@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(firebase:*)",
+      "Bash(supabase projects:*)",
+      "Bash(npx supabase@latest projects list)",
+      "Bash(supabase status:*)",
+      "Bash(supabase whoami:*)",
+      "Bash(gh repo:*)",
+      "Bash(npm create:*)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(cp:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(node:*)"
+    ]
+  }
+}
