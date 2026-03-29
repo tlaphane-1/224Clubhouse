@@ -6,7 +6,7 @@ export function useOrderStatus(orderId) {
   const [status, setStatus] = useState(null)
 
   useEffect(() => {
-    if (!orderId) return
+    if (!orderId || !db) return
 
     const orderRef = ref(db, `orders/${orderId}/status`)
     const unsubscribe = onValue(orderRef, (snapshot) => {

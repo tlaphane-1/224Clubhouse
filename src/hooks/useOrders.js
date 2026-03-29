@@ -44,10 +44,12 @@ export function useUpdateOrderStatus() {
         .eq('id', orderId)
       if (error) throw error
 
-      await set(ref(db, `orders/${orderId}`), {
-        status,
-        updatedAt: new Date().toISOString(),
-      })
+      if (db) {
+        await set(ref(db, `orders/${orderId}`), {
+          status,
+          updatedAt: new Date().toISOString(),
+        })
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })

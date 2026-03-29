@@ -78,11 +78,13 @@ export default function Checkout() {
           .catch(() => null) // fail silently if RPC not set up yet
       ))
 
-      // 3. Write to Firebase
-      await set(ref(db, `orders/${order.id}`), {
-        status: 'paid',
-        updatedAt: new Date().toISOString(),
-      })
+      // 3. Write to Firebase (only if configured)
+      if (db) {
+        await set(ref(db, `orders/${order.id}`), {
+          status: 'paid',
+          updatedAt: new Date().toISOString(),
+        })
+      }
 
       // 4. Send order confirmation email
       await supabase.functions.invoke('send-order-email', {
