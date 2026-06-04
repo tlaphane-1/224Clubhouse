@@ -6,6 +6,7 @@ import { useProducts } from '../hooks/useProducts'
 import { supabase } from '../lib/supabase'
 import ProductGrid from '../components/store/ProductGrid'
 import toast from 'react-hot-toast'
+import { BRAND_IMAGES } from '../hooks/useStorageImages'
 
 const fadeUp = {
   initial: { opacity: 0, y: 30 },
@@ -81,13 +82,18 @@ export default function Home() {
     <div>
       {/* Hero */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 bg-background">
+        {/* Background — real header photo */}
+        <div className="absolute inset-0">
+          <img
+            src={BRAND_IMAGES.header}
+            alt=""
+            className="w-full h-full object-cover object-center"
+          />
+          {/* Dark overlay so text stays readable */}
+          <div className="absolute inset-0 bg-black/70" />
+          {/* Gold radial glow */}
           <div className="absolute inset-0"
-            style={{ background: 'radial-gradient(ellipse at center, rgba(201,168,76,0.08) 0%, transparent 70%)' }} />
-          {/* Subtle grid pattern */}
-          <div className="absolute inset-0 opacity-[0.03]"
-            style={{ backgroundImage: 'linear-gradient(rgba(201,168,76,1) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,76,1) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+            style={{ background: 'radial-gradient(ellipse at center, rgba(201,168,76,0.12) 0%, transparent 65%)' }} />
         </div>
 
         <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
@@ -118,14 +124,9 @@ export default function Home() {
               <Link to="/store" className="btn-gold px-8 py-4 text-sm uppercase tracking-widest flex items-center gap-2">
                 Shop Now <ArrowRight size={16} />
               </Link>
-              <a
-                href="https://224clubhouse.co.za/membership/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-outline px-8 py-4 text-sm uppercase tracking-widest"
-              >
+              <Link to="/membership" className="btn-outline px-8 py-4 text-sm uppercase tracking-widest">
                 Become a Member
-              </a>
+              </Link>
             </div>
           </motion.div>
         </div>
@@ -219,6 +220,31 @@ export default function Home() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Gallery */}
+      <section className="py-24 px-4 max-w-7xl mx-auto">
+        <div className="text-center mb-14">
+          <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">The Experience</p>
+          <h2 className="section-heading text-white">Life at 224</h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {BRAND_IMAGES.gallery.slice(0, 8).map((url, i) => (
+            <motion.div
+              key={url}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: i * 0.05, duration: 0.4 }}
+              className={`overflow-hidden rounded-xl ${i === 0 ? 'col-span-2 row-span-2' : ''}`}
+            >
+              <img
+                src={url}
+                alt={`224 Clubhouse gallery ${i + 1}`}
+                className="w-full h-full object-cover aspect-square hover:scale-105 transition-transform duration-500"
+              />
+            </motion.div>
+          ))}
         </div>
       </section>
 

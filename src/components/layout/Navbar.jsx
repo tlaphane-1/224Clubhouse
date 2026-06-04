@@ -3,11 +3,14 @@ import { Link, NavLink } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingBag, Menu, X } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
+import { BRAND_IMAGES } from '../../hooks/useStorageImages'
 
 const navLinks = [
   { to: '/', label: 'Home' },
   { to: '/store', label: 'Store' },
   { to: '/events', label: 'Events' },
+  { to: '/membership', label: 'Membership' },
+  { to: '/about', label: 'About' },
 ]
 
 export default function Navbar() {
@@ -31,13 +34,12 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
-            <Link to="/" className="flex flex-col leading-none group">
-              <span className="font-heading text-4xl font-bold text-gold tracking-wider group-hover:text-gold-light transition-colors">
-                224
-              </span>
-              <span className="text-white text-[9px] tracking-[0.5em] uppercase font-light -mt-1">
-                Clubhouse
-              </span>
+            <Link to="/" className="flex items-center group">
+              <img
+                src={BRAND_IMAGES.logoWide}
+                alt="224 Clubhouse"
+                className="h-10 w-auto object-contain brightness-100 group-hover:brightness-110 transition-all"
+              />
             </Link>
 
             {/* Desktop Nav */}
@@ -113,7 +115,7 @@ export default function Navbar() {
               className="fixed top-0 right-0 bottom-0 z-[70] w-72 bg-surface border-l border-border flex flex-col"
             >
               <div className="flex items-center justify-between p-6 border-b border-border">
-                <span className="font-heading text-2xl font-bold text-gold">224</span>
+                <img src={BRAND_IMAGES.logoWide} alt="224 Clubhouse" className="h-8 w-auto object-contain" />
                 <button onClick={() => setMobileOpen(false)} className="text-muted hover:text-white">
                   <X size={24} />
                 </button>

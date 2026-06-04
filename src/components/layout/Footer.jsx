@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { BRAND_IMAGES } from '../../hooks/useStorageImages'
 
 function FacebookIcon({ size = 20, className = '' }) {
   return (
@@ -23,10 +24,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Brand */}
           <div>
-            <div className="font-heading text-4xl font-bold text-gold tracking-wider">224</div>
-            <div className="text-white text-[9px] tracking-[0.5em] uppercase font-light mt-0.5 mb-4">
-              Clubhouse
-            </div>
+            <img src={BRAND_IMAGES.logoWide} alt="224 Clubhouse" className="h-10 w-auto object-contain mb-4" />
             <p className="text-muted text-sm leading-relaxed max-w-xs">
               A private cannabis lifestyle lounge where good people and great energy meet. Members only. Elevated always.
             </p>
@@ -62,26 +60,14 @@ export default function Footer() {
                 { to: '/', label: 'Home' },
                 { to: '/store', label: 'Shop' },
                 { to: '/events', label: 'Events' },
-                { href: 'https://224clubhouse.co.za/membership/', label: 'Membership' },
-              ].map(link => (
-                <li key={link.label}>
-                  {link.to ? (
-                    <Link
-                      to={link.to}
-                      className="text-muted hover:text-gold text-sm transition-colors"
-                    >
-                      {link.label}
-                    </Link>
-                  ) : (
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted hover:text-gold text-sm transition-colors"
-                    >
-                      {link.label}
-                    </a>
-                  )}
+                { to: '/membership', label: 'Membership' },
+                { to: '/about', label: 'About Us' },
+                { to: '/contact', label: 'Contact' },
+              ].map(({ to, label }) => (
+                <li key={label}>
+                  <Link to={to} className="text-muted hover:text-gold text-sm transition-colors">
+                    {label}
+                  </Link>
                 </li>
               ))}
             </ul>

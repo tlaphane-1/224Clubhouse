@@ -15,11 +15,15 @@ import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import OrderConfirmation from './pages/OrderConfirmation'
 import Events from './pages/Events'
+import Membership from './pages/Membership'
+import About from './pages/About'
+import Contact from './pages/Contact'
 import Login from './pages/Login'
 import Dashboard from './pages/admin/Dashboard'
 import Products from './pages/admin/Products'
 import Orders from './pages/admin/Orders'
 import AdminEvents from './pages/admin/Events'
+import AdminMemberships from './pages/admin/Memberships'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -75,6 +79,9 @@ export default function App() {
               <Route path="/checkout" element={<PublicLayout><Checkout /></PublicLayout>} />
               <Route path="/order-confirmation/:id" element={<PublicLayout><OrderConfirmation /></PublicLayout>} />
               <Route path="/events" element={<PublicLayout><Events /></PublicLayout>} />
+              <Route path="/membership" element={<PublicLayout><Membership /></PublicLayout>} />
+              <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
+              <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
 
               {/* Admin */}
               <Route path="/admin/login" element={<Login />} />
@@ -82,6 +89,7 @@ export default function App() {
               <Route path="/admin/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
               <Route path="/admin/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
               <Route path="/admin/events" element={<ProtectedRoute><AdminEvents /></ProtectedRoute>} />
+              <Route path="/admin/memberships" element={<ProtectedRoute><AdminMemberships /></ProtectedRoute>} />
 
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
