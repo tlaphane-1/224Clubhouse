@@ -14,6 +14,11 @@ dist-ssr
 .env
 .env.local
 
+# Generated build artifacts (staging dirs only — image-manifest.json is imported by the app and IS committed)
+224-website-download/
+224-images-staging/
+224-product-images-staging/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
