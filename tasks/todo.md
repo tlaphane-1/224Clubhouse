@@ -14,13 +14,14 @@ Branch: `feature/memberships-and-pages` (never commit to `master`).
 
 Correction to original plan: **un-ignore `scripts/image-manifest.json`** — it's imported by `useStorageImages.js`, so it must be committed or fresh clones won't build. Keep the staging dirs ignored.
 
-Commit sequence (each snapshot builds; ordered by dependency):
-- [ ] `chore: ignore image staging directories` — `.gitignore` (staging dirs only, NOT the manifest)
-- [ ] `chore: add data/image ops scripts and deps` — `scripts/*`, `scripts/image-manifest.json`, `package.json`, `package-lock.json` (cheerio, node-fetch)
-- [ ] `feat: add Supabase storage image helper` — `src/hooks/useStorageImages.js`
-- [ ] `feat: add membership system` — `Membership.jsx`, `admin/Memberships.jsx`, `useMemberships.js`, `supabase/migrations/20260329200000_memberships.sql`
-- [ ] `feat: add About/Contact pages, wire routes, refresh layout` — `About.jsx`, `Contact.jsx`, `App.jsx`, `Navbar.jsx`, `Footer.jsx`, `Home.jsx`, `AdminLayout.jsx`
-- [ ] `docs: add CLAUDE.md and task plan` — `CLAUDE.md`, `tasks/todo.md`
+Commit sequence (each snapshot builds; ordered by dependency) — DONE on branch `feature/memberships-and-pages`:
+- [x] `chore: ignore image staging directories` — `.gitignore` (staging dirs only, NOT the manifest)
+- [x] `chore: add data/image ops scripts and deps` — `scripts/*`, `scripts/image-manifest.json`, `package.json`, `package-lock.json` (cheerio, node-fetch)
+- [x] `feat: add Supabase storage image helper` — `src/hooks/useStorageImages.js`
+- [x] `feat: add membership system` — `Membership.jsx`, `admin/Memberships.jsx`, `useMemberships.js`, `supabase/migrations/20260329200000_memberships.sql`
+- [x] `feat: add About/Contact pages, wire routes, refresh layout` — `About.jsx`, `Contact.jsx`, `App.jsx`, `Navbar.jsx`, `Footer.jsx`, `Home.jsx`, `AdminLayout.jsx`
+- [x] `docs: add CLAUDE.md and task plan` — `CLAUDE.md`, `tasks/todo.md`
+- Build verified green after commits. Branch not yet pushed (awaiting your go-ahead).
 
 Leave unstaged / not committed: `.claude/settings.local.json` (machine-local permissions), `supabase/.temp/` (CLI metadata). Confirmed safe: `.env.local` is gitignored.
 Flag: **Google Maps API key hardcoded** in `Contact.jsx:213` — browser-visible; restrict by HTTP-referrer in Google Cloud console. Supabase storage URL in `useStorageImages.js:9` is public — acceptable.
@@ -36,22 +37,26 @@ Flag: **Google Maps API key hardcoded** in `Contact.jsx:213` — browser-visible
 - [ ] `supabase secrets set PAYSTACK_SECRET_KEY=...` (never client-side).
 - [ ] Phase 2: `paystack-webhook` function (HMAC-SHA512 signature check) as durability net for "paid but tab closed".
 
-### Admin authorization
-- [ ] New migration `supabase/migrations/<ts>_admin_authorization.sql`: `admin_users` table (FK → auth.users), `SECURITY DEFINER is_admin()` helper, seed current admin from `auth.users` by email.
-- [ ] Drop all `*_auth_*` write policies on products/events/memberships/newsletter; replace with `is_admin()`. Keep public SELECT on products/events and public INSERT on memberships/newsletter.
-- [ ] `orders` policy: coordinate with payment work — no public INSERT (service role creates orders); admin-only select/update/delete; confirmation read served from the verify response or a tokenized lookup, not direct anon table read.
-- [ ] `AuthContext.jsx`: derive `isAdmin` via `rpc('is_admin')`; keep `loading` true until it resolves (avoid flash-redirect). Remove `VITE_ADMIN_EMAILS` (and from `.env.example`, update `CLAUDE.md`).
-- [ ] **Lock-out guard:** confirm the admin `auth.users` row exists before `supabase db push`. Keep a service-role insert ready as fallback.
+### Admin authorization  — code written (provider-agnostic), pending live apply
+- [x] New migration `supabase/migrations/20260604120000_admin_authorization.sql`: `admin_users` table (FK → auth.users), `SECURITY DEFINER is_admin()` helper, seed current admin from `auth.users` by email.
+- [x] Drop all `*_auth_*` write policies on products/events/memberships/newsletter (+ storage upload/delete); replace with `is_admin()`. Public SELECT on products/events and public INSERT on memberships/newsletter kept.
+- [~] `orders` policy: **DEFERRED to the payment workstream** (left as original `auth.role()='authenticated'`). Tightening it now would break live anon checkout/confirmation with no server-side replacement.
+- [x] `AuthContext.jsx`: derive `isAdmin` via `rpc('is_admin')`; resolve admin in `signIn` before returning (avoid redirect race). Removed `VITE_ADMIN_EMAILS` (and from `.env.example`; `CLAUDE.md` updated).
+- [ ] **YOU must run, in order:** (1) confirm the admin's `auth.users` row exists + edit the seed email in the migration; (2) `supabase db push`; (3) deploy the `AuthContext` change. The migration MUST be applied before/with the client change, or `rpc('is_admin')` fails and the admin UI locks out. Keep a service-role insert ready as fallback.
+
+Decision pending (you): **payment provider — Paystack vs Yoco** (+ confirm cannabis is permitted by the processor) before the payment half of Workstream 2 proceeds.
 
 ---
 
-## Workstream 3 — Layered DB/RLS tests (do after RLS hardening so it asserts new policies)
+## Workstream 3 — Layered DB/RLS tests  ✅ built & verified green (Layers 1/2 skip until keys provided)
 
-- [ ] Add Vitest (`test: { environment: 'node' }`), `test` + `predeploy` scripts. Reference templates: `EFF/election-monitoring-app/frontend/`.
-- [ ] Layer 1 (`src/__tests__/api.contract.test.js`): 9 read probes from `src/hooks/`, service-role key, auto-skip when absent.
-- [ ] Layer 2 (`api.anonContract.test.js`): anon key; **PII negative-controls** — assert anon CANNOT read `orders`, `memberships` (SA ID numbers), `newsletter_subscribers`; positive controls for `products`/`events`.
-- [ ] Layer 3 (`scripts/audit-embed-rls.mjs` + wrapper): port from reference; **relax the `rows > 0` assertion** (no embeds exist today — it's a future guard).
-- [ ] Wire `.env.local` into tests via a setup file reusing the `seed.js` parser.
+- [x] Add Vitest (`test: { environment: 'node' }`), `test`/`test:contract`/`audit:rls`/`predeploy` scripts. Adapted from `EFF/election-monitoring-app/frontend/`.
+- [x] Layer 1 (`src/__tests__/api.contract.test.js`): 9 `.limit(0)` read probes from `src/hooks/`, service-role key, auto-skip when absent.
+- [x] Layer 2 (`api.anonContract.test.js`): anon key; **PII negative-controls** — anon CANNOT read `orders`, `memberships` (SA ID numbers), `newsletter_subscribers`; positive controls for `products`/`events`.
+- [x] Layer 3 (`scripts/audit-embed-rls.mjs` + wrapper): ported; asserts `problems === 0` (no `rows > 0` assertion — zero embeds today; future guard). Fixed: excludes `__tests__`/`*.test.*` so it reports `0 embeds inspected`.
+- [x] Wire `.env.local` into tests via `test/loadEnv.mjs` reusing the `seed.js` parser.
+- [ ] **YOU run for full Layer 1/2 coverage:** put `SUPABASE_SERVICE_ROLE_KEY` + `VITE_SUPABASE_ANON_KEY` in `.env.local`, then `npm run test:contract`. Without keys the suite is green with 2 skips.
+- Note: Layer 2 negative-controls already assert the hardened PII posture; re-run after `supabase db push` to confirm the admin migration didn't loosen anything.
 
 ---
 
