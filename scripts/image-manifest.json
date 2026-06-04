@@ -1,0 +1,135 @@
+[
+  {
+    "originalName": "1-1.jpg",
+    "cleanName": "1-1.jpg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/1-1.jpg",
+    "category": "brand"
+  },
+  {
+    "originalName": "2.jpg",
+    "cleanName": "2.jpg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/2.jpg",
+    "category": "brand"
+  },
+  {
+    "originalName": "224-header-1.jpg",
+    "cleanName": "224-header-1.jpg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/224-header-1.jpg",
+    "category": "brand"
+  },
+  {
+    "originalName": "224-logo-fav-1-480x142.png",
+    "cleanName": "224-logo-fav-1-480x142.png",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/224-logo-fav-1-480x142.png",
+    "category": "brand"
+  },
+  {
+    "originalName": "224-logo-fav-1.png",
+    "cleanName": "224-logo-fav-1.png",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/224-logo-fav-1.png",
+    "category": "brand"
+  },
+  {
+    "originalName": "224-logo-fav.png",
+    "cleanName": "224-logo-fav.png",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/224-logo-fav.png",
+    "category": "brand"
+  },
+  {
+    "originalName": "224-square-images-1.jpg",
+    "cleanName": "224-square-images-1.jpg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/224-square-images-1.jpg",
+    "category": "brand"
+  },
+  {
+    "originalName": "224-square-images-2.jpg",
+    "cleanName": "224-square-images-2.jpg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/224-square-images-2.jpg",
+    "category": "brand"
+  },
+  {
+    "originalName": "224-square-images.jpg",
+    "cleanName": "224-square-images.jpg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/224-square-images.jpg",
+    "category": "brand"
+  },
+  {
+    "originalName": "3.jpg",
+    "cleanName": "3.jpg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/3.jpg",
+    "category": "brand"
+  },
+  {
+    "originalName": "5.jpg",
+    "cleanName": "5.jpg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/5.jpg",
+    "category": "brand"
+  },
+  {
+    "originalName": "6.jpg",
+    "cleanName": "6.jpg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/6.jpg",
+    "category": "brand"
+  },
+  {
+    "originalName": "7.jpg",
+    "cleanName": "7.jpg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/7.jpg",
+    "category": "brand"
+  },
+  {
+    "originalName": "whatsapp-image-2026-02-24-at-10.03.48-pm.jpeg",
+    "cleanName": "whatsapp-image-2026-02-24-at-10.03.48-pm.jpeg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/whatsapp-image-2026-02-24-at-10.03.48-pm.jpeg",
+    "category": "brand"
+  },
+  {
+    "originalName": "whatsapp-image-2026-02-24-at-10.03.51-pm.jpeg",
+    "cleanName": "whatsapp-image-2026-02-24-at-10.03.51-pm.jpeg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/whatsapp-image-2026-02-24-at-10.03.51-pm.jpeg",
+    "category": "brand"
+  },
+  {
+    "originalName": "whatsapp-image-2026-02-24-at-10.03.54-pm-1.jpeg",
+    "cleanName": "whatsapp-image-2026-02-24-at-10.03.54-pm-1.jpeg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm-1.jpeg",
+    "category": "brand"
+  },
+  {
+    "originalName": "whatsapp-image-2026-02-24-at-10.03.54-pm-2.jpeg",
+    "cleanName": "whatsapp-image-2026-02-24-at-10.03.54-pm-2.jpeg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm-2.jpeg",
+    "category": "brand"
+  },
+  {
+    "originalName": "whatsapp-image-2026-02-24-at-10.03.54-pm.jpeg",
+    "cleanName": "whatsapp-image-2026-02-24-at-10.03.54-pm.jpeg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm.jpeg",
+    "category": "brand"
+  },
+  {
+    "originalName": "whatsapp-image-2026-02-24-at-10.03.56-pm.jpeg",
+    "cleanName": "whatsapp-image-2026-02-24-at-10.03.56-pm.jpeg",
+    "bucket": "brand-assets",
+    "publicUrl": "https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public/brand-assets/whatsapp-image-2026-02-24-at-10.03.56-pm.jpeg",
+    "category": "brand"
+  }
+]
