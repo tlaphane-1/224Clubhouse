@@ -46,11 +46,11 @@ supabase migration new <name>                     # scaffold a new migration
 - **Supabase** (`src/lib/supabase.js`) is the source of truth: Postgres (products, orders, events, memberships, newsletter_subscribers), Auth, and Storage. Uses the **anon key** client-side; RLS enforces access.
 - **Firebase Realtime Database** (`src/lib/firebase.js`) is used *only* for live order-status push. It is **guarded**: `db` is `null` unless `VITE_FIREBASE_DATABASE_URL` is set. Every Firebase call must be wrapped in `if (db)` — see `Checkout.jsx`, `useOrders.js`, `useOrderStatus.js`. The app works fully without Firebase configured.
 
-### Auth & admin authorization (important security model)
+### Auth & admin authorization (security model)
 
 - Login is Supabase email/password (`AuthContext.jsx`).
-- **Admin status is determined client-side** by checking the logged-in email against the `VITE_ADMIN_EMAILS` comma-separated allowlist. `ProtectedRoute` in `App.jsx` gates `/admin/*` on this.
-- At the **database** level there is no admin role: RLS policies grant all writes (and order reads) to *any* `authenticated` user. So the email allowlist is a UI gate, not a real authorization boundary. Treat any authenticated session as able to write products/events/orders. Do not assume server-side admin enforcement exists.
+- **Admin status is a server-side boundary.** `AuthContext` resolves it via the `is_admin()` Postgres RPC, which checks the `admin_users` table under RLS (migration `*_admin_authorization.sql`). The client `isAdmin` only drives UI (showing `/admin/*`); the real enforcement is RLS — write policies on products/events/memberships/newsletter and storage upload/delete all require `is_admin()`. Add/remove admins by editing the `admin_users` table (dashboard or a service-role script); there is no admin env var.
+- **`orders` is the exception (still being hardened).** Its RLS is deliberately left as the original `auth.role() = 'authenticated'` because order creation is mid-migration to a server-side, payment-verified flow. Until that lands, `orders` writes are not yet locked down. See `tasks/todo.md` Workstream 2.
 
 ### Data layer — TanStack Query hooks in `src/hooks/`
 
