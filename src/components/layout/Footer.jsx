@@ -62,6 +62,7 @@ export default function Footer() {
                 { to: '/events', label: 'Events' },
                 { to: '/membership', label: 'Membership' },
                 { to: '/about', label: 'About Us' },
+                { to: '/track', label: 'Track Order' },
                 { to: '/contact', label: 'Contact' },
               ].map(({ to, label }) => (
                 <li key={label}>

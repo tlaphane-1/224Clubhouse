@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { formatZAR } from '../utils/formatCurrency'
@@ -18,10 +17,8 @@ export default function Cart() {
   if (items.length === 0) {
     return (
       <div className="min-h-screen pt-28 flex flex-col items-center justify-center px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
+        <div
+          className="text-center animate-fadeIn"
         >
           <ShoppingBag size={56} className="text-muted mx-auto mb-6" strokeWidth={1} />
           <h2 className="font-heading text-2xl font-semibold text-white mb-3">Your cart is empty</h2>
@@ -29,16 +26,14 @@ export default function Cart() {
           <Link to="/store" className="btn-gold px-8 py-3 flex items-center gap-2 inline-flex">
             Continue Shopping <ArrowRight size={16} />
           </Link>
-        </motion.div>
+        </div>
       </div>
     )
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen pt-28 pb-20"
+    <div
+      className="min-h-screen pt-28 pb-20 animate-fadeIn"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-10">
@@ -141,6 +136,6 @@ export default function Cart() {
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }

@@ -38,10 +38,10 @@ export function useUpdateOrderStatus() {
 
   return useMutation({
     mutationFn: async ({ orderId, status }) => {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status })
-        .eq('id', orderId)
+      const { error } = await supabase.rpc('admin_update_order_status', {
+        p_order_id: orderId,
+        p_status: status,
+      })
       if (error) throw error
 
       if (db) {

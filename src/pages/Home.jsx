@@ -1,18 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { ArrowRight, Leaf, Candy, Wrench, ShoppingBag, Star, Mail } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import { supabase } from '../lib/supabase'
 import ProductGrid from '../components/store/ProductGrid'
 import toast from 'react-hot-toast'
 import { BRAND_IMAGES } from '../hooks/useStorageImages'
-
-const fadeUp = {
-  initial: { opacity: 0, y: 30 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },
-}
 
 const categories = [
   { value: 'flower', label: 'Flower Selections', icon: Leaf, desc: 'Premium cannabis flower, handpicked' },
@@ -97,11 +90,7 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8 }}
-          >
+          <div className="animate-scaleIn">
             <div className="inline-block mb-6">
               <div className="font-heading text-[clamp(5rem,15vw,10rem)] font-bold text-gold leading-none tracking-wider">
                 224
@@ -128,7 +117,7 @@ export default function Home() {
                 Become a Member
               </Link>
             </div>
-          </motion.div>
+          </div>
         </div>
 
         {/* Scroll indicator */}
@@ -139,18 +128,16 @@ export default function Home() {
 
       {/* Category Grid */}
       <section className="py-24 px-4 max-w-7xl mx-auto">
-        <motion.div {...fadeUp} className="text-center mb-14">
+        <div className="text-center mb-14 animate-fadeIn">
           <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Browse</p>
           <h2 className="section-heading text-white">The Collection</h2>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {categories.map(({ value, label, icon: Icon, desc }, i) => (
-            <motion.div
+          {categories.map(({ value, label, icon: Icon, desc }) => (
+            <div
               key={value}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1, duration: 0.4 }}
+              className="animate-fadeIn"
             >
               <Link
                 to={`/store?category=${value}`}
@@ -166,7 +153,7 @@ export default function Home() {
                   Explore <ArrowRight size={10} />
                 </div>
               </Link>
-            </motion.div>
+            </div>
           ))}
         </div>
       </section>
@@ -194,13 +181,10 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {reviews.map((review, i) => (
-              <motion.div
+            {reviews.map((review) => (
+              <div
                 key={review.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.15, duration: 0.4 }}
-                className="bg-background border border-border rounded-xl p-8"
+                className="bg-background border border-border rounded-xl p-8 animate-fadeIn"
               >
                 <div className="flex gap-1 mb-4">
                   {Array.from({ length: review.rating }).map((_, j) => (
@@ -217,7 +201,7 @@ export default function Home() {
                     <span className="text-gold font-heading font-bold text-xs">{review.name[0]}</span>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -231,19 +215,16 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {BRAND_IMAGES.gallery.slice(0, 8).map((url, i) => (
-            <motion.div
+            <div
               key={url}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: i * 0.05, duration: 0.4 }}
-              className={`overflow-hidden rounded-xl ${i === 0 ? 'col-span-2 row-span-2' : ''}`}
+              className={`overflow-hidden rounded-xl animate-fade ${i === 0 ? 'col-span-2 row-span-2' : ''}`}
             >
               <img
                 src={url}
                 alt={`224 Clubhouse gallery ${i + 1}`}
                 className="w-full h-full object-cover aspect-square hover:scale-105 transition-transform duration-500"
               />
-            </motion.div>
+            </div>
           ))}
         </div>
       </section>

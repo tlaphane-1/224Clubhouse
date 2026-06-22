@@ -1,4 +1,3 @@
-import { motion, AnimatePresence } from 'framer-motion'
 import { X, Trash2, ShoppingBag } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
@@ -7,23 +6,16 @@ import { formatZAR } from '../../utils/formatCurrency'
 export default function CartDrawer({ isOpen, onClose }) {
   const { items, removeItem, updateQuantity, cartSubtotal } = useCart()
 
+  if (!isOpen) return null
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[80] flex justify-end">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+    <div className="fixed inset-0 z-[80] flex justify-end">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade"
             onClick={onClose}
           />
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'tween', duration: 0.3 }}
-            className="relative w-full max-w-md bg-surface border-l border-border flex flex-col"
+          <div
+            className="relative w-full max-w-md bg-surface border-l border-border flex flex-col animate-slideInRight"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-border">
@@ -98,9 +90,7 @@ export default function CartDrawer({ isOpen, onClose }) {
                 </Link>
               </div>
             )}
-          </motion.div>
+          </div>
         </div>
-      )}
-    </AnimatePresence>
   )
 }

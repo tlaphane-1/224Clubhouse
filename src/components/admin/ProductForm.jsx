@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { slugify } from '../../utils/slugify'
+import { safeFileName } from '../../utils/safeFileName'
 import Button from '../ui/Button'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
@@ -24,22 +25,25 @@ export default function ProductForm({ product, onClose }) {
   const set = (key, value) => setForm(f => ({ ...f, [key]: value }))
 
   const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files)
+    const input = e.target
+    const files = Array.from(input.files)
     if (!files.length) return
     setUploading(true)
     try {
-      const urls = await Promise.all(files.map(async (file) => {
-        const path = `products/${Date.now()}-${file.name}`
+      const urls = await Promise.all(files.map(async (file, i) => {
+        const path = `products/${Date.now()}-${i}-${safeFileName(file.name)}`
         const { error } = await supabase.storage.from('product-images').upload(path, file)
         if (error) throw error
         const { data } = supabase.storage.from('product-images').getPublicUrl(path)
         return data.publicUrl
       }))
-      set('images', [...(form.images || []), ...urls])
+      // Functional update so repeated uploads accumulate (no stale closure on form.images).
+      setForm(f => ({ ...f, images: [...(f.images || []), ...urls] }))
     } catch (err) {
-      toast.error('Image upload failed')
+      toast.error(err.message || 'Image upload failed')
     } finally {
       setUploading(false)
+      input.value = '' // reset so selecting the same file again still fires onChange
     }
   }
 

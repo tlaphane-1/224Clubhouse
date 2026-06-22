@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { isAgeVerified, setAgeVerified } from '../../utils/ageGate'
 
 export default function AgeGate() {
@@ -20,22 +19,13 @@ export default function AgeGate() {
     window.location.href = 'https://www.google.com'
   }
 
+  if (!show) return null
+
   return (
-    <AnimatePresence>
-      {show && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          className="fixed inset-0 z-[9999] bg-background flex items-center justify-center p-6"
+        <div
+          className="fixed inset-0 z-[9999] bg-background flex items-center justify-center p-6 animate-fade"
         >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-            className="text-center max-w-md w-full"
-          >
+          <div className="text-center max-w-md w-full animate-scaleIn">
             {/* Logo */}
             <div className="mb-8">
               <div className="font-heading text-7xl font-bold text-gold tracking-wider">224</div>
@@ -74,9 +64,7 @@ export default function AgeGate() {
             <p className="text-muted text-xs mt-6">
               By entering, you agree that you are of legal age to consume cannabis products in your jurisdiction.
             </p>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </div>
+        </div>
   )
 }

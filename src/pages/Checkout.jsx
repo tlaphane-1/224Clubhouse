@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { useCart } from '../context/CartContext'
 import { supabase } from '../lib/supabase'
-import { db } from '../lib/firebase'
-import { ref, set } from 'firebase/database'
 import CheckoutForm from '../components/checkout/CheckoutForm'
 import OrderSummary, { SHIPPING_FEE, SHIPPING_THRESHOLD } from '../components/checkout/OrderSummary'
-import PaystackButton from '../components/checkout/PaystackButton'
+import PaymentMethodSelect from '../components/checkout/PaymentMethodSelect'
+// Paystack is disabled while the online paygate is being confirmed (PaystackButton.jsx retained for re-enable).
+import { paymentLabel } from '../utils/orderStatus'
+import { formatZAR } from '../utils/formatCurrency'
 import toast from 'react-hot-toast'
 
 const emptyForm = {
@@ -32,6 +32,7 @@ export default function Checkout() {
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [agreed, setAgreed] = useState(false)
+  const [method, setMethod] = useState('cash_on_delivery')
   const [processing, setProcessing] = useState(false)
   const navigate = useNavigate()
 
@@ -43,94 +44,56 @@ export default function Checkout() {
     if (items.length === 0) navigate('/cart')
   }, [items, navigate])
 
-  const handlePaystackSuccess = async (reference) => {
-    setProcessing(true)
-    try {
-      // 1. Insert order
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          customer_name: form.name,
-          customer_email: form.email,
-          customer_phone: form.phone,
-          items: items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, slug: i.slug })),
-          subtotal: cartSubtotal,
-          shipping_fee: shippingFee,
-          total,
-          status: 'paid',
-          paystack_reference: reference.reference,
-          shipping_address: {
-            street: form.street,
-            apartment: form.apartment,
-            city: form.city,
-            province: form.province,
-            postalCode: form.postalCode,
-          },
-        })
-        .select()
-        .single()
-
-      if (orderError) throw orderError
-
-      // 2. Decrement stock
-      await Promise.all(items.map(item =>
-        supabase.rpc('decrement_stock', { product_id: item.id, qty: item.quantity })
-          .catch(() => null) // fail silently if RPC not set up yet
-      ))
-
-      // 3. Write to Firebase (only if configured)
-      if (db) {
-        await set(ref(db, `orders/${order.id}`), {
-          status: 'paid',
-          updatedAt: new Date().toISOString(),
-        })
-      }
-
-      // 4. Send order confirmation email
-      await supabase.functions.invoke('send-order-email', {
-        body: {
-          orderId: order.id,
-          customerName: form.name,
-          customerEmail: form.email,
-          items: order.items,
-          total: order.total,
-          paystack_reference: reference.reference,
-        },
-      })
-
-      // 5. Clear cart and navigate
-      clearCart()
-      navigate(`/order-confirmation/${order.id}`)
-    } catch (err) {
-      toast.error('Something went wrong processing your order. Please contact us.')
-      console.error(err)
-    } finally {
-      setProcessing(false)
-    }
-  }
-
-  const handlePayClick = () => {
+  const handlePlaceOrder = async () => {
     const validationErrors = validate(form)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
       toast.error('Please fill in all required fields')
-      return false
+      return
     }
     if (!agreed) {
       toast.error('Please confirm you are 21 or older')
-      return false
+      return
+    }
+    if (!method) {
+      toast.error('Please choose a payment method')
+      return
     }
     setErrors({})
-    return true
+
+    setProcessing(true)
+    const { data, error } = await supabase.rpc('place_cod_order', {
+      p_customer: {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        street: form.street,
+        apartment: form.apartment,
+        city: form.city,
+        province: form.province,
+        postalCode: form.postalCode,
+      },
+      p_items: items.map(i => ({ id: i.id, quantity: i.quantity })),
+      p_payment_method: method,
+    })
+
+    if (error) {
+      toast.error(error.message || 'Could not place your order. Please try again.')
+      setProcessing(false)
+      return
+    }
+
+    clearCart()
+    navigate(`/order-confirmation/${data.order_number}`, {
+      state: { order: data, items, customer: form, paymentMethod: method },
+    })
   }
 
   if (items.length === 0) return null
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen pt-28 pb-20"
+    <div
+      className="min-h-screen pt-28 pb-20 animate-fadeIn"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-10">
@@ -166,7 +129,15 @@ export default function Checkout() {
               </label>
             </div>
 
-            {/* Pay button */}
+            {/* Payment method */}
+            <div className="bg-surface border border-border rounded-xl p-6">
+              <h2 className="font-semibold text-white mb-6 uppercase tracking-widest text-sm">
+                Payment Method
+              </h2>
+              <PaymentMethodSelect value={method} onChange={setMethod} />
+            </div>
+
+            {/* Place order */}
             <div className="bg-surface border border-border rounded-xl p-6">
               {processing ? (
                 <div className="flex items-center justify-center gap-3 py-4 text-muted">
@@ -174,26 +145,18 @@ export default function Checkout() {
                   Processing your order...
                 </div>
               ) : (
-                <div onClick={() => { if (!handlePayClick()) return }}>
-                  {agreed && Object.keys(errors).length === 0 ? (
-                    <PaystackButton
-                      amount={total}
-                      email={form.email}
-                      name={form.name}
-                      phone={form.phone}
-                      onSuccess={handlePaystackSuccess}
-                      onClose={() => toast('Payment cancelled')}
-                      disabled={!agreed}
-                    />
-                  ) : (
-                    <button
-                      onClick={handlePayClick}
-                      className="btn-gold w-full py-4 text-base"
-                    >
-                      Review & Pay {new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(total / 100)}
-                    </button>
-                  )}
-                </div>
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePlaceOrder}
+                    className="btn-gold w-full py-4 text-base"
+                  >
+                    Place Order — {formatZAR(total)}
+                  </button>
+                  <p className="text-muted text-xs text-center mt-3">
+                    No payment now — you'll pay by {method ? paymentLabel(method) : 'cash/card'} when your order is delivered.
+                  </p>
+                </>
               )}
             </div>
           </div>
@@ -206,6 +169,6 @@ export default function Checkout() {
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }

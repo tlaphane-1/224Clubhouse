@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { ShoppingCart } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -24,11 +23,7 @@ export default function ProductCard({ product }) {
   }
 
   return (
-    <motion.div
-      whileHover={{ scale: 1.02 }}
-      transition={{ duration: 0.2 }}
-      className="group"
-    >
+    <div className="group transition-transform duration-200 hover:scale-[1.02]">
       <Link to={`/store/${product.slug}`} className="block">
         <div className="bg-surface border border-border rounded-xl overflow-hidden
                         transition-all duration-300 group-hover:border-gold group-hover:shadow-lg group-hover:shadow-gold/10">
@@ -105,6 +100,6 @@ export default function ProductCard({ product }) {
           </div>
         </div>
       </Link>
-    </motion.div>
+    </div>
   )
 }

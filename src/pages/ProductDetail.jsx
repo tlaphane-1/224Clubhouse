@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useProduct, useProducts } from '../hooks/useProducts'
 import { useCart } from '../context/CartContext'
@@ -52,10 +51,8 @@ export default function ProductDetail() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen pt-28 pb-20"
+    <div
+      className="min-h-screen pt-28 pb-20 animate-fadeIn"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
@@ -79,13 +76,13 @@ export default function ProductDetail() {
                     <>
                       <button
                         onClick={() => setImageIndex(i => (i - 1 + images.length) % images.length)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-3 sm:p-2 rounded-full transition-colors"
                       >
                         <ChevronLeft size={18} />
                       </button>
                       <button
                         onClick={() => setImageIndex(i => (i + 1) % images.length)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-3 sm:p-2 rounded-full transition-colors"
                       >
                         <ChevronRight size={18} />
                       </button>
@@ -188,6 +185,6 @@ export default function ProductDetail() {
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   )
 }

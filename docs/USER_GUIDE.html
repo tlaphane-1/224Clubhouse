@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>224 Clubhouse — Website Owner's Guide</title>
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-dark: #a8893a;
+    --ink: #1c1c1c;
+    --ink-soft: #333;
+    --muted: #6b6b6b;
+    --rule: #e2ddd0;
+    --tip-bg: #f6f2e6;
+    --warn-bg: #fbf0ec;
+    --warn-border: #d98b76;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: "Georgia", "Cambria", "Times New Roman", serif;
+    color: var(--ink);
+    background: #ffffff;
+    font-size: 11.5pt;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 8mm 4mm 16mm;
+  }
+
+  /* ---------- Headings ---------- */
+  h1, h2, h3 {
+    font-family: "Helvetica Neue", "Arial", sans-serif;
+    color: var(--ink);
+    line-height: 1.2;
+    page-break-after: avoid;
+  }
+
+  h1 {
+    font-size: 26pt;
+    margin: 0 0 4pt;
+    color: var(--ink);
+    border-bottom: 3px solid var(--gold);
+    padding-bottom: 10pt;
+    letter-spacing: 0.3px;
+  }
+
+  h2 {
+    font-size: 16pt;
+    margin: 26pt 0 8pt;
+    padding-bottom: 5pt;
+    border-bottom: 1.5px solid var(--gold);
+    color: var(--gold-dark);
+  }
+
+  h3 {
+    font-size: 12.5pt;
+    margin: 16pt 0 4pt;
+    color: var(--ink-soft);
+  }
+
+  p { margin: 0 0 9pt; }
+
+  .lede {
+    font-style: italic;
+    color: var(--muted);
+    font-size: 12pt;
+    margin-bottom: 14pt;
+  }
+
+  a { color: var(--gold-dark); text-decoration: none; }
+
+  strong { color: var(--ink); }
+
+  /* ---------- Horizontal rule ---------- */
+  hr {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 18pt 0;
+  }
+
+  /* ---------- Lists ---------- */
+  ul, ol { margin: 0 0 10pt; padding-left: 22pt; }
+  li { margin: 0 0 4pt; }
+  li > ul, li > ol { margin-top: 4pt; }
+
+  /* ---------- Tables ---------- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8pt 0 14pt;
+    font-size: 10.8pt;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid var(--rule);
+    padding: 6pt 9pt;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--tip-bg);
+    color: var(--gold-dark);
+    font-family: "Helvetica Neue", "Arial", sans-serif;
+    font-weight: 600;
+  }
+  tr:nth-child(even) td { background: #faf8f2; }
+
+  /* ---------- Code ---------- */
+  code {
+    font-family: "Consolas", "Courier New", monospace;
+    background: #f1efe8;
+    color: #7a5c12;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.92em;
+  }
+
+  /* ---------- Callouts (blockquotes) ---------- */
+  blockquote {
+    margin: 12pt 0;
+    padding: 10pt 14pt;
+    background: var(--tip-bg);
+    border-left: 4px solid var(--gold);
+    border-radius: 4px;
+    page-break-inside: avoid;
+  }
+  blockquote p { margin: 0; }
+  blockquote.warn {
+    background: var(--warn-bg);
+    border-left-color: var(--warn-border);
+  }
+
+  /* ---------- Table of contents ---------- */
+  .toc { padding-left: 0; list-style: none; counter-reset: toc; }
+  .toc li {
+    counter-increment: toc;
+    margin-bottom: 5pt;
+    padding-left: 26pt;
+    position: relative;
+  }
+  .toc li::before {
+    content: counter(toc) ".";
+    position: absolute;
+    left: 0;
+    color: var(--gold-dark);
+    font-family: "Helvetica Neue", "Arial", sans-serif;
+    font-weight: 600;
+  }
+
+  /* fill-in line */
+  .fill-line {
+    display: block;
+    border-bottom: 1px solid var(--muted);
+    height: 1.4em;
+    margin: 6pt 0;
+  }
+
+  footer.brand {
+    margin-top: 26pt;
+    padding-top: 12pt;
+    border-top: 2px solid var(--gold);
+    text-align: center;
+    font-style: italic;
+    color: var(--muted);
+    font-size: 11pt;
+  }
+
+  /* ---------- Print rules ---------- */
+  @page {
+    size: A4;
+    margin: 16mm 15mm 18mm;
+  }
+  @media print {
+    .page { max-width: none; padding: 0; }
+    h1 { font-size: 24pt; }
+    h2 { page-break-after: avoid; }
+    h2, h3 { page-break-after: avoid; }
+    table, blockquote, tr, img { page-break-inside: avoid; }
+    a { color: var(--ink); }
+    a[href^="http"] { color: var(--gold-dark); }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>224 Clubhouse — Website Owner's Guide</h1>
+<p class="lede">Everything you need to run your website, in plain language. No technical knowledge required.</p>
+
+<hr>
+
+<h2>Welcome</h2>
+<p>This guide explains how to use your 224 Clubhouse website day to day — adding products, managing orders, running events, and looking after memberships. Keep it handy; think of it as your manual for the whole system.</p>
+
+<p>Your website has <strong>two sides</strong>:</p>
+<ol>
+  <li><strong>The public side</strong> — what your customers see and use (the shop, membership sign-up, events, contact page). You don't need to do anything here; it runs itself.</li>
+  <li><strong>The admin side</strong> — your private control room. This is where you, the owner, add products, watch orders come in, and manage members. It is protected by a login, so only you and your staff can reach it.</li>
+</ol>
+
+<h3>Your web addresses</h3>
+<table>
+  <thead>
+    <tr><th>What</th><th>Address</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Your live website</strong> (give this to customers)</td><td><code>https://224clubhouse.web.app</code></td></tr>
+    <tr><td><strong>Your staff control room</strong> (keep this private)</td><td><code>https://224clubhouse.web.app/admin/login</code></td></tr>
+  </tbody>
+</table>
+
+<blockquote><p>💡 <strong>Tip:</strong> Save the admin address as a bookmark on your work computer and phone. Don't share it publicly — it's your back office.</p></blockquote>
+
+<hr>
+
+<h2>Table of contents</h2>
+<ol class="toc">
+  <li><a href="#s1">Signing in to the control room</a></li>
+  <li><a href="#s2">The Dashboard — your daily snapshot</a></li>
+  <li><a href="#s3">Products — your shop stock</a></li>
+  <li><a href="#s4">Orders — sales coming in</a></li>
+  <li><a href="#s5">Events — what's on</a></li>
+  <li><a href="#s6">Memberships — your members</a></li>
+  <li><a href="#s7">Signing out</a></li>
+  <li><a href="#s8">What your customers experience</a></li>
+  <li><a href="#s9">Everyday tasks — quick recipes</a></li>
+  <li><a href="#s10">Good habits &amp; housekeeping</a></li>
+  <li><a href="#s11">Common questions &amp; troubleshooting</a></li>
+  <li><a href="#s12">Who to call for help</a></li>
+</ol>
+
+<hr>
+
+<h2 id="s1">1. Signing in to the control room</h2>
+<ol>
+  <li>Open your web browser and go to <strong><code>https://224clubhouse.web.app/admin/login</code></strong>.</li>
+  <li>You'll see the <strong>224 logo</strong> and a <strong>Sign In</strong> box.</li>
+  <li>Type your <strong>email address</strong> and <strong>password</strong> (the ones you were given when the site was set up).</li>
+  <li>Click the gold <strong>Sign In</strong> button.</li>
+  <li>If your details are correct, you land on the <strong>Dashboard</strong>. If not, a red message says "Invalid credentials" — check your typing and try again.</li>
+</ol>
+
+<blockquote><p>🔒 <strong>Only approved staff accounts can get in.</strong> Even if someone else knows the web address, they cannot reach your products, orders, or members without an approved login. If you need to add another staff member, contact your website support person (see section 12) — they'll create the account for you.</p></blockquote>
+
+<hr>
+
+<h2 id="s2">2. The Dashboard — your daily snapshot</h2>
+<p>The first screen after you sign in. It gives you the health of the business at a glance.</p>
+
+<p><strong>You'll see four summary cards:</strong></p>
+<ul>
+  <li><strong>Total Products</strong> — how many items are in your shop.</li>
+  <li><strong>Total Orders</strong> — how many orders you've ever received.</li>
+  <li><strong>Total Revenue</strong> — total money taken, shown in Rands.</li>
+  <li><strong>Pending Orders</strong> — orders that still need your attention.</li>
+</ul>
+
+<p><strong>Below the cards: Recent Orders</strong> — a list of the latest orders so you can see activity at a glance. To work with orders properly, go to the <strong>Orders</strong> page (section 4).</p>
+
+<p><strong>To move around</strong>, use the <strong>menu on the left</strong>:</p>
+<table>
+  <thead>
+    <tr><th>Menu item</th><th>What it's for</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Dashboard</strong></td><td>The snapshot you're looking at now</td></tr>
+    <tr><td><strong>Products</strong></td><td>Add, edit, and remove shop items</td></tr>
+    <tr><td><strong>Orders</strong></td><td>See and process customer orders</td></tr>
+    <tr><td><strong>Events</strong></td><td>Create and manage events</td></tr>
+    <tr><td><strong>Memberships</strong></td><td>Manage your members</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2 id="s3">3. Products — your shop stock</h2>
+<p>This is where you control everything customers can buy. Click <strong>Products</strong> in the left menu.</p>
+<p>You'll see a table of all your products with a small picture, the category, the price, how many are in stock, whether it's available, and action buttons.</p>
+
+<h3>Adding a new product</h3>
+<ol>
+  <li>Click the gold <strong>Add Product</strong> button (top right).</li>
+  <li>A form pops up. Fill it in:
+    <ul>
+      <li><strong>Product Name</strong> <em>(required)</em> — e.g. "OG Kush".</li>
+      <li><strong>Description</strong> — a few sentences about the product (optional but recommended).</li>
+      <li><strong>Price (Rands)</strong> <em>(required)</em> — type the price in Rands, e.g. <code>50.00</code>.</li>
+      <li><strong>Stock Quantity</strong> <em>(required)</em> — how many you have, e.g. <code>100</code>.</li>
+      <li><strong>Category</strong> <em>(required)</em> — choose <strong>Flower</strong>, <strong>Edibles</strong>, <strong>Accessories</strong>, or <strong>Merchandise</strong>.</li>
+    </ul>
+  </li>
+  <li><strong>If you chose "Flower"</strong>, three extra boxes appear:
+    <ul>
+      <li><strong>Strain Type</strong> — Indica, Sativa, or Hybrid.</li>
+      <li><strong>THC %</strong> — e.g. <code>25.0</code>.</li>
+      <li><strong>Weight (g)</strong> — e.g. <code>3.5</code>.</li>
+    </ul>
+  </li>
+  <li><strong>Two switches:</strong>
+    <ul>
+      <li><strong>Available</strong> — leave <strong>ON</strong> so customers can buy it. Turn <strong>OFF</strong> to hide it from the shop.</li>
+      <li><strong>Members Only</strong> — turn <strong>ON</strong> if only members should see/buy this item.</li>
+    </ul>
+  </li>
+  <li><strong>Add pictures:</strong>
+    <ul>
+      <li>Click the dashed <strong>upload box</strong> (with the up-arrow icon).</li>
+      <li>Choose one or more photos from your computer or phone. You can select several at once.</li>
+      <li>They appear as small thumbnails. To remove one, click the little <strong>✕</strong> on its corner.</li>
+      <li><strong>The first picture is the one customers see first</strong>, so put your best shot first.</li>
+    </ul>
+  </li>
+  <li>Click the gold <strong>Add Product</strong> button at the bottom.</li>
+  <li>A green message confirms <strong>"Product created"</strong> and your item appears in the list.</li>
+</ol>
+
+<h3>Editing a product</h3>
+<ol>
+  <li>Find the product in the list.</li>
+  <li>Click the <strong>pencil icon</strong> in its row.</li>
+  <li>The same form opens, already filled in. Change whatever you need.</li>
+  <li>Click <strong>Update Product</strong>. A green <strong>"Product updated"</strong> message confirms it.</li>
+</ol>
+
+<h3>Turning a product on or off (quickest way to hide/show)</h3>
+<p>In the <strong>Available</strong> column, click the <strong>toggle switch</strong>:</p>
+<ul>
+  <li><strong>Green (pointing right)</strong> = customers can see and buy it.</li>
+  <li><strong>Grey (pointing left)</strong> = hidden from the shop.</li>
+</ul>
+<p>This is the fastest way to temporarily pull something from sale (e.g. you've run out) without deleting it. It changes instantly.</p>
+
+<h3>Deleting a product</h3>
+<ol>
+  <li>Click the <strong>trash-can icon</strong> in the product's row.</li>
+  <li>A box asks <strong>"Delete this product? This cannot be undone."</strong></li>
+  <li>Click <strong>OK</strong> to confirm. A message says <strong>"Product deleted."</strong></li>
+</ol>
+
+<blockquote class="warn"><p>⚠️ <strong>Deleting is permanent.</strong> If you only want to stop selling something for a while, use the <strong>Available</strong> toggle instead — that way you keep the product and its photos for later.</p></blockquote>
+
+<hr>
+
+<h2 id="s4">4. Orders — sales coming in</h2>
+<p>Every time a customer pays, an order lands here. Click <strong>Orders</strong> in the left menu.</p>
+<p>You'll see a table with the order, the customer's name and email, the total, the current status, and a dropdown to change the status.</p>
+
+<h3>Filtering orders</h3>
+<p>At the top is a row of buttons: <strong>all, pending, paid, processing, shipped, delivered, cancelled</strong>. Click one to show only orders in that state. Click <strong>all</strong> to see everything. This helps you focus — for example, click <strong>paid</strong> to see orders you still need to prepare.</p>
+
+<h3>Seeing the full details of an order</h3>
+<p>Click the <strong>arrow (chevron)</strong> at the end of an order's row. It expands to show:</p>
+<ul>
+  <li><strong>The delivery address and phone number.</strong></li>
+  <li><strong>The exact items ordered</strong>, with quantities and prices.</li>
+  <li>The payment reference number.</li>
+</ul>
+<p>Click the arrow again to close it.</p>
+
+<h3>Updating an order's status</h3>
+<p>As you prepare and send an order, keep its status up to date so you always know where things stand:</p>
+<ol>
+  <li>Find the order.</li>
+  <li>Click the <strong>status dropdown</strong>.</li>
+  <li>Choose the new status. A typical journey is: <strong>paid → processing → shipped → delivered.</strong></li>
+  <li>A message confirms <strong>"Order status updated."</strong></li>
+</ol>
+
+<table>
+  <thead>
+    <tr><th>Status</th><th>What it means</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>pending</strong></td><td>Order started but payment not completed</td></tr>
+    <tr><td><strong>paid</strong></td><td>Customer has paid — ready for you to prepare</td></tr>
+    <tr><td><strong>processing</strong></td><td>You're packing/preparing it</td></tr>
+    <tr><td><strong>shipped</strong></td><td>It's on its way</td></tr>
+    <tr><td><strong>delivered</strong></td><td>Customer has received it</td></tr>
+    <tr><td><strong>cancelled</strong></td><td>Order was cancelled</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2 id="s5">5. Events — what's on</h2>
+<p>Promote your sessions, parties, and gatherings. Click <strong>Events</strong> in the left menu. You'll see a list of all events with a picture, date and time, whether it's members-only, and the ticket price.</p>
+
+<h3>Adding an event</h3>
+<ol>
+  <li>Click <strong>Add Event</strong> (top right).</li>
+  <li>Fill in the form:
+    <ul>
+      <li><strong>Event Title</strong> <em>(required)</em> — e.g. "Sesh Sunday".</li>
+      <li><strong>Description</strong> — what it's about.</li>
+      <li><strong>Date</strong> <em>(required)</em> — pick the day.</li>
+      <li><strong>Time</strong> — pick the start time (optional).</li>
+      <li><strong>Location</strong> — already filled with your address; change it if the event is elsewhere.</li>
+      <li><strong>Ticket Price (Rands)</strong> — type a price, or leave it <strong>blank</strong> to make the event <strong>free</strong>.</li>
+    </ul>
+  </li>
+  <li><strong>Upload an image</strong> — click the upload link and choose a photo (one image per event).</li>
+  <li><strong>Members Only</strong> switch — turn <strong>ON</strong> if it's for members only.</li>
+  <li>Click <strong>Add Event</strong>. A confirmation appears and it shows in the list.</li>
+</ol>
+
+<h3>Editing or deleting an event</h3>
+<ul>
+  <li><strong>Edit:</strong> click the <strong>pencil icon</strong>, change the details, click <strong>Update Event</strong>.</li>
+  <li><strong>Delete:</strong> click the <strong>trash-can icon</strong>, confirm, and it's removed.</li>
+</ul>
+
+<hr>
+
+<h2 id="s6">6. Memberships — your members</h2>
+<p>Manage everyone who has signed up to join the club. Click <strong>Memberships</strong> in the left menu.</p>
+
+<p><strong>At the top, four summary cards:</strong></p>
+<ul>
+  <li><strong>Total Applications</strong> — everyone who has applied.</li>
+  <li><strong>Active Members</strong> — currently valid memberships.</li>
+  <li><strong>Pending Review</strong> — applications waiting for your decision.</li>
+  <li><strong>Active Revenue</strong> — money from current memberships.</li>
+</ul>
+
+<p><strong>A search box</strong> lets you find someone fast — start typing a <strong>name or email</strong> and the list filters instantly.</p>
+
+<p><strong>The members table</strong> shows each person's name, email, phone, their tier (Daily Pass, Weekly, or Monthly), their status, the amount they paid, and when their membership expires.</p>
+
+<h3>Changing a member's status</h3>
+<p>In each member's row there are small action buttons:</p>
+<ul>
+  <li>✅ <strong>Green tick</strong> — mark the member <strong>Active</strong> (approved and current).</li>
+  <li>❌ <strong>Red cross</strong> — <strong>Cancel</strong> the membership.</li>
+  <li>🕐 <strong>Grey clock</strong> — mark the membership <strong>Expired</strong>.</li>
+</ul>
+<p>Click the one you want; a short message confirms the change.</p>
+
+<p><strong>What the status colours mean:</strong></p>
+<table>
+  <thead>
+    <tr><th>Colour</th><th>Status</th><th>Meaning</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>🟢 Green</td><td>Active</td><td>Membership is current and valid</td></tr>
+    <tr><td>🟡 Yellow</td><td>Pending</td><td>Waiting for you to approve</td></tr>
+    <tr><td>⚪ Grey</td><td>Expired</td><td>The membership period has ended</td></tr>
+    <tr><td>🔴 Red</td><td>Cancelled</td><td>The member or you cancelled it</td></tr>
+  </tbody>
+</table>
+
+<blockquote><p>💡 <strong>Membership lengths:</strong> Daily Pass = 1 day, Weekly = 7 days, Monthly = 30 days. The expiry date is worked out automatically from when they joined.</p></blockquote>
+
+<hr>
+
+<h2 id="s7">7. Signing out</h2>
+<p>When you're finished, always sign out — especially on a shared or public computer.</p>
+<ul>
+  <li>Click <strong>Sign Out</strong> at the <strong>bottom of the left menu</strong>.</li>
+  <li>You'll return to the login screen. Your control room is locked again.</li>
+</ul>
+
+<hr>
+
+<h2 id="s8">8. What your customers experience</h2>
+<p>You don't manage this part — it runs automatically — but it helps to know what your customers go through.</p>
+
+<p><strong>Buying a product:</strong></p>
+<ol>
+  <li><strong>Age check</strong> — first-time visitors must confirm they are <strong>21 or older</strong> before the site opens. (Visitors who say they're under 21 are sent away.)</li>
+  <li><strong>The Store</strong> — they browse products, search by name, and filter by category.</li>
+  <li><strong>Product page</strong> — they view photos (with a gallery), read the details, pick a quantity, and click <strong>Add to Cart</strong>.</li>
+  <li><strong>Cart</strong> — they review their items and the total. Orders over a set amount get <strong>free shipping</strong>; otherwise a delivery fee is added.</li>
+  <li><strong>Checkout</strong> — they enter their name, contact details and delivery address, tick the 21+ confirmation, and pay securely by card through <strong>Paystack</strong>.</li>
+  <li><strong>Confirmation</strong> — they see an order confirmation, and the order appears in your <strong>Orders</strong> page.</li>
+</ol>
+
+<p><strong>Joining as a member:</strong></p>
+<ol>
+  <li>On the <strong>Membership</strong> page they choose a tier (Daily, Weekly, or Monthly).</li>
+  <li>They fill in their details and date of birth, and agree to the <strong>12 Club Commandments</strong>.</li>
+  <li>They pay through <strong>Paystack</strong>.</li>
+  <li>They see a welcome screen and are asked to present their confirmation at the door. The new member then appears in your <strong>Memberships</strong> page.</li>
+</ol>
+
+<p><strong>Other pages customers can visit:</strong> Events (what's on), About (your story), and Contact (your address, phone, hours, a map, and a message form).</p>
+
+<blockquote><p>💳 <strong>About payments:</strong> All card payments are handled securely by <strong>Paystack</strong>. Your website never sees or stores customers' card numbers.</p></blockquote>
+
+<hr>
+
+<h2 id="s9">9. Everyday tasks — quick recipes</h2>
+
+<p><strong>"I've run out of an item."</strong><br>
+→ Products → click the <strong>green Available toggle</strong> so it turns grey. The item disappears from the shop until you switch it back on. (No need to delete it.)</p>
+
+<p><strong>"New stock arrived."</strong><br>
+→ Products → <strong>pencil icon</strong> on the item → update the <strong>Stock Quantity</strong> → if it was hidden, turn <strong>Available</strong> back on → <strong>Update Product</strong>.</p>
+
+<p><strong>"I want to add this week's special."</strong><br>
+→ Products → <strong>Add Product</strong> → fill in the details and photos → <strong>Add Product</strong>.</p>
+
+<p><strong>"A customer paid — what now?"</strong><br>
+→ Orders → find the order (filter by <strong>paid</strong>) → open it with the <strong>arrow</strong> to see the address and items → prepare it → set status to <strong>processing</strong>, then <strong>shipped</strong>, then <strong>delivered</strong> as you go.</p>
+
+<p><strong>"I'm promoting Friday's event."</strong><br>
+→ Events → <strong>Add Event</strong> → title, date, time, price (or leave blank for free), photo → <strong>Add Event</strong>.</p>
+
+<p><strong>"Approve a new member."</strong><br>
+→ Memberships → find them (use <strong>search</strong>) → click the <strong>green tick</strong> to mark them <strong>Active</strong>.</p>
+
+<hr>
+
+<h2 id="s10">10. Good habits &amp; housekeeping</h2>
+<ul>
+  <li><strong>Use good photos.</strong> Clear, well-lit, square-ish pictures look best. The first photo is the main one customers see.</li>
+  <li><strong>Keep stock numbers honest.</strong> Update quantities when stock changes so the shop never sells something you don't have.</li>
+  <li><strong>Process orders promptly</strong> and keep their status current — it's how you track what still needs doing.</li>
+  <li><strong>Prefer the Available toggle over Delete.</strong> Toggling hides an item but keeps it (and its photos) for next time. Deleting is permanent.</li>
+  <li><strong>Always sign out</strong> on shared computers.</li>
+  <li><strong>Use a strong password</strong> for your admin login and don't share it.</li>
+  <li><strong>The admin address is private.</strong> Treat it like the keys to your shop.</li>
+</ul>
+
+<hr>
+
+<h2 id="s11">11. Common questions &amp; troubleshooting</h2>
+
+<p><strong>I can't log in.</strong><br>
+Double-check your email and password (watch for capital letters and spaces). If it still won't work, ask your support contact (section 12) to reset your password.</p>
+
+<p><strong>The age check keeps appearing / a customer says they can't get past it.</strong><br>
+The 21+ confirmation is remembered <strong>per device and per browser</strong>. It will show again on a new phone or computer, or if someone clears their browser history. That's normal.</p>
+
+<p><strong>I added a product but customers can't see it.</strong><br>
+Check two things: the <strong>Available</strong> switch is <strong>green (on)</strong>, and <strong>Members Only</strong> is <strong>off</strong> if it should be for everyone.</p>
+
+<p><strong>My new product has no picture in the shop.</strong><br>
+You probably didn't upload a photo, or it was still uploading when you saved. Edit the product and add an image. While images upload you'll see "Uploading…" — wait for the thumbnail to appear before saving.</p>
+
+<p><strong>A price looks wrong.</strong><br>
+Always type prices in <strong>Rands</strong> (e.g. <code>50.00</code>), not cents. Edit the product to fix it.</p>
+
+<p><strong>An order is stuck on "pending".</strong><br>
+"Pending" usually means the customer started but didn't finish paying. You only need to act on orders marked <strong>paid</strong>.</p>
+
+<p><strong>A customer says they paid but didn't get a confirmation email.</strong><br>
+Check the <strong>Orders</strong> page — if the order is there and marked <strong>paid</strong>, you have their details and can contact them directly. If confirmation emails aren't arriving at all, tell your support contact so they can check the email setup.</p>
+
+<p><strong>Something looks broken or won't load.</strong><br>
+Try refreshing the page first. If it persists, note what you were doing and contact support (section 12).</p>
+
+<hr>
+
+<h2 id="s12">12. Who to call for help</h2>
+<p>For anything this guide doesn't cover — adding staff logins, password resets, changing how the site works, or fixing a problem — contact your website support person:</p>
+
+<p><strong>Your website developer / support contact:</strong></p>
+<span class="fill-line"></span>
+<span class="fill-line"></span>
+<p><em>(Write their name, phone, and email here so it's always to hand.)</em></p>
+
+<p>When you ask for help, it speeds things up if you can say:</p>
+<ul>
+  <li><strong>What you were trying to do.</strong></li>
+  <li><strong>What happened instead</strong> (and any message you saw).</li>
+  <li><strong>Which page</strong> you were on (e.g. Products, Orders).</li>
+</ul>
+
+<footer class="brand">224 Clubhouse — Boksburg, South Africa. Members only. Elevated always.</footer>
+
+</div>
+</body>
+</html>

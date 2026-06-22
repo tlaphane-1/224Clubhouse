@@ -42,7 +42,7 @@ Flag: **Google Maps API key hardcoded** in `Contact.jsx:213` — browser-visible
 - [x] Drop all `*_auth_*` write policies on products/events/memberships/newsletter (+ storage upload/delete); replace with `is_admin()`. Public SELECT on products/events and public INSERT on memberships/newsletter kept.
 - [~] `orders` policy: **DEFERRED to the payment workstream** (left as original `auth.role()='authenticated'`). Tightening it now would break live anon checkout/confirmation with no server-side replacement.
 - [x] `AuthContext.jsx`: derive `isAdmin` via `rpc('is_admin')`; resolve admin in `signIn` before returning (avoid redirect race). Removed `VITE_ADMIN_EMAILS` (and from `.env.example`; `CLAUDE.md` updated).
-- [ ] **YOU must run, in order:** (1) confirm the admin's `auth.users` row exists + edit the seed email in the migration; (2) `supabase db push`; (3) deploy the `AuthContext` change. The migration MUST be applied before/with the client change, or `rpc('is_admin')` fails and the admin UI locks out. Keep a service-role insert ready as fallback.
+- [x] **APPLIED 2026-06-22.** Existing `auth.users` row `admin@224clubhouse.co.za` already matched the seed (no edit needed). Reset its password via `scripts/provision-admin.mjs`, ran `supabase db push --yes` (project `aogdkqczvlffgydgxsmz` confirmed linked), verified end-to-end with `scripts/verify-admin.mjs`: `admin_users` has 1 row, anon sign-in + `rpc('is_admin')` → `true`. Live admin login at https://224clubhouse.web.app/admin/login works.
 
 Decision pending (you): **payment provider — Paystack vs Yoco** (+ confirm cannabis is permitted by the processor) before the payment half of Workstream 2 proceeds.
 
@@ -77,5 +77,56 @@ Status-change emails + fulfilment fields; refund flow + `refunded` status; admin
 
 ---
 
+---
+
+## Workstream 5 — Admin Products page improvements (in progress)
+
+The `/admin/products` CRUD already exists (create/edit/delete/toggle/upload). Improving it.
+
+Scope (approved):
+1. Search + filters (name search, category, availability, stock)
+2. Column sorting (name, price, stock)
+3. Form validation (price/stock NaN guards, required name/category, duplicate-slug guard on create)
+4. Image cleanup on delete (remove orphaned files from `product-images` bucket)
+5. Galleries — admin (view all images per product) + store cards (cycle images)
+
+Tasks:
+- [ ] util `src/utils/storageImages.js`: `storagePathFromUrl(url)` + `deleteProductImages(urls)` (parse path after `/product-images/`, call `storage.remove`)
+- [ ] Products.jsx: client-side search/category/availability/stock filters + sortable headers (useMemo over `useAllProducts`)
+- [ ] Products.jsx: image-count badge on table thumb; click opens read-only gallery Modal
+- [ ] Products.jsx handleDelete: delete storage files after the row delete succeeds
+- [ ] ProductForm.jsx: validation + delete file from storage when an image is removed
+- [ ] ProductCard.jsx: multi-image dot indicators, hover/tap to change image (no nav conflict)
+- [ ] Verify: `npm run lint` + `npm run build`
+
+Notes:
+- `docs/DESIGN_SYSTEM.md` (referenced in CLAUDE.md) does NOT exist — using tokens from tailwind.config.js + index.css.
+- Product images stored as full public URLs; storage path = everything after `/product-images/`.
+- Uploads are immediate (on file-select) → removing an image should delete from storage immediately too.
+- Storefront ProductDetail.jsx already has a full gallery — not touching it.
+
+---
+
 ## Review
-(Fill in as workstreams complete.)
+
+### 2026-06-22 session — handoff prep
+- **Hosting:** deployed to Firebase Hosting site `224clubhouse` → https://224clubhouse.web.app (old default `clubhouse-61730.web.app` disabled). Configs: `firebase.json` (SPA rewrites + asset caching), `.firebaserc`.
+- **Client manual:** `docs/USER_GUIDE.md` (+ `.pdf`, `.html`) — non-technical how-to.
+- **Admin auth migration:** applied live + verified (see Workstream 2). Admin login: `admin@224clubhouse.co.za`.
+- **Mobile fixes:** `AdminLayout` responsive (drawer on phones); `Orders` mobile card view (was blank on phones); `Memberships` now wrapped in `AdminLayout`; `ProductDetail` carousel tap targets.
+- **Auth robustness:** `AuthContext` initial load + signIn now time-boxed + always clears `loading` (no more infinite spinner on flaky mobile networks).
+- **Bundle:** route-level `React.lazy` + Suspense, vendor `manualChunks`. Entry 854 KB → 32 KB. Firebase (145 KB) + admin no longer on storefront. **framer-motion fully removed** (132 KB raw / ~43 KB gzip) — replaced with CSS animation utilities in `index.css`; dependency uninstalled. Storefront initial ≈ 155 KB gzip (was 248 KB single bundle). All pages headless-verified rendering.
+- **Admin image upload BUG fixed (root cause):** upload path used the raw filename; unicode/accented names (e.g. `café.jpg`) → Supabase "Invalid key" → upload failed. Added `src/utils/safeFileName.js`, used in `ProductForm` + `EventForm`, and surfaced the real error. Verified messy/unicode/emoji filenames now upload.
+- **Ops scripts left:** `scripts/provision-admin.mjs` (reset admin password), `scripts/verify-admin.mjs` (test login end-to-end).
+
+### 2026-06-23 — Cash/Card on Delivery + live tracking + tests (subagent build)
+- **Migration `20260622130000_cod_and_tracking.sql`** (applied + verified live): added `payment_method`, `order_number`, `tracking_token`, `status_history` to orders; delivery status set (pending→confirmed→preparing→out_for_delivery→delivered). Three SECURITY DEFINER RPCs — `place_cod_order` (anon, server-recomputes totals + decrements stock), `get_order_tracking` (anon, number+email, null on mismatch — no enumeration), `admin_update_order_status` (is_admin only, appends history). orders table RLS stays locked; anon never touches it directly.
+- **Checkout** now Cash/Card on Delivery (`PaymentMethodSelect`, Paystack hidden but code kept). **TrackOrder** page (`/track`, polls every 15s) with status timeline. **OrderConfirmation** rewritten (router state, COD callout, track CTA). **Admin Orders** uses the delivery status set + admin RPC + payment/order-number display; `Badge` got new status colors. Shared vocab in `src/utils/orderStatus.js`.
+- **Tests:** `src/__tests__/cod.contract.test.js` (anon place/track + wrong-email + admin-boundary negative controls; self-cleaning). Playwright e2e (`e2e/*.spec.js` + `playwright.config.js`): storefront/cart, tracking not-found, admin login. **5 passed / 1 skipped** against the live site. `eslint.config.js` got a node-globals override for test/scripts dirs. Run: `npm run test:contract` (DB), `npm run test:e2e` (needs `npx playwright install chromium` once; `ADMIN_EMAIL`/`ADMIN_PASSWORD` env to exercise the admin-login e2e).
+- Note: `predeploy` now includes the COD contract test, which writes+cleans a test order on the live DB (idempotent).
+
+### Still open before real-money launch (unchanged)
+- Server-side payment verification (Workstream 2) — keep Paystack in TEST mode until done.
+- Contact form + membership confirmation emails are cosmetic (Workstream 4).
+- POPIA: privacy policy + harden age gate.
+- ESLint flat config missing React `jsx-uses-vars` rule → 49 pre-existing false-positive "unused" errors (`npm run build` is clean; `npm run lint` is not).

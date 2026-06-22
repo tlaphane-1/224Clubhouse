@@ -4,6 +4,7 @@ import Button from '../ui/Button'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { Upload } from 'lucide-react'
+import { safeFileName } from '../../utils/safeFileName'
 
 const DEFAULT_LOCATION = '224 Rondebult Ave, Libradene, Boksburg'
 
@@ -25,19 +26,21 @@ export default function EventForm({ event, onClose }) {
   const set = (key, value) => setForm(f => ({ ...f, [key]: value }))
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0]
+    const input = e.target
+    const file = input.files[0]
     if (!file) return
     setUploading(true)
     try {
-      const path = `events/${Date.now()}-${file.name}`
+      const path = `events/${Date.now()}-${safeFileName(file.name)}`
       const { error } = await supabase.storage.from('event-images').upload(path, file)
       if (error) throw error
       const { data } = supabase.storage.from('event-images').getPublicUrl(path)
       set('image_url', data.publicUrl)
-    } catch {
-      toast.error('Image upload failed')
+    } catch (err) {
+      toast.error(err.message || 'Image upload failed')
     } finally {
       setUploading(false)
+      input.value = '' // reset so selecting the same file again still fires onChange
     }
   }
 

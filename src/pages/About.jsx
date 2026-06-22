@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { BRAND_IMAGES } from '../hooks/useStorageImages'
 
@@ -39,11 +38,7 @@ export default function About() {
         <div className="absolute inset-0"
           style={{ background: 'radial-gradient(ellipse at 60% 50%, rgba(201,168,76,0.06) 0%, transparent 60%)' }} />
         <div className="max-w-4xl mx-auto relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+          <div className="animate-fadeIn">
             <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Our Story</p>
             <h1 className="font-heading text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
               Built on Experience,<br />Authenticity & Love<br />for the Culture.
@@ -52,18 +47,14 @@ export default function About() {
             <p className="text-muted text-lg leading-relaxed max-w-2xl">
               224 Clubhouse represents the evolution of cannabis culture in South Africa — a space where community, connection, and intentional living converge.
             </p>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* Founder Story */}
       <section className="py-20 px-4 bg-surface border-y border-border">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+          <div className="animate-fadeIn">
             <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">The Founder</p>
             <h2 className="section-heading text-white mb-6">George's Story</h2>
             <div className="space-y-4 text-muted leading-relaxed">
@@ -77,12 +68,9 @@ export default function About() {
                 From Dank Monkey in 2021 to Herbally in 2022, each iteration brought him closer to the vision that would become 224 Clubhouse. In April 2025, that vision became reality at 224 Rondebult Ave, Boksburg — the address that gave the clubhouse its name.
               </p>
             </div>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="relative"
+          </div>
+          <div
+            className="relative animate-fadeIn"
           >
             <img
               src={BRAND_IMAGES.header}
@@ -90,7 +78,7 @@ export default function About() {
               className="w-full aspect-square object-cover rounded-2xl"
             />
             <div className="absolute inset-0 rounded-2xl ring-1 ring-gold/20" />
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -104,13 +92,10 @@ export default function About() {
           <div className="relative">
             <div className="absolute left-16 top-0 bottom-0 w-px bg-border" />
             <div className="space-y-10">
-              {timeline.map((item, i) => (
-                <motion.div
+              {timeline.map((item) => (
+                <div
                   key={item.year}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.15, duration: 0.4 }}
-                  className="flex gap-8 items-start"
+                  className="flex gap-8 items-start animate-fadeIn"
                 >
                   <div className="w-32 shrink-0 text-right">
                     <span className="font-heading text-2xl font-bold text-gold">{item.year}</span>
@@ -120,7 +105,7 @@ export default function About() {
                     <h3 className="font-heading text-lg font-bold text-white mb-2">{item.title}</h3>
                     <p className="text-muted text-sm leading-relaxed">{item.description}</p>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
@@ -135,17 +120,14 @@ export default function About() {
             <h2 className="section-heading text-white">Our Values</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {values.map((v, i) => (
-              <motion.div
+            {values.map((v) => (
+              <div
                 key={v.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1, duration: 0.4 }}
-                className="bg-background border border-border rounded-xl p-8"
+                className="bg-background border border-border rounded-xl p-8 animate-fadeIn"
               >
                 <h3 className="font-heading text-xl font-bold text-gold mb-3">{v.title}</h3>
                 <p className="text-muted text-sm leading-relaxed">{v.desc}</p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>

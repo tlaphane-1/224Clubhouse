@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { Calendar } from 'lucide-react'
 import { useEvents } from '../hooks/useEvents'
 import EventCard from '../components/events/EventCard'
@@ -12,10 +11,8 @@ export default function Events() {
   }, [])
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen pt-28 pb-20"
+    <div
+      className="min-h-screen pt-28 pb-20 animate-fadeIn"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -42,15 +39,13 @@ export default function Events() {
           </div>
         ) : events && events.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event, i) => (
-              <motion.div
+            {events.map((event) => (
+              <div
                 key={event.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1, duration: 0.4 }}
+                className="animate-fadeIn"
               >
                 <EventCard event={event} />
-              </motion.div>
+              </div>
             ))}
           </div>
         ) : (
@@ -61,6 +56,6 @@ export default function Events() {
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   )
 }

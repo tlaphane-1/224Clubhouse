@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
 import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
@@ -89,14 +88,14 @@ export default function Contact() {
     <div className="min-h-screen bg-background">
       {/* Hero */}
       <section className="pt-32 pb-16 px-4 text-center">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <div className="animate-fadeIn">
           <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Get In Touch</p>
           <h1 className="font-heading text-5xl md:text-6xl font-bold text-white mb-4">Contact Us</h1>
           <div className="w-16 h-px bg-gold mx-auto mb-6" />
           <p className="text-muted max-w-lg mx-auto leading-relaxed">
             Have a question, a vibe, or just want to find us? We're right here.
           </p>
-        </motion.div>
+        </div>
       </section>
 
       <section className="py-12 px-4">
@@ -104,15 +103,12 @@ export default function Contact() {
 
           {/* Contact Info */}
           <div className="space-y-6">
-            {INFO.map((item, i) => {
+            {INFO.map((item) => {
               const Icon = item.icon
               return (
-                <motion.div
+                <div
                   key={item.label}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.08, duration: 0.4 }}
-                  className="flex gap-5 bg-surface border border-border rounded-xl p-6"
+                  className="flex gap-5 bg-surface border border-border rounded-xl p-6 animate-fadeIn"
                 >
                   <div className="w-11 h-11 bg-gold/10 rounded-lg flex items-center justify-center shrink-0">
                     <Icon size={20} className="text-gold" />
@@ -133,7 +129,7 @@ export default function Contact() {
                       </a>
                     )}
                   </div>
-                </motion.div>
+                </div>
               )
             })}
 
@@ -162,11 +158,7 @@ export default function Contact() {
           </div>
 
           {/* Contact Form */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
+          <div className="animate-fadeIn">
             <div className="bg-surface border border-border rounded-2xl p-8">
               <h2 className="font-heading text-2xl font-bold text-white mb-6">Send a Message</h2>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -218,7 +210,7 @@ export default function Contact() {
                 loading="lazy"
               />
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
     </div>

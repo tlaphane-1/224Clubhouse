@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingBag, Menu, X } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
@@ -11,6 +10,7 @@ const navLinks = [
   { to: '/events', label: 'Events' },
   { to: '/membership', label: 'Membership' },
   { to: '/about', label: 'About' },
+  { to: '/track', label: 'Track Order' },
 ]
 
 export default function Navbar() {
@@ -69,20 +69,14 @@ export default function Navbar() {
                     cartCount > 0 ? 'text-gold' : 'text-muted group-hover:text-white'
                   }`}
                 />
-                <AnimatePresence>
-                  {cartCount > 0 && (
-                    <motion.span
-                      key="badge"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
-                      className="absolute -top-2 -right-2 bg-gold text-black text-[10px] font-bold
-                                 w-5 h-5 rounded-full flex items-center justify-center"
-                    >
-                      {cartCount > 99 ? '99+' : cartCount}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+                {cartCount > 0 && (
+                  <span
+                    className="absolute -top-2 -right-2 bg-gold text-black text-[10px] font-bold
+                               w-5 h-5 rounded-full flex items-center justify-center animate-scaleIn"
+                  >
+                    {cartCount > 99 ? '99+' : cartCount}
+                  </span>
+                )}
               </Link>
 
               <button
@@ -97,22 +91,14 @@ export default function Navbar() {
       </nav>
 
       {/* Mobile Drawer */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"
+      {mobileOpen && (
+        <>
+            <div
+              className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm animate-fade"
               onClick={() => setMobileOpen(false)}
             />
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'tween', duration: 0.3 }}
-              className="fixed top-0 right-0 bottom-0 z-[70] w-72 bg-surface border-l border-border flex flex-col"
+            <div
+              className="fixed top-0 right-0 bottom-0 z-[70] w-72 bg-surface border-l border-border flex flex-col animate-slideInRight"
             >
               <div className="flex items-center justify-between p-6 border-b border-border">
                 <img src={BRAND_IMAGES.logoWide} alt="224 Clubhouse" className="h-8 w-auto object-contain" />
@@ -154,10 +140,9 @@ export default function Navbar() {
                   )}
                 </Link>
               </div>
-            </motion.div>
+            </div>
           </>
         )}
-      </AnimatePresence>
     </>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import { Crown, Search, Check, X, Clock } from 'lucide-react'
+import AdminLayout from '../../components/admin/AdminLayout'
 import { useMemberships, useUpdateMembershipStatus } from '../../hooks/useMemberships'
 import toast from 'react-hot-toast'
 
@@ -40,7 +40,7 @@ export default function AdminMemberships() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <AdminLayout>
       <div className="flex items-center gap-3 mb-8">
         <Crown size={22} className="text-gold" />
         <h1 className="font-heading text-2xl font-bold text-white">Memberships</h1>
@@ -89,11 +89,9 @@ export default function AdminMemberships() {
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={6} className="text-center text-muted py-12">No memberships found.</td></tr>
               ) : filtered.map(m => (
-                <motion.tr
+                <tr
                   key={m.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="border-b border-border/50 hover:bg-background/50 transition-colors"
+                  className="border-b border-border/50 hover:bg-background/50 transition-colors animate-fade"
                 >
                   <td className="px-5 py-4">
                     <p className="text-white font-medium text-sm">{m.full_name}</p>
@@ -145,12 +143,12 @@ export default function AdminMemberships() {
                       )}
                     </div>
                   </td>
-                </motion.tr>
+                </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   )
 }

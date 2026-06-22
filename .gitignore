@@ -19,6 +19,12 @@ dist-ssr
 224-images-staging/
 224-product-images-staging/
 
+# Deploy / test artifacts (regenerated, not source)
+.firebase/
+supabase/.temp/
+test-results/
+playwright-report/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

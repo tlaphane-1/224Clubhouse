@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
 import { Check, Crown, Star, Zap } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
@@ -168,10 +167,8 @@ export default function Membership() {
   if (step === 'success') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full text-center bg-surface border border-gold/30 rounded-2xl p-10"
+        <div
+          className="max-w-md w-full text-center bg-surface border border-gold/30 rounded-2xl p-10 animate-scaleIn"
         >
           <div className="w-16 h-16 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-6">
             <Crown size={32} className="text-gold" />
@@ -191,7 +188,7 @@ export default function Membership() {
           <a href="/" className="btn-gold w-full py-3 text-sm uppercase tracking-widest inline-block">
             Back to Home
           </a>
-        </motion.div>
+        </div>
       </div>
     )
   }
@@ -200,18 +197,14 @@ export default function Membership() {
     <div className="min-h-screen bg-background">
       {/* Hero */}
       <section className="pt-32 pb-16 px-4 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
+        <div className="animate-fadeIn">
           <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Join The Club</p>
           <h1 className="font-heading text-5xl md:text-6xl font-bold text-white mb-4">Membership</h1>
           <div className="w-16 h-px bg-gold mx-auto mb-6" />
           <p className="text-muted max-w-xl mx-auto text-lg leading-relaxed">
             224 Clubhouse is a private, members-based space designed for community, connection, and curated experiences. Choose your level of access.
           </p>
-        </motion.div>
+        </div>
       </section>
 
       {/* Requirements Banner */}
@@ -225,17 +218,14 @@ export default function Membership() {
       <section className="py-20 px-4">
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TIERS.map((t, i) => {
+            {TIERS.map((t) => {
               const Icon = t.icon
               const isSelected = selected === t.id
               return (
-                <motion.div
+                <div
                   key={t.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
                   onClick={() => setSelected(t.id)}
-                  className={`relative cursor-pointer bg-surface border-2 rounded-2xl p-8 transition-all duration-200 ${
+                  className={`relative cursor-pointer bg-surface border-2 rounded-2xl p-8 transition-all duration-200 animate-fadeIn ${
                     isSelected ? 'border-gold shadow-xl shadow-gold/10' : t.color
                   }`}
                 >
@@ -263,7 +253,7 @@ export default function Membership() {
                       <span className="text-gold text-xs uppercase tracking-widest font-semibold">Selected</span>
                     </div>
                   )}
-                </motion.div>
+                </div>
               )
             })}
           </div>
@@ -282,10 +272,8 @@ export default function Membership() {
       {/* Application Form Modal */}
       {step === 'form' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-surface border border-border rounded-2xl p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+          <div
+            className="bg-surface border border-border rounded-2xl p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scaleIn"
           >
             <h2 className="font-heading text-2xl font-bold text-white mb-1">
               {tier.label} Application
@@ -352,7 +340,7 @@ export default function Membership() {
                 </button>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       )}
 
