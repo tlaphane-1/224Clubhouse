@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Crown, Search, Check, X, Clock } from 'lucide-react'
+import { Crown, Search, Check, X, Clock, AlertTriangle } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { useMemberships, useUpdateMembershipStatus } from '../../hooks/useMemberships'
 import toast from 'react-hot-toast'
@@ -14,7 +14,7 @@ const STATUS_STYLES = {
 const TIER_LABELS = { daily: 'Daily Pass', weekly: 'Weekly', monthly: 'Monthly' }
 
 export default function AdminMemberships() {
-  const { data: memberships, isLoading } = useMemberships()
+  const { data: memberships, isLoading, isError, refetch } = useMemberships()
   const updateStatus = useUpdateMembershipStatus()
   const [search, setSearch] = useState('')
 
@@ -86,6 +86,18 @@ export default function AdminMemberships() {
             <tbody>
               {isLoading ? (
                 <tr><td colSpan={6} className="text-center text-muted py-12">Loading...</td></tr>
+              ) : isError ? (
+                <tr><td colSpan={6} className="py-12">
+                  <div className="text-center">
+                    <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
+                    <p className="text-white text-sm mb-5">
+                      Couldn't load memberships. Please check your connection and try again.
+                    </p>
+                    <button onClick={() => refetch()} className="btn-gold text-sm">
+                      Retry
+                    </button>
+                  </div>
+                </td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={6} className="text-center text-muted py-12">No memberships found.</td></tr>
               ) : filtered.map(m => (

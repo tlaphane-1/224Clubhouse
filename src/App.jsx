@@ -7,6 +7,8 @@ import { CartProvider } from './context/CartContext'
 import AgeGate from './components/layout/AgeGate'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
+import ErrorBoundary from './components/ErrorBoundary'
+import NotFound from './pages/NotFound'
 
 // Pages are lazy-loaded: each becomes its own chunk fetched on demand, so the
 // storefront's initial bundle no longer ships the admin panel, checkout,
@@ -82,6 +84,7 @@ export default function App() {
           <BrowserRouter>
             <AgeGate />
             <Toaster position="top-right" />
+            <ErrorBoundary>
             <Suspense fallback={<PageFallback />}>
               <Routes>
                 {/* Public */}
@@ -106,9 +109,10 @@ export default function App() {
                 <Route path="/admin/memberships" element={<ProtectedRoute><AdminMemberships /></ProtectedRoute>} />
 
                 {/* Fallback */}
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
               </Routes>
             </Suspense>
+            </ErrorBoundary>
           </BrowserRouter>
         </CartProvider>
       </AuthProvider>

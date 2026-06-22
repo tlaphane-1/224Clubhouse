@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import Badge from '../../components/ui/Badge'
 import { useOrders, useUpdateOrderStatus } from '../../hooks/useOrders'
@@ -8,7 +8,7 @@ import { ALL_STATUSES, statusLabel, paymentLabel } from '../../utils/orderStatus
 import toast from 'react-hot-toast'
 
 export default function Orders() {
-  const { data: orders, isLoading } = useOrders()
+  const { data: orders, isLoading, isError, refetch } = useOrders()
   const updateStatus = useUpdateOrderStatus()
   const [filter, setFilter] = useState('all')
   const [expandedId, setExpandedId] = useState(null)
@@ -55,6 +55,16 @@ export default function Orders() {
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-muted">Loading orders...</div>
+        ) : isError ? (
+          <div className="p-10 text-center">
+            <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
+            <p className="text-white text-sm mb-5">
+              Couldn't load orders. Please check your connection and try again.
+            </p>
+            <button onClick={() => refetch()} className="btn-gold text-sm">
+              Retry
+            </button>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center text-muted">No orders found.</div>
         ) : (

@@ -65,18 +65,22 @@ export default function Contact() {
     }
     setLoading(true)
     try {
-      // Store as a newsletter subscriber note or invoke an edge function
-      // For now, send via the send-order-email pattern — store in a contact_messages table
-      // Fallback: just show success (email forwarding can be wired later)
-      await supabase.functions.invoke('send-contact-email', {
-        body: { name: form.name, email: form.email, subject: form.subject, message: form.message },
-      }).catch(() => null) // graceful — function may not exist yet
-
-      toast.success('Message sent! We\'ll get back to you within 1–2 business days.', {
-        duration: 5000,
-        style: { background: '#111111', color: '#fff', border: '1px solid #C9A84C' },
+      const { error } = await supabase.from('contact_messages').insert({
+        name: form.name,
+        email: form.email,
+        subject: form.subject || null,
+        message: form.message,
       })
-      setForm({ name: '', email: '', subject: '', message: '' })
+
+      if (error) {
+        toast.error('Something went wrong. Please email us directly at team@224clubhouse.co.za')
+      } else {
+        toast.success('Message sent! We\'ll get back to you within 1–2 business days.', {
+          duration: 5000,
+          style: { background: '#111111', color: '#fff', border: '1px solid #C9A84C' },
+        })
+        setForm({ name: '', email: '', subject: '', message: '' })
+      }
     } catch {
       toast.error('Something went wrong. Please email us directly at team@224clubhouse.co.za')
     } finally {

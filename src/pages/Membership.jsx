@@ -70,12 +70,6 @@ const COMMANDMENTS = [
   'Hold each other accountable — we are family.',
 ]
 
-function addDays(days) {
-  const d = new Date()
-  d.setDate(d.getDate() + days)
-  return d.toISOString()
-}
-
 export default function Membership() {
   const [selected, setSelected] = useState('weekly')
   const [step, setStep] = useState('tiers') // 'tiers' | 'form' | 'success'
@@ -137,18 +131,16 @@ export default function Membership() {
       },
       callback: async (response) => {
         try {
-          const expiresMap = { daily: 1, weekly: 7, monthly: 30 }
-          const { error } = await supabase.from('memberships').insert({
-            full_name: form.full_name,
-            email: form.email,
-            phone: form.phone,
-            date_of_birth: form.date_of_birth,
-            id_number: form.id_number || null,
-            tier: selected,
-            status: 'active',
-            amount: tier.price,
-            paystack_reference: response.reference,
-            expires_at: addDays(expiresMap[selected]),
+          const { error } = await supabase.rpc('place_membership', {
+            p_customer: {
+              full_name: form.full_name,
+              email: form.email,
+              phone: form.phone,
+              date_of_birth: form.date_of_birth,
+              id_number: form.id_number || null,
+            },
+            p_tier: selected,
+            p_reference: response.reference,
           })
           if (error) throw error
           setStep('success')
@@ -173,12 +165,12 @@ export default function Membership() {
           <div className="w-16 h-16 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-6">
             <Crown size={32} className="text-gold" />
           </div>
-          <h1 className="font-heading text-3xl font-bold text-white mb-3">Welcome to 224</h1>
+          <h1 className="font-heading text-3xl font-bold text-white mb-3">Application Received</h1>
           <p className="text-muted leading-relaxed mb-2">
-            Your <span className="text-gold font-semibold">{tier.label}</span> membership is active.
+            Thanks <span className="text-white">{form.full_name.split(' ')[0]}</span>! We've received your{' '}
+            <span className="text-gold font-semibold">{tier.label}</span> membership application and will confirm it shortly.
           </p>
           <p className="text-muted text-sm leading-relaxed mb-8">
-            A confirmation has been sent to <span className="text-white">{form.email}</span>.
             Present your confirmation at the door on arrival.
           </p>
           <div className="bg-gold/5 border border-gold/20 rounded-xl p-4 mb-8">

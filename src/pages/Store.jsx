@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { Search, AlertTriangle } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import ProductGrid from '../components/store/ProductGrid'
 import CategoryFilter from '../components/store/CategoryFilter'
@@ -10,7 +10,7 @@ export default function Store() {
   const [search, setSearch] = useState('')
   const category = searchParams.get('category') || 'all'
 
-  const { data: products, isLoading } = useProducts(category === 'all' ? null : category)
+  const { data: products, isLoading, isError, refetch } = useProducts(category === 'all' ? null : category)
 
   const filtered = products?.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
@@ -60,7 +60,19 @@ export default function Store() {
         </div>
 
         {/* Grid */}
-        <ProductGrid products={filtered} loading={isLoading} />
+        {isError ? (
+          <div className="bg-surface border border-red-500/20 rounded-2xl p-8 text-center max-w-md mx-auto animate-fadeIn">
+            <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
+            <p className="text-white text-sm mb-5">
+              Couldn't load products. Please check your connection and try again.
+            </p>
+            <button onClick={() => refetch()} className="btn-gold text-sm">
+              Retry
+            </button>
+          </div>
+        ) : (
+          <ProductGrid products={filtered} loading={isLoading} />
+        )}
       </div>
     </div>
   )

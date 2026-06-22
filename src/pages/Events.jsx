@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
-import { Calendar } from 'lucide-react'
+import { Calendar, AlertTriangle } from 'lucide-react'
 import { useEvents } from '../hooks/useEvents'
 import EventCard from '../components/events/EventCard'
 
 export default function Events() {
-  const { data: events, isLoading } = useEvents()
+  const { data: events, isLoading, isError, refetch } = useEvents()
 
   useEffect(() => {
     document.title = 'Events | 224 Clubhouse'
@@ -36,6 +36,16 @@ export default function Events() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : isError ? (
+          <div className="bg-surface border border-red-500/20 rounded-2xl p-8 text-center max-w-md mx-auto animate-fadeIn">
+            <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
+            <p className="text-white text-sm mb-5">
+              Couldn't load events. Please check your connection and try again.
+            </p>
+            <button onClick={() => refetch()} className="btn-gold text-sm">
+              Retry
+            </button>
           </div>
         ) : events && events.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

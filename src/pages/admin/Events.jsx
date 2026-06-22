@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Edit2, Trash2 } from 'lucide-react'
+import { Plus, Edit2, Trash2, AlertTriangle } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
@@ -11,7 +11,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
 export default function AdminEvents() {
-  const { data: events, isLoading } = useAllEvents()
+  const { data: events, isLoading, isError, refetch } = useAllEvents()
   const [modalOpen, setModalOpen] = useState(false)
   const [editEvent, setEditEvent] = useState(null)
   const queryClient = useQueryClient()
@@ -50,6 +50,16 @@ export default function AdminEvents() {
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-muted">Loading...</div>
+        ) : isError ? (
+          <div className="p-10 text-center">
+            <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
+            <p className="text-white text-sm mb-5">
+              Couldn't load events. Please check your connection and try again.
+            </p>
+            <button onClick={() => refetch()} className="btn-gold text-sm">
+              Retry
+            </button>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

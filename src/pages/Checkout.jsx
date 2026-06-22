@@ -45,6 +45,7 @@ export default function Checkout() {
   }, [items, navigate])
 
   const handlePlaceOrder = async () => {
+    if (processing) return // guard against double-submit -> duplicate orders
     const validationErrors = validate(form)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
@@ -77,8 +78,8 @@ export default function Checkout() {
       p_payment_method: method,
     })
 
-    if (error) {
-      toast.error(error.message || 'Could not place your order. Please try again.')
+    if (error || !data?.order_number) {
+      toast.error(error?.message || 'Could not place your order. Please try again.')
       setProcessing(false)
       return
     }

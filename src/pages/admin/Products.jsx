@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
@@ -11,7 +11,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
 export default function Products() {
-  const { data: products, isLoading } = useAllProducts()
+  const { data: products, isLoading, isError, refetch } = useAllProducts()
   const [modalOpen, setModalOpen] = useState(false)
   const [editProduct, setEditProduct] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
@@ -63,6 +63,16 @@ export default function Products() {
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-muted">Loading...</div>
+        ) : isError ? (
+          <div className="p-10 text-center">
+            <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
+            <p className="text-white text-sm mb-5">
+              Couldn't load products. Please check your connection and try again.
+            </p>
+            <button onClick={() => refetch()} className="btn-gold text-sm">
+              Retry
+            </button>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

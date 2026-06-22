@@ -6,7 +6,10 @@
 
 import manifest from '../../scripts/image-manifest.json'
 
-const BASE = 'https://aogdkqczvlffgydgxsmz.supabase.co/storage/v1/object/public'
+// Derive from the same env var the Supabase client uses, so images and data
+// never point at different projects. Falls back to the known project URL.
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://aogdkqczvlffgydgxsmz.supabase.co'
+const BASE = `${SUPABASE_URL}/storage/v1/object/public`
 
 // Named references to key brand assets
 export const BRAND_IMAGES = {

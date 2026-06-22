@@ -96,6 +96,8 @@ export function AuthProvider({ children }) {
   const signOut = async () => {
     await supabase.auth.signOut()
     setIsAdmin(false)
+    setUser(null)
+    setSession(null)
   }
 
   return (

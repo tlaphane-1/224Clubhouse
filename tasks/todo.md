@@ -125,6 +125,18 @@ Notes:
 - **Tests:** `src/__tests__/cod.contract.test.js` (anon place/track + wrong-email + admin-boundary negative controls; self-cleaning). Playwright e2e (`e2e/*.spec.js` + `playwright.config.js`): storefront/cart, tracking not-found, admin login. **5 passed / 1 skipped** against the live site. `eslint.config.js` got a node-globals override for test/scripts dirs. Run: `npm run test:contract` (DB), `npm run test:e2e` (needs `npx playwright install chromium` once; `ADMIN_EMAIL`/`ADMIN_PASSWORD` env to exercise the admin-login e2e).
 - Note: `predeploy` now includes the COD contract test, which writes+cleans a test order on the live DB (idempotent).
 
+### 2026-06-23 — Security/robustness/reliability hardening (audited + fixed)
+Driven by 3 parallel audits (DB, frontend/auth, robustness). Migration `20260623120000_security_hardening.sql` (applied + verified):
+- **orders** RLS locked to admin-only (was any-authenticated — PII). Anon uses RPCs only.
+- **stock oversell race** fixed: `for update` row lock + guarded decrement + `products.stock_quantity >= 0` CHECK.
+- **place_cod_order** input caps (cart ≤50, qty 1–100, customer-field + email validation).
+- **memberships**: forgeable public insert removed; new `place_membership` RPC (server prices the tier, validates 21+, creates **pending** for admin confirmation). Membership.jsx updated + "Application Received" copy.
+- **contact_messages** table (public-insert/admin-select); Contact.jsx now really stores messages + only shows success on success (was a fake toast dropping messages).
+- **decrement_stock** hardened (pinned search_path, revoked from anon).
+Frontend: top-level **ErrorBoundary** (+ stale-chunk auto-reload) and real **404 page** (was redirect-to-home); **checkout double-submit guard + RPC-null check**; **query error states** w/ Retry on Store/Events + all admin pages; **formatZAR** NaN guard; storage **BASE derived from env**; **signOut** clears user/session; **security headers** in firebase.json (verified live).
+Verified: all 4 DB test layers green (19 passed), Playwright e2e 5/5 against live, headers + 404 live.
+Confirmed already-correct (no change): is_admin/get_order_tracking/admin_update_order_status definers, admin_users write-lock, no XSS sinks, no service-role key client-side, COD totals server-authoritative.
+
 ### Still open before real-money launch (unchanged)
 - Server-side payment verification (Workstream 2) — keep Paystack in TEST mode until done.
 - Contact form + membership confirmation emails are cosmetic (Workstream 4).
