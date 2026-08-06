@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Check, Search, AlertTriangle } from 'lucide-react'
+import { Check, Search, AlertTriangle, X } from 'lucide-react'
 import { useOrderTracking } from '../hooks/useOrderTracking'
+import { useOrdersByEmail } from '../hooks/useOrdersByEmail'
 import { formatZAR } from '../utils/formatCurrency'
+import { forgetOrder, getRecentOrders } from '../utils/recentOrders'
 import {
   STATUS_STEPS,
   statusLabel,
@@ -15,10 +17,36 @@ export default function TrackOrder() {
   const [orderNumber, setOrderNumber] = useState(searchParams.get('order') || '')
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [recent, setRecent] = useState(() => getRecentOrders())
 
   useEffect(() => {
     document.title = 'Track Your Order | 224 Clubhouse'
   }, [])
+
+  // Orders placed on this device track themselves — one tap, no order number needed.
+  const track = (order) => {
+    setOrderNumber(order.orderNumber)
+    setEmail(order.email)
+    setSubmitted(true)
+  }
+
+  // Arriving from the confirmation page (or a link) with ?order= — if we know the
+  // matching email from this device, look it up without asking again.
+  useEffect(() => {
+    const fromUrl = searchParams.get('order')
+    if (!fromUrl || submitted) return
+    const known = getRecentOrders().find(
+      (o) => o.orderNumber === fromUrl.trim().toUpperCase(),
+    )
+    if (known) track(known)
+    // Only reacts to the incoming URL, not to later typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  const dropRecent = (num) => {
+    forgetOrder(num)
+    setRecent(getRecentOrders())
+  }
 
   const { data, isLoading, isError } = useOrderTracking(
     orderNumber.trim(),
@@ -26,14 +54,22 @@ export default function TrackOrder() {
     submitted,
   )
 
+  // Email on its own lists that address's orders, for customers who never noted
+  // the number. Only runs when the order-number field is empty.
+  const byEmail = useOrdersByEmail(email.trim(), submitted && !orderNumber.trim())
+
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!orderNumber.trim() || !email.trim()) return
+    if (!email.trim()) return
     setSubmitted(true)
   }
 
   // The query is "done" with a null result only after a real fetch returned no row.
-  const notFound = submitted && !isLoading && !isError && data === null
+  const notFound = submitted && !orderNumber.trim()
+    ? !byEmail.isLoading && !byEmail.isError && (byEmail.data ?? []).length === 0
+    : submitted && !isLoading && !isError && data === null
+
+  const listing = submitted && !orderNumber.trim() ? (byEmail.data ?? []) : []
 
   return (
     <div className="min-h-screen pt-28 pb-20 animate-fadeIn">
@@ -43,9 +79,55 @@ export default function TrackOrder() {
           <p className="text-gold text-xs uppercase tracking-[0.3em] mb-3">Order Status</p>
           <h1 className="font-heading text-3xl md:text-4xl font-bold text-white">Track Your Order</h1>
           <p className="text-muted text-sm mt-3">
-            Enter your order number and the email you checked out with to see live status.
+            Enter the email you checked out with to see your orders — or add the order number
+            to go straight to one.
           </p>
         </div>
+
+        {/* Orders placed from this browser — the common case is someone who just
+            checked out and never wrote the number down. */}
+        {recent.length > 0 && (
+          <div className="bg-surface border border-border rounded-2xl p-6 mb-8">
+            <h2 className="text-white font-semibold text-sm uppercase tracking-widest mb-1">
+              Your orders
+            </h2>
+            <p className="text-muted text-xs mb-4">Placed from this device.</p>
+            <ul className="space-y-2">
+              {recent.map((o) => (
+                <li
+                  key={o.orderNumber}
+                  className="flex items-center justify-between gap-3 flex-wrap border border-border rounded-xl p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-gold text-sm font-semibold">{o.orderNumber}</p>
+                    <p className="text-muted text-xs mt-0.5">
+                      {new Date(o.placedAt).toLocaleDateString('en-ZA')}
+                      {o.total != null && ` · ${formatZAR(o.total)}`}
+                      {o.itemCount ? ` · ${o.itemCount} item${o.itemCount === 1 ? '' : 's'}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => track(o)}
+                      className="btn-gold px-4 py-2 text-xs uppercase tracking-widest"
+                    >
+                      Track
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dropRecent(o.orderNumber)}
+                      aria-label={`Remove ${o.orderNumber} from this device`}
+                      className="text-muted hover:text-white p-2"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Lookup form */}
         <form
@@ -54,7 +136,7 @@ export default function TrackOrder() {
         >
           <div>
             <label htmlFor="order-number" className="block text-muted text-xs uppercase tracking-widest mb-2">
-              Order Number
+              Order Number <span className="normal-case tracking-normal">(optional)</span>
             </label>
             <input
               id="order-number"
@@ -87,15 +169,52 @@ export default function TrackOrder() {
           </button>
         </form>
 
+        {/* Orders found for the email — pick one to see its live status. */}
+        {listing.length > 0 && (
+          <div className="bg-surface border border-border rounded-2xl p-6 mb-8 animate-fadeIn">
+            <h2 className="text-white font-semibold text-sm uppercase tracking-widest mb-1">
+              Orders for {email.trim()}
+            </h2>
+            <p className="text-muted text-xs mb-4">
+              {listing.length} order{listing.length === 1 ? '' : 's'} · newest first
+            </p>
+            <ul className="space-y-2">
+              {listing.map((o) => (
+                <li
+                  key={o.order_number}
+                  className="flex items-center justify-between gap-3 flex-wrap border border-border rounded-xl p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-gold text-sm font-semibold">{o.order_number}</p>
+                    <p className="text-muted text-xs mt-0.5">
+                      {new Date(o.created_at).toLocaleDateString('en-ZA')} · {formatZAR(o.total)}
+                      {o.item_count ? ` · ${o.item_count} item${o.item_count === 1 ? '' : 's'}` : ''}
+                      {' · '}
+                      {statusLabel(o.status)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setOrderNumber(o.order_number)}
+                    className="btn-gold px-4 py-2 text-xs uppercase tracking-widest"
+                  >
+                    View
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Loading */}
-        {submitted && isLoading && (
+        {submitted && (isLoading || byEmail.isLoading) && (
           <div className="flex justify-center py-12">
             <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
           </div>
         )}
 
         {/* Error */}
-        {submitted && isError && (
+        {submitted && (isError || byEmail.isError) && (
           <div className="bg-surface border border-red-500/20 rounded-2xl p-6 text-center animate-fadeIn">
             <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
             <p className="text-white text-sm">
@@ -109,7 +228,7 @@ export default function TrackOrder() {
           <div className="bg-surface border border-border rounded-2xl p-6 text-center animate-fadeIn">
             <Search size={28} className="text-muted mx-auto mb-3" />
             <p className="text-white text-sm">
-              We couldn't find an order with that number and email. Double-check both and try again.
+              We couldn't find any orders for those details. Double-check the email (and order number, if you entered one) and try again.
             </p>
           </div>
         )}

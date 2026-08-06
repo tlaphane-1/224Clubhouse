@@ -8,6 +8,7 @@ import PaymentMethodSelect from '../components/checkout/PaymentMethodSelect'
 // Paystack is disabled while the online paygate is being confirmed (PaystackButton.jsx retained for re-enable).
 import { paymentLabel } from '../utils/orderStatus'
 import { formatZAR } from '../utils/formatCurrency'
+import { rememberOrder } from '../utils/recentOrders'
 import toast from 'react-hot-toast'
 
 const emptyForm = {
@@ -83,6 +84,15 @@ export default function Checkout() {
       setProcessing(false)
       return
     }
+
+    // Remember it on this device BEFORE navigating: the order number otherwise only
+    // exists in router state, so a refresh loses the one thing needed to track it.
+    rememberOrder({
+      orderNumber: data.order_number,
+      email: form.email,
+      total: data.total,
+      itemCount: items.reduce((n, i) => n + i.quantity, 0),
+    })
 
     clearCart()
     navigate(`/order-confirmation/${data.order_number}`, {
