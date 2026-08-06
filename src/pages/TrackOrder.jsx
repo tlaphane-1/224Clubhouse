@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Check, Search, AlertTriangle } from 'lucide-react'
+import { Check, Search, AlertTriangle, X } from 'lucide-react'
 import { useOrderTracking } from '../hooks/useOrderTracking'
 import { formatZAR } from '../utils/formatCurrency'
+import { forgetOrder, getRecentOrders } from '../utils/recentOrders'
 import {
   STATUS_STEPS,
   statusLabel,
@@ -15,10 +16,36 @@ export default function TrackOrder() {
   const [orderNumber, setOrderNumber] = useState(searchParams.get('order') || '')
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [recent, setRecent] = useState(() => getRecentOrders())
 
   useEffect(() => {
     document.title = 'Track Your Order | 224 Clubhouse'
   }, [])
+
+  // Orders placed on this device track themselves — one tap, no order number needed.
+  const track = (order) => {
+    setOrderNumber(order.orderNumber)
+    setEmail(order.email)
+    setSubmitted(true)
+  }
+
+  // Arriving from the confirmation page (or a link) with ?order= — if we know the
+  // matching email from this device, look it up without asking again.
+  useEffect(() => {
+    const fromUrl = searchParams.get('order')
+    if (!fromUrl || submitted) return
+    const known = getRecentOrders().find(
+      (o) => o.orderNumber === fromUrl.trim().toUpperCase(),
+    )
+    if (known) track(known)
+    // Only reacts to the incoming URL, not to later typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  const dropRecent = (num) => {
+    forgetOrder(num)
+    setRecent(getRecentOrders())
+  }
 
   const { data, isLoading, isError } = useOrderTracking(
     orderNumber.trim(),
@@ -46,6 +73,51 @@ export default function TrackOrder() {
             Enter your order number and the email you checked out with to see live status.
           </p>
         </div>
+
+        {/* Orders placed from this browser — the common case is someone who just
+            checked out and never wrote the number down. */}
+        {recent.length > 0 && (
+          <div className="bg-surface border border-border rounded-2xl p-6 mb-8">
+            <h2 className="text-white font-semibold text-sm uppercase tracking-widest mb-1">
+              Your orders
+            </h2>
+            <p className="text-muted text-xs mb-4">Placed from this device.</p>
+            <ul className="space-y-2">
+              {recent.map((o) => (
+                <li
+                  key={o.orderNumber}
+                  className="flex items-center justify-between gap-3 flex-wrap border border-border rounded-xl p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-gold text-sm font-semibold">{o.orderNumber}</p>
+                    <p className="text-muted text-xs mt-0.5">
+                      {new Date(o.placedAt).toLocaleDateString('en-ZA')}
+                      {o.total != null && ` · ${formatZAR(o.total)}`}
+                      {o.itemCount ? ` · ${o.itemCount} item${o.itemCount === 1 ? '' : 's'}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => track(o)}
+                      className="btn-gold px-4 py-2 text-xs uppercase tracking-widest"
+                    >
+                      Track
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dropRecent(o.orderNumber)}
+                      aria-label={`Remove ${o.orderNumber} from this device`}
+                      className="text-muted hover:text-white p-2"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Lookup form */}
         <form

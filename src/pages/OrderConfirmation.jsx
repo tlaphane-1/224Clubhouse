@@ -3,6 +3,7 @@ import { useLocation, Link } from 'react-router-dom'
 import { CheckCircle, Package, Truck } from 'lucide-react'
 import { formatZAR } from '../utils/formatCurrency'
 import { paymentLabel } from '../utils/orderStatus'
+import { getLastOrder } from '../utils/recentOrders'
 
 export default function OrderConfirmation() {
   const { state } = useLocation()
@@ -15,17 +16,27 @@ export default function OrderConfirmation() {
   // order by id — anon clients cannot read `orders` directly — so point them at
   // the live tracking page instead.
   if (!state?.order) {
+    // A refresh drops the router state, which used to leave the customer with no
+    // record of their order number at all. It was saved at checkout, so show it.
+    const saved = getLastOrder()
     return (
       <div className="min-h-screen pt-28 pb-20 animate-fadeIn">
         <div className="max-w-2xl mx-auto px-4">
           <div className="bg-surface border border-border rounded-2xl p-8 text-center animate-scaleIn">
             <CheckCircle size={56} className="text-green-400 mx-auto mb-4" strokeWidth={1.5} />
             <h1 className="font-heading text-2xl font-bold text-white mb-3">Your order was placed!</h1>
-            <p className="text-muted text-sm mb-8">
-              Use Track Order with your order number and email to see live status.
-            </p>
+            {saved ? (
+              <>
+                <p className="text-muted text-xs uppercase tracking-widest mb-1">Your order number</p>
+                <p className="font-mono text-gold text-lg font-semibold mb-6">{saved.orderNumber}</p>
+              </>
+            ) : (
+              <p className="text-muted text-sm mb-8">
+                Use Track Order with your order number and email to see live status.
+              </p>
+            )}
             <Link
-              to="/track"
+              to={saved ? `/track?order=${encodeURIComponent(saved.orderNumber)}` : '/track'}
               className="btn-gold px-8 py-3 inline-flex items-center gap-2 text-sm uppercase tracking-widest"
             >
               Track Order
