@@ -65,12 +65,9 @@ anyone who clones the repo. Decide whether to merge or rename.
 ## 3. Live defects
 
 ### 3.1 The newsletter welcome email silently fails
-`src/pages/Home.jsx:54` invokes `send-welcome-email`. That function **exists in the repo but is not
-deployed** — the only deployed function is `send-order-email`. Subscribers get a success toast and
-no email.
-
-Fix: `supabase functions deploy send-welcome-email --use-api` (see §6 for the Docker note). It will
-still need `RESEND_API_KEY` from §1.1.
+`src/pages/Home.jsx:54` invokes `send-welcome-email`. The function was deployed on 2026-08-07 and is
+ACTIVE, but like `send-order-email` it sends nothing until `RESEND_API_KEY` and domain verification
+land (§1.1). Until then subscribers still get a success toast and no email.
 
 ### 3.2 No React error boundary
 A single render error white-screens the whole app.
