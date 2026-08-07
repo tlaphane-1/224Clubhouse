@@ -94,6 +94,24 @@ export default function Checkout() {
       itemCount: items.reduce((n, i) => n + i.quantity, 0),
     })
 
+    // Receipt email — fire and forget. The order is already placed; if Resend is
+    // misconfigured or slow the customer must still reach their confirmation page,
+    // so this never blocks navigation and never surfaces an error to them.
+    supabase.functions
+      .invoke('send-order-email', {
+        body: {
+          orderNumber: data.order_number,
+          customerName: form.name,
+          customerEmail: form.email,
+          items: items.map(i => ({ name: i.name, price: i.price, quantity: i.quantity })),
+          total: data.total,
+          paymentMethod: method,
+        },
+      })
+      .catch(() => {
+        /* the order stands with or without the receipt */
+      })
+
     clearCart()
     navigate(`/order-confirmation/${data.order_number}`, {
       state: { order: data, items, customer: form, paymentMethod: method },

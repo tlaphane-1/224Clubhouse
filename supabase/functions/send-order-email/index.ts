@@ -9,12 +9,21 @@ interface OrderItem {
 }
 
 interface OrderEmailPayload {
-  orderId: string
+  orderNumber: string
   customerName: string
   customerEmail: string
   items: OrderItem[]
   total: number
-  paystack_reference: string
+  /** 'cash' | 'card' — payment happens on delivery, so nothing is paid yet. */
+  paymentMethod?: string
+}
+
+const SITE_URL = 'https://224clubhouse.web.app'
+
+function paymentLabel(method?: string): string {
+  if (method === 'card') return 'Card on delivery'
+  if (method === 'cash') return 'Cash on delivery'
+  return 'On delivery'
 }
 
 function formatZAR(cents: number): string {
@@ -28,7 +37,7 @@ serve(async (req) => {
 
   try {
     const payload: OrderEmailPayload = await req.json()
-    const { orderId, customerName, customerEmail, items, total, paystack_reference } = payload
+    const { orderNumber, customerName, customerEmail, items, total, paymentMethod } = payload
 
     const itemRows = items.map(item => `
       <tr>
@@ -65,16 +74,12 @@ serve(async (req) => {
     <!-- Order Card -->
     <div style="background:#111111; border:1px solid #222222; border-radius:12px; padding:28px; margin-bottom:24px;">
 
-      <!-- Reference -->
-      <div style="display:flex; justify-content:space-between; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid #222222;">
-        <div>
-          <div style="color:#888888; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:4px;">Order Reference</div>
-          <div style="color:#C9A84C; font-family:monospace; font-size:13px;">${paystack_reference}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="color:#888888; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:4px;">Status</div>
-          <div style="color:#4ade80; font-size:13px; font-weight:600; text-transform:uppercase;">Paid</div>
-        </div>
+      <!-- Order number: the whole point of this email. Customers who lose it cannot
+           track their order, which is what prompted adding this. -->
+      <div style="margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid #222222; text-align:center;">
+        <div style="color:#888888; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">Your Order Number</div>
+        <div style="color:#C9A84C; font-family:monospace; font-size:22px; font-weight:700; letter-spacing:1px;">${orderNumber}</div>
+        <div style="color:#888888; font-size:12px; margin-top:8px;">Keep this to track your order.</div>
       </div>
 
       <!-- Items -->
@@ -89,11 +94,25 @@ serve(async (req) => {
         <tbody>${itemRows}</tbody>
       </table>
 
-      <!-- Total -->
-      <div style="margin-top:20px; padding-top:16px; border-top:1px solid #333333; display:flex; justify-content:space-between;">
-        <span style="color:#ffffff; font-weight:600; font-size:15px;">Total Paid</span>
-        <span style="color:#C9A84C; font-weight:700; font-size:18px;">${formatZAR(total)}</span>
+      <!-- Amount due. NOT "Total Paid" — this is cash/card on delivery, nothing has
+           been charged yet, and saying otherwise invites a dispute at the door. -->
+      <div style="margin-top:20px; padding-top:16px; border-top:1px solid #333333;">
+        <table style="width:100%;">
+          <tr>
+            <td style="color:#ffffff; font-weight:600; font-size:15px;">Amount due on delivery</td>
+            <td style="color:#C9A84C; font-weight:700; font-size:18px; text-align:right;">${formatZAR(total)}</td>
+          </tr>
+        </table>
+        <div style="color:#888888; font-size:12px; margin-top:6px;">${paymentLabel(paymentMethod)} — no payment is needed now.</div>
       </div>
+    </div>
+
+    <!-- Track -->
+    <div style="text-align:center; margin-bottom:32px;">
+      <a href="${SITE_URL}/track?order=${encodeURIComponent(orderNumber)}"
+         style="display:inline-block; background:#C9A84C; color:#0a0a0a; text-decoration:none; padding:14px 32px; border-radius:8px; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:2px;">
+        Track your order
+      </a>
     </div>
 
     <!-- Delivery -->
