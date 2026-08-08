@@ -42,6 +42,25 @@ backend does not keep.
 ### 1.4 Product decision: `WELCOME10`
 Promised in the welcome email, honoured nowhere. Implement the coupon or drop the promise.
 
+### 1.5 Account-required checkout — ship steps (built 2026-08-08, not yet deployed)
+Checkout now requires a customer account: `place_cod_order` is `authenticated`-only and stamps
+`user_id` + the account email; `/orders` lists the signed-in customer's orders
+(migration `20260808120000_customer_accounts_orders.sql`). To ship it:
+
+- **Deploy the migration and the frontend together.** `supabase db push` revokes anon
+  `place_cod_order`, so the currently deployed anonymous checkout breaks the moment the
+  migration lands without the new frontend.
+- Supabase Dashboard → Authentication → URL Configuration: add redirect URLs
+  `https://<prod-domain>/**` and `http://localhost:5173/**` (signup confirmation links land on
+  `/checkout` and `/orders`).
+- Keep "Confirm email" **ON** (owner decision 2026-08-08 — checkout pauses on a
+  confirm-your-email step for new accounts).
+- **Custom SMTP for Auth before launch:** the built-in mailer sends ~2–4 emails/hour from a
+  supabase.io address — signups will stall without it. Can reuse Resend once §1.1 lands.
+- Known gap, accepted as a fast follow: **no "Forgot password" flow**.
+- Old anonymous orders were deliberately NOT linked to new accounts (takeover risk); they stay
+  reachable via `/track`.
+
 ---
 
 ## 2. Decisions waiting
@@ -54,6 +73,9 @@ fields only (no name, phone, address or line items) and capped at 20.
 
 Once receipts are landing (§1.1), customers have their order number and this can be removed. Until
 then it is the only cross-device way to find an order. **Do not "fix" it as an oversight.**
+
+Update 2026-08-08: new orders are account-tied and listed on `/orders` (§1.5), so this RPC now
+only serves **pre-account** orders. Retire it once receipts land and those orders have aged out.
 
 ### 2.2 `master` is 14 commits behind the deployed branch
 Production is deployed from `feature/memberships-and-pages`. `master` still sits at "Add initial

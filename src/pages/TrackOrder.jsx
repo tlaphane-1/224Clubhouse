@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Check, Search, AlertTriangle, X } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 import { useOrderTracking } from '../hooks/useOrderTracking'
 import { useOrdersByEmail } from '../hooks/useOrdersByEmail'
 import { formatZAR } from '../utils/formatCurrency'
@@ -13,6 +14,7 @@ import {
 
 export default function TrackOrder() {
   const [searchParams] = useSearchParams()
+  const { user } = useAuth()
 
   const [orderNumber, setOrderNumber] = useState(searchParams.get('order') || '')
   const [email, setEmail] = useState('')
@@ -30,18 +32,27 @@ export default function TrackOrder() {
     setSubmitted(true)
   }
 
-  // Arriving from the confirmation page (or a link) with ?order= — if we know the
-  // matching email from this device, look it up without asking again.
+  // Arriving from the confirmation page, /orders, or a link with ?order= — if we
+  // know the matching email (remembered on this device, or the signed-in
+  // account, whose email is what place_cod_order stamps on the order), look it
+  // up without asking again. `user` is in the deps because auth resolves async;
+  // the `submitted` guard stops re-runs once a lookup has started.
   useEffect(() => {
     const fromUrl = searchParams.get('order')
     if (!fromUrl || submitted) return
-    const known = getRecentOrders().find(
-      (o) => o.orderNumber === fromUrl.trim().toUpperCase(),
-    )
+    const num = fromUrl.trim().toUpperCase()
+    const known = getRecentOrders().find((o) => o.orderNumber === num)
     if (known) track(known)
-    // Only reacts to the incoming URL, not to later typing.
+    else if (user?.email) track({ orderNumber: num, email: user.email })
+    // Only reacts to the incoming URL and auth state, not to later typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
+  }, [searchParams, user])
+
+  // Signed-in customers shouldn't have to retype their email; keep the field
+  // editable for looking up older, pre-account orders under another address.
+  useEffect(() => {
+    if (user?.email) setEmail((cur) => cur || user.email)
+  }, [user])
 
   const dropRecent = (num) => {
     forgetOrder(num)

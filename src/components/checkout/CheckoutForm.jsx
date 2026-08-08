@@ -3,7 +3,7 @@ const SA_PROVINCES = [
   'Limpopo', 'Mpumalanga', 'Northern Cape', 'North West', 'Western Cape',
 ]
 
-export default function CheckoutForm({ form, onChange, errors }) {
+export default function CheckoutForm({ form, onChange, errors, lockEmail = false }) {
   const set = (key, value) => onChange({ ...form, [key]: value })
   const inputCls = (key) => `input-base text-sm ${errors?.[key] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`
   const labelCls = 'block text-muted text-xs uppercase tracking-widest mb-1.5'
@@ -19,7 +19,15 @@ export default function CheckoutForm({ form, onChange, errors }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>Email Address *</label>
-          <input type="email" className={inputCls('email')} value={form.email} onChange={e => set('email', e.target.value)} placeholder="you@email.com" />
+          <input
+            type="email"
+            className={`${inputCls('email')} ${lockEmail ? 'opacity-60 cursor-not-allowed' : ''}`}
+            value={form.email}
+            onChange={e => set('email', e.target.value)}
+            placeholder="you@email.com"
+            disabled={lockEmail}
+          />
+          {lockEmail && <p className="text-muted text-xs mt-1">Orders are tied to your account email.</p>}
           {errors?.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
         </div>
         <div>

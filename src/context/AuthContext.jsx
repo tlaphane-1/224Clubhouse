@@ -93,6 +93,31 @@ export function AuthProvider({ children }) {
     return data
   }
 
+  // Email confirmation is ON in Supabase Auth, so signUp returns NO session —
+  // the caller shows a "check your email" state. The confirmation link lands on
+  // redirectTo with tokens in the URL hash; detectSessionInUrl (default) picks
+  // them up and onAuthStateChange fires SIGNED_IN. Callers detect an
+  // already-registered email via data.user?.identities?.length === 0 (Supabase
+  // obfuscates that case to prevent account enumeration).
+  const signUp = async (email, password, { redirectTo } = {}) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: redirectTo ?? window.location.origin + '/checkout' },
+    })
+    if (error) throw error
+    return data
+  }
+
+  const resendConfirmation = async (email, { redirectTo } = {}) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: redirectTo ?? window.location.origin + '/checkout' },
+    })
+    if (error) throw error
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
     setIsAdmin(false)
@@ -101,7 +126,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signOut, isAdmin }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, resendConfirmation, signOut, isAdmin }}>
       {children}
     </AuthContext.Provider>
   )

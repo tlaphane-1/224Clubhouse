@@ -20,6 +20,7 @@ const Cart = lazy(() => import('./pages/Cart'))
 const Checkout = lazy(() => import('./pages/Checkout'))
 const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'))
 const TrackOrder = lazy(() => import('./pages/TrackOrder'))
+const MyOrders = lazy(() => import('./pages/MyOrders'))
 const Events = lazy(() => import('./pages/Events'))
 const Membership = lazy(() => import('./pages/Membership'))
 const About = lazy(() => import('./pages/About'))
@@ -95,6 +96,8 @@ export default function App() {
                 <Route path="/checkout" element={<PublicLayout><Checkout /></PublicLayout>} />
                 <Route path="/order-confirmation/:id" element={<PublicLayout><OrderConfirmation /></PublicLayout>} />
                 <Route path="/track" element={<PublicLayout><TrackOrder /></PublicLayout>} />
+                {/* No ProtectedRoute: the page shows sign-in itself when logged out. */}
+                <Route path="/orders" element={<PublicLayout><MyOrders /></PublicLayout>} />
                 <Route path="/events" element={<PublicLayout><Events /></PublicLayout>} />
                 <Route path="/membership" element={<PublicLayout><Membership /></PublicLayout>} />
                 <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />

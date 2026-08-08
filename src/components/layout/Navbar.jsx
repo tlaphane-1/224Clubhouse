@@ -10,6 +10,7 @@ const navLinks = [
   { to: '/events', label: 'Events' },
   { to: '/membership', label: 'Membership' },
   { to: '/about', label: 'About' },
+  { to: '/orders', label: 'Orders' },
   { to: '/track', label: 'Track Order' },
 ]
 

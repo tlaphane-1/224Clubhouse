@@ -2,14 +2,15 @@
  * Remembers the orders placed from this browser, so a customer can get back to
  * Track Order without having written down an order number.
  *
- * Why local storage and not an account lookup: orders are anonymous — there is no
- * customer login, and `orders` is admin-only under RLS with `get_order_tracking`
- * deliberately requiring order number AND email so nobody can enumerate other
- * people's orders by email alone. Storing the pair on the device that placed the
- * order keeps that boundary intact.
+ * Since 2026-08-08 checkout requires an account and /orders lists a signed-in
+ * customer's orders across devices, so this is now a convenience fallback:
+ * it keeps the confirmation page recoverable after a refresh and lets /track
+ * one-tap orders placed on this device without signing in. Orders placed
+ * BEFORE accounts existed have no user_id and are only reachable this way or
+ * by number/email lookup.
  *
  * Limitation: this is per-browser. Clearing site data, or ordering on a phone and
- * tracking on a laptop, still needs the order number.
+ * tracking on a laptop, needs the order number or a signed-in session.
  */
 
 const KEY = '224:recent-orders'

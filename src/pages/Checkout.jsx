@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import CheckoutForm from '../components/checkout/CheckoutForm'
+import CustomerAuth from '../components/auth/CustomerAuth'
 import OrderSummary, { SHIPPING_FEE, SHIPPING_THRESHOLD } from '../components/checkout/OrderSummary'
 import PaymentMethodSelect from '../components/checkout/PaymentMethodSelect'
 // Paystack is disabled while the online paygate is being confirmed (PaystackButton.jsx retained for re-enable).
@@ -30,12 +33,14 @@ function validate(form) {
 
 export default function Checkout() {
   const { items, cartSubtotal, clearCart } = useCart()
+  const { user, loading: authLoading } = useAuth()
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [agreed, setAgreed] = useState(false)
   const [method, setMethod] = useState('cash_on_delivery')
   const [processing, setProcessing] = useState(false)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const shippingFee = cartSubtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
   const total = cartSubtotal + shippingFee
@@ -45,9 +50,15 @@ export default function Checkout() {
     if (items.length === 0) navigate('/cart')
   }, [items, navigate])
 
+  // The server stamps the order with the ACCOUNT email (place_cod_order
+  // overrides whatever the client sends), so the form mirrors it read-only —
+  // derived here rather than synced into state.
+  const checkoutForm = { ...form, email: user?.email ?? '' }
+
   const handlePlaceOrder = async () => {
     if (processing) return // guard against double-submit -> duplicate orders
-    const validationErrors = validate(form)
+    if (!user) return // render gate should prevent this; server enforces regardless
+    const validationErrors = validate(checkoutForm)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
       toast.error('Please fill in all required fields')
@@ -66,14 +77,14 @@ export default function Checkout() {
     setProcessing(true)
     const { data, error } = await supabase.rpc('place_cod_order', {
       p_customer: {
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        street: form.street,
-        apartment: form.apartment,
-        city: form.city,
-        province: form.province,
-        postalCode: form.postalCode,
+        name: checkoutForm.name,
+        email: checkoutForm.email,
+        phone: checkoutForm.phone,
+        street: checkoutForm.street,
+        apartment: checkoutForm.apartment,
+        city: checkoutForm.city,
+        province: checkoutForm.province,
+        postalCode: checkoutForm.postalCode,
       },
       p_items: items.map(i => ({ id: i.id, quantity: i.quantity })),
       p_payment_method: method,
@@ -89,7 +100,7 @@ export default function Checkout() {
     // exists in router state, so a refresh loses the one thing needed to track it.
     rememberOrder({
       orderNumber: data.order_number,
-      email: form.email,
+      email: checkoutForm.email,
       total: data.total,
       itemCount: items.reduce((n, i) => n + i.quantity, 0),
     })
@@ -101,8 +112,8 @@ export default function Checkout() {
       .invoke('send-order-email', {
         body: {
           orderNumber: data.order_number,
-          customerName: form.name,
-          customerEmail: form.email,
+          customerName: checkoutForm.name,
+          customerEmail: checkoutForm.email,
           items: items.map(i => ({ name: i.name, price: i.price, quantity: i.quantity })),
           total: data.total,
           paymentMethod: method,
@@ -112,13 +123,24 @@ export default function Checkout() {
         /* the order stands with or without the receipt */
       })
 
+    // The customer's order list is cached; make the new order show up on /orders.
+    queryClient.invalidateQueries({ queryKey: ['my-orders'] })
+
     clearCart()
     navigate(`/order-confirmation/${data.order_number}`, {
-      state: { order: data, items, customer: form, paymentMethod: method },
+      state: { order: data, items, customer: checkoutForm, paymentMethod: method },
     })
   }
 
   if (items.length === 0) return null
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div
@@ -131,13 +153,21 @@ export default function Checkout() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Form */}
+          {/* Form — or sign-in, since orders are tied to an account */}
+          {!user ? (
+            <div className="lg:col-span-3">
+              <CustomerAuth
+                title="Sign in to check out"
+                subtitle="You need an account so your orders are saved and you can track them any time."
+              />
+            </div>
+          ) : (
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-surface border border-border rounded-xl p-6">
               <h2 className="font-semibold text-white mb-6 uppercase tracking-widest text-sm">
                 Contact & Delivery
               </h2>
-              <CheckoutForm form={form} onChange={setForm} errors={errors} />
+              <CheckoutForm form={checkoutForm} onChange={setForm} errors={errors} lockEmail />
             </div>
 
             {/* Age confirmation */}
@@ -189,6 +219,7 @@ export default function Checkout() {
               )}
             </div>
           </div>
+          )}
 
           {/* Summary */}
           <div className="lg:col-span-2">
