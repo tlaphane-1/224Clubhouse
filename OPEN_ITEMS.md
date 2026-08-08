@@ -42,21 +42,21 @@ backend does not keep.
 ### 1.4 Product decision: `WELCOME10`
 Promised in the welcome email, honoured nowhere. Implement the coupon or drop the promise.
 
-### 1.5 Account-required checkout — ship steps (built 2026-08-08, not yet deployed)
-Checkout now requires a customer account: `place_cod_order` is `authenticated`-only and stamps
+### 1.5 Account-required checkout — DEPLOYED 2026-08-08, two dashboard steps remain
+Checkout requires a customer account: `place_cod_order` is `authenticated`-only and stamps
 `user_id` + the account email; `/orders` lists the signed-in customer's orders
-(migration `20260808120000_customer_accounts_orders.sql`). To ship it:
+(migration `20260808120000_customer_accounts_orders.sql`). Frontend deployed to Firebase
+Hosting and migration applied 2026-08-08; all 21 contract tests pass against the live DB
+(anon ordering blocked, user_id stamping and owner RLS verified).
 
-- **Deploy the migration and the frontend together.** `supabase db push` revokes anon
-  `place_cod_order`, so the currently deployed anonymous checkout breaks the moment the
-  migration lands without the new frontend.
-- Supabase Dashboard → Authentication → URL Configuration: add redirect URLs
-  `https://<prod-domain>/**` and `http://localhost:5173/**` (signup confirmation links land on
-  `/checkout` and `/orders`).
+Still owner-manual in the Supabase Dashboard (Authentication settings):
+- **URL Configuration → Redirect URLs:** add `https://224clubhouse.web.app/**` (plus the custom
+  domain if one exists) and `http://localhost:5173/**`. Until then, signup confirmation links
+  fall back to the Site URL instead of returning to `/checkout` or `/orders` with cart intact.
+- **Custom SMTP:** the built-in auth mailer sends ~2–4 emails/hour from a supabase.io address —
+  real-volume signups will stall without it. Can reuse Resend once §1.1 lands.
 - Keep "Confirm email" **ON** (owner decision 2026-08-08 — checkout pauses on a
   confirm-your-email step for new accounts).
-- **Custom SMTP for Auth before launch:** the built-in mailer sends ~2–4 emails/hour from a
-  supabase.io address — signups will stall without it. Can reuse Resend once §1.1 lands.
 - Known gap, accepted as a fast follow: **no "Forgot password" flow**.
 - Old anonymous orders were deliberately NOT linked to new accounts (takeover risk); they stay
   reachable via `/track`.
