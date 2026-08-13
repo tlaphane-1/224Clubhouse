@@ -12,11 +12,11 @@
  *   SELECT policy the storefront silently goes blank; these tests
  *   catch that.
  *
- *   NEGATIVE controls — the high-value tests. orders, memberships and
- *   newsletter_subscribers carry PII (including POPIA-sensitive ID
- *   numbers on memberships). Anon must NEVER see a populated row. The
- *   assertion tolerates the table being empty or erroring; the only
- *   outcome that fails is leaked rows.
+ *   NEGATIVE controls — the high-value tests. orders, memberships,
+ *   newsletter_subscribers and contact_messages carry PII (including
+ *   POPIA-sensitive ID numbers on memberships). Anon must NEVER see a
+ *   populated row. The assertion tolerates the table being empty or
+ *   erroring; the only outcome that fails is leaked rows.
  *
  * NOTE: this app has NO PostgREST embeds and NO SECURITY DEFINER embed
  * RPC, so the reference implementation's "direct embed still blanks the
@@ -84,6 +84,14 @@ describe.skipIf(SKIP)('Anon-role contract — PII tables stay hidden', () => {
   it('NEGATIVE: anon cannot read newsletter_subscribers rows', async () => {
     const { data, error } = await supabase
       .from('newsletter_subscribers')
+      .select('email')
+      .limit(5)
+    expect(error != null || (data?.length ?? 0) === 0).toBe(true)
+  })
+
+  it('NEGATIVE: anon cannot read contact_messages rows (PII: name/email)', async () => {
+    const { data, error } = await supabase
+      .from('contact_messages')
       .select('email')
       .limit(5)
     expect(error != null || (data?.length ?? 0) === 0).toBe(true)

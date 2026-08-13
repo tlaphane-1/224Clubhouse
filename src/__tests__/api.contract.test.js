@@ -70,6 +70,9 @@ describe.skipIf(SKIP)('API contract — read queries resolve against live DB', (
 
     // useMemberships() — admin, all memberships
     { name: 'useMemberships', run: () => supabase.from('memberships').select('*').order('created_at', { ascending: false }).limit(0) },
+
+    // useContactMessages() — admin, all contact-form messages
+    { name: 'useContactMessages', run: () => supabase.from('contact_messages').select('*').order('created_at', { ascending: false }).limit(0) },
   ]
 
   PROBES.forEach(({ name, run }) => {
