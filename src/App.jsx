@@ -21,11 +21,16 @@ const Checkout = lazy(() => import('./pages/Checkout'))
 const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'))
 const TrackOrder = lazy(() => import('./pages/TrackOrder'))
 const MyOrders = lazy(() => import('./pages/MyOrders'))
+const Account = lazy(() => import('./pages/Account'))
+const OrderDetail = lazy(() => import('./pages/OrderDetail'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const Events = lazy(() => import('./pages/Events'))
 const Membership = lazy(() => import('./pages/Membership'))
 const About = lazy(() => import('./pages/About'))
 const Contact = lazy(() => import('./pages/Contact'))
+const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'))
+const Terms = lazy(() => import('./pages/legal/Terms'))
+const DeliveryReturns = lazy(() => import('./pages/legal/DeliveryReturns'))
 const Login = lazy(() => import('./pages/Login'))
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
 const Products = lazy(() => import('./pages/admin/Products'))
@@ -33,6 +38,7 @@ const Orders = lazy(() => import('./pages/admin/Orders'))
 const AdminEvents = lazy(() => import('./pages/admin/Events'))
 const AdminMemberships = lazy(() => import('./pages/admin/Memberships'))
 const AdminMessages = lazy(() => import('./pages/admin/Messages'))
+const AdminNewsletter = lazy(() => import('./pages/admin/Newsletter'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -100,12 +106,17 @@ export default function App() {
                 <Route path="/track" element={<PublicLayout><TrackOrder /></PublicLayout>} />
                 {/* No ProtectedRoute: the page shows sign-in itself when logged out. */}
                 <Route path="/orders" element={<PublicLayout><MyOrders /></PublicLayout>} />
+                <Route path="/account" element={<PublicLayout><Account /></PublicLayout>} />
+                <Route path="/orders/:id" element={<PublicLayout><OrderDetail /></PublicLayout>} />
                 {/* Password-recovery landing page — the emailed reset link points here. */}
                 <Route path="/reset-password" element={<PublicLayout><ResetPassword /></PublicLayout>} />
                 <Route path="/events" element={<PublicLayout><Events /></PublicLayout>} />
                 <Route path="/membership" element={<PublicLayout><Membership /></PublicLayout>} />
                 <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
                 <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
+                <Route path="/privacy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
+                <Route path="/terms" element={<PublicLayout><Terms /></PublicLayout>} />
+                <Route path="/delivery-returns" element={<PublicLayout><DeliveryReturns /></PublicLayout>} />
 
                 {/* Admin */}
                 <Route path="/admin/login" element={<Login />} />
@@ -115,6 +126,7 @@ export default function App() {
                 <Route path="/admin/events" element={<ProtectedRoute><AdminEvents /></ProtectedRoute>} />
                 <Route path="/admin/memberships" element={<ProtectedRoute><AdminMemberships /></ProtectedRoute>} />
                 <Route path="/admin/messages" element={<ProtectedRoute><AdminMessages /></ProtectedRoute>} />
+                <Route path="/admin/newsletter" element={<ProtectedRoute><AdminNewsletter /></ProtectedRoute>} />
 
                 {/* Fallback */}
                 <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />

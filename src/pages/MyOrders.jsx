@@ -114,12 +114,20 @@ export default function MyOrders() {
                           {' · '}{statusLabel(o.status)}
                         </p>
                       </div>
-                      <Link
-                        to={`/track?order=${o.order_number}`}
-                        className="btn-gold px-4 py-2 text-xs uppercase tracking-widest"
-                      >
-                        Track
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/orders/${o.id}`}
+                          className="btn-gold px-4 py-2 text-xs uppercase tracking-widest"
+                        >
+                          View
+                        </Link>
+                        <Link
+                          to={`/track?order=${o.order_number}`}
+                          className="btn-outline px-4 py-2 text-xs uppercase tracking-widest"
+                        >
+                          Track
+                        </Link>
+                      </div>
                     </li>
                   ))}
                 </ul>
