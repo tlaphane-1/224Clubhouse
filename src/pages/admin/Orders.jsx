@@ -17,9 +17,16 @@ export default function Orders() {
     document.title = 'Orders | 224 Admin'
   }, [])
 
-  const handleStatusChange = async (orderId, status) => {
+  const handleStatusChange = async (order, status) => {
     try {
-      await updateStatus.mutateAsync({ orderId, status })
+      await updateStatus.mutateAsync({
+        orderId: order.id,
+        status,
+        // Carried through so the mutation can email the customer about the change.
+        orderNumber: order.order_number,
+        customerName: order.customer_name,
+        customerEmail: order.customer_email,
+      })
       toast.success(`Order status updated to "${statusLabel(status)}"`)
     } catch {
       toast.error('Failed to update status')
@@ -101,7 +108,7 @@ export default function Orders() {
                   <div className="flex items-center gap-2 mt-3">
                     <select
                       value={order.status}
-                      onChange={e => handleStatusChange(order.id, e.target.value)}
+                      onChange={e => handleStatusChange(order, e.target.value)}
                       className="flex-1 bg-background border border-border text-white text-xs rounded px-2 py-2 cursor-pointer"
                     >
                       {ALL_STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
@@ -132,7 +139,7 @@ export default function Orders() {
                   <div className="text-center">
                     <select
                       value={order.status}
-                      onChange={e => handleStatusChange(order.id, e.target.value)}
+                      onChange={e => handleStatusChange(order, e.target.value)}
                       className="bg-background border border-border text-white text-xs rounded px-2 py-1.5 cursor-pointer w-full"
                     >
                       {ALL_STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}

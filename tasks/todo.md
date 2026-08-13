@@ -123,21 +123,28 @@ Branch: `feature/memberships-and-pages`. Commit incrementally; deploy only after
 - [x] `RESEND_API_KEY` set on project (browser session, key never in transcript, sending-only permission, name `224clubhouse`)
 - [x] INTERIM email domain (owner decision 2026-08-13): free Resend plan's 1-domain slot is taken by `effyouthcommand.org.za`; both edge functions now build `from` off `MAIL_FROM_DOMAIN` secret (set to effyouthcommand.org.za; unset to revert to 224clubhouse.co.za once verified — needs Resend Pro $20/mo or a second free account). Both functions redeployed `--use-api`; live test send returned success.
 - [x] Supabase Auth URL config fixed via dashboard 2026-08-13: **Site URL was `http://localhost:3000`** (confirmation emails were sending customers to localhost!) → now `https://224clubhouse.web.app`; redirect allowlist was EMPTY → added `https://224clubhouse.web.app/**` + `http://localhost:5173/**` (verified after reload, Total URLs: 2)
-- [ ] OWNER still: custom SMTP for the auth mailer (built-in sends 2–4/hr from supabase.io; can use Resend SMTP — smtp.resend.com, user `resend`, password = the API key — but entering the key is an owner action); `VITE_WHATSAPP_NUMBER` value for the WhatsApp order panel
+- [x] WhatsApp number received 2026-08-13 (`27750868783`), added to `.env.local`, deployed from a clean worktree at HEAD (in-flight Wave 3 tree changes excluded), verified live: wa.me link carries cart + number correctly on /cart
+- [ ] OWNER still: custom SMTP for the auth mailer (built-in sends 2–4/hr from supabase.io; can use Resend SMTP — smtp.resend.com, user `resend`, password = the API key — but entering the key is an owner action)
 
-### Wave 3 — P1 make membership real
-- [ ] Migration: `memberships.user_id` FK + owner-select RLS + `place_membership` requires `auth.uid()` (mirror `place_cod_order` hardening); status history; admin edit/extend/create
-- [ ] `membership_tiers` table + admin tier CRUD (kill JSX/SQL price duplication)
-- [ ] Expiry: derive expired at query time (+ approval-time clock start, not application-time)
-- [ ] `useMyMembership` + `isMember` in AuthContext; My Membership on account surface
-- [ ] Enforce `is_member_only` in UI + `place_cod_order`
-- [ ] Membership confirmation email (once Resend key lands)
+### Wave 3 — P1 make membership real (in flight 2026-08-13)
+- [x] Migration WRITTEN, NOT PUSHED: `supabase/migrations/20260813150000_membership_accounts_tiers.sql` — membership_tiers (seeded, public-select active, admin ALL), memberships.user_id/tier_id/approved_at/status_history + owner-select RLS + partial unique pending-per-user index, place_membership auth-required + account-email override + null clock until approval, admin_update_membership_status (activation stamps clock, actor history), admin_create_membership (walk-in), membership_effective_status (query-time expiry, no cron). 9 contract tests skip-gated on migration presence (probe on membership_tiers). ⚠ DEPLOY COUPLING: push breaks the anonymous Membership.jsx flow — DB + frontend ship together, like the 2026-08-08 orders migration.
+- [~] Customer frontend (agent running): useMembershipTiers/useMyMembership, Membership.jsx sign-in-required + DB tiers + own-membership status card
+- [~] Admin frontend (agent running): RPC status updates, detail view (history/hidden fields), walk-in modal, tier CRUD, expiring-soon tile
+- [ ] Enforce `is_member_only`: place_cod_order check (extend unpushed migration) + UI gating via useMyMembership (after customer agent lands)
+- [ ] Membership confirmation email on approval (Resend now live — new edge function + call from admin status RPC flow)
+- [ ] Coordinated ship: review package → supabase db push → frontend deploy → run un-skipped membership contract tests live
 
-### Wave 4 — P2/P3
-- [ ] Navbar account menu + `/account`; `/orders/:id` detail (owner RLS, line items, timeline, reorder); checkout prefill from last order
-- [ ] Status-change email + admin new-order notification; newsletter admin view + unsubscribe
-- [ ] Legal pages: Privacy (POPIA), Terms (wire dead checkout link), Returns/Delivery; server-side age check in `place_cod_order`
-- [ ] Stock restore on order cancel
+### Wave 4 — P2/P3 (built 2026-08-13, shipping with Wave 3)
+- [x] Navbar auth-aware (account dropdown, admin link) + `/account` page (email/signout, membership card, links)
+- [x] `/orders/:id` OrderDetail (owner RLS via useMyOrder maybeSingle, TrackOrder timeline reuse, line items, address, amount due) + Reorder (current-price/stock revalidation, skip/cap toasts) + checkout prefill from last order (derived-state merge, no setState-in-effect)
+- [x] `send-status-email` edge function (per-status subjects, pending/legacy skipped) called fire-and-forget from useUpdateOrderStatus; admin Orders passes name/email/number
+- [x] `/admin/newsletter` subscribers page + RFC-4180 CSV export + AdminLayout nav
+- [x] Legal pages `/privacy` `/terms` `/delivery-returns` (POPIA/ECT Act, verified R80/R500/2–5day numbers, draft banners, 2 owner decisions flagged: delivery area, failed-delivery policy); checkout terms checkbox now links real pages
+- [x] Wave 3 enforcement: place_cod_order member-only gate appended to unpushed migration (verbatim copy of 20260808120000 + one gated addition); ProductCard/ProductDetail "Join to unlock" states (no member flicker); send-membership-email function; +1 contract test (pending membership does NOT unlock)
+- [ ] Deferred post-ship: admin new-order notification email, newsletter unsubscribe route, WELCOME10 decision, stock restore on cancel, server-side age check in place_cod_order, events ticketing, reporting/CSVs
+- vite.config.js: fileParallelism:false — live-DB contract suites were timing out under parallel file execution (root-caused, not flaky-skipped)
+
+### Ship sequence (in progress): code-review high over uncommitted diff → fix criticals → commit chunks → supabase db push (breaks old anon membership flow; frontend deploys immediately after) → deploy send-membership-email + send-status-email --use-api → firebase deploy → un-skipped membership contract tests live → smoke test
 
 ### Layered tests (target: 11+ new specs across layers, added with each wave)
 Layer 1 service-role probes for every new read path; Layer 2 anon/user negative+positive controls

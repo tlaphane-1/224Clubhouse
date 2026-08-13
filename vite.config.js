@@ -24,5 +24,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     setupFiles: ['./test/loadEnv.mjs'],
+    // The contract suites hit the live Supabase project; running the files in
+    // parallel makes their user-provisioning beforeAll hooks time out under
+    // concurrent load. Serial file execution keeps them deterministic.
+    fileParallelism: false,
   },
 })
