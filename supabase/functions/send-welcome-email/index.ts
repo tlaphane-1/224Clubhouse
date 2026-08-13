@@ -1,6 +1,9 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
+// Interim: sends go out from a domain already verified on the Resend account until
+// 224clubhouse.co.za is verified there. Unset MAIL_FROM_DOMAIN to revert to the default.
+const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
 
 interface WelcomeEmailPayload {
   firstName: string
@@ -97,7 +100,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'hello@224clubhouse.co.za',
+        from: `224 Clubhouse <hello@${MAIL_FROM_DOMAIN}>`,
         to: email,
         subject: 'Welcome to the 224 family 🔥',
         html,
