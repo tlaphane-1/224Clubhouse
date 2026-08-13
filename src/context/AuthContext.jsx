@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { CART_KEY, CART_CLEAR_EVENT } from './cartReducer'
 
 const AuthContext = createContext(null)
 
@@ -118,15 +119,39 @@ export function AuthProvider({ children }) {
     if (error) throw error
   }
 
+  // Sends a password-recovery email. The link uses the default implicit flow:
+  // it lands on /reset-password with tokens in the URL hash, which supabase-js
+  // (detectSessionInUrl) exchanges for a recovery session automatically.
+  // NOTE: the Supabase project's Auth redirect allowlist must include this
+  // origin for redirectTo to be honoured (configured in the dashboard).
+  const resetPassword = async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password',
+    })
+    if (error) throw error
+  }
+
+  // Set a new password for the current session's user — used by the
+  // /reset-password page while a recovery session is active.
+  const updatePassword = async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) throw error
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
     setIsAdmin(false)
     setUser(null)
     setSession(null)
+    // Shared-device privacy: the cart must not survive sign-out. Clear the
+    // persisted copy directly, and signal CartProvider (rendered below this
+    // provider, so useCart isn't reachable here) to clear in-memory state.
+    localStorage.removeItem(CART_KEY)
+    window.dispatchEvent(new CustomEvent(CART_CLEAR_EVENT))
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, resendConfirmation, signOut, isAdmin }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, resendConfirmation, resetPassword, updatePassword, signOut, isAdmin }}>
       {children}
     </AuthContext.Provider>
   )

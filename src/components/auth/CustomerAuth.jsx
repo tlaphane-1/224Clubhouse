@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Mail } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { validateNewPassword } from '../../utils/passwordValidation'
+import ForgotPasswordForm from './ForgotPasswordForm'
 import toast from 'react-hot-toast'
 
 /**
@@ -18,7 +20,7 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
   const location = useLocation()
   const redirectTo = window.location.origin + location.pathname
 
-  const [mode, setMode] = useState('signin') // 'signin' | 'signup' | 'pending'
+  const [mode, setMode] = useState('signin') // 'signin' | 'signup' | 'pending' | 'forgot'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -49,12 +51,9 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
   const handleSignUp = async (e) => {
     e.preventDefault()
     if (busy) return
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters')
-      return
-    }
-    if (password !== confirm) {
-      toast.error('Passwords do not match')
+    const invalid = validateNewPassword(password, confirm)
+    if (invalid) {
+      toast.error(invalid)
       return
     }
     setBusy(true)
@@ -85,6 +84,20 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
     } catch (err) {
       toast.error(err?.message || 'Could not resend the email. Please try again.')
     }
+  }
+
+  if (mode === 'forgot') {
+    return (
+      <div className="bg-surface border border-border rounded-xl p-6">
+        <h2 className="font-semibold text-white mb-1 uppercase tracking-widest text-sm">
+          Reset your password
+        </h2>
+        <p className="text-muted text-sm mb-5">
+          Enter your account email and we&apos;ll send you a link to choose a new password.
+        </p>
+        <ForgotPasswordForm initialEmail={email} onBack={() => setMode('signin')} />
+      </div>
+    )
   }
 
   if (mode === 'pending') {
@@ -173,6 +186,17 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
             placeholder={isSignup ? 'At least 6 characters' : 'Your password'}
             autoComplete={isSignup ? 'new-password' : 'current-password'}
           />
+          {!isSignup && (
+            <div className="text-right mt-1.5">
+              <button
+                type="button"
+                onClick={() => setMode('forgot')}
+                className="text-muted hover:text-gold text-xs transition-colors"
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
         </div>
         {isSignup && (
           <div>

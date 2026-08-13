@@ -107,6 +107,45 @@ Notes:
 
 ---
 
+## Workstream 6 — Full gap-closure roadmap (started 2026-08-13, customers waiting)
+
+From the 3-agent gap analysis (memberships facade, account UX, comms black hole, legal, ops).
+Branch: `feature/memberships-and-pages`. Commit incrementally; deploy only after account gates.
+
+### Wave 1 — P0 ✅ done 2026-08-13
+- [x] Contact-messages admin inbox: `/admin/messages` + Layer 1 probe + Layer 2 anon negative control (16 live contract tests green)
+- [x] Hygiene bundle: cart cleared on sign-out (CustomEvent bridge, reducer extracted to `cartReducer.js` + 3 unit tests); dead `CartDrawer.jsx`/`useOrderStatus.js` deleted (grep-verified); autoComplete on all 8 checkout fields; dashboard "Revenue (delivered)" + outstanding sub-line
+- [x] Mosate app found (`GitHub/mosate-restaurant`); WhatsApp flow fully mapped
+
+### Wave 2 — P0 continued
+- [x] Password reset (2026-08-13): `resetPassword`/`updatePassword` in AuthContext, shared `ForgotPasswordForm` (CustomerAuth 'forgot' mode + admin Login link), `/reset-password` recovery page (implicit-flow session detection), shared `passwordValidation` util + 8 unit tests. E2E manual pass still pending (needs a real reset email). WhatsApp panel now hides entirely in prod when `VITE_WHATSAPP_NUMBER` unset (dev shows disabled state).
+- [x] **WhatsApp order flow**: ported to `src/utils/whatsappOrder.js` + `WhatsAppOrderPanel` on Cart page; 6/6 unit tests; NEEDS `VITE_WHATSAPP_NUMBER` from owner (CTA disabled until set)
+- [x] `RESEND_API_KEY` set on project (browser session, key never in transcript, sending-only permission, name `224clubhouse`)
+- [x] INTERIM email domain (owner decision 2026-08-13): free Resend plan's 1-domain slot is taken by `effyouthcommand.org.za`; both edge functions now build `from` off `MAIL_FROM_DOMAIN` secret (set to effyouthcommand.org.za; unset to revert to 224clubhouse.co.za once verified — needs Resend Pro $20/mo or a second free account). Both functions redeployed `--use-api`; live test send returned success.
+- [x] Supabase Auth URL config fixed via dashboard 2026-08-13: **Site URL was `http://localhost:3000`** (confirmation emails were sending customers to localhost!) → now `https://224clubhouse.web.app`; redirect allowlist was EMPTY → added `https://224clubhouse.web.app/**` + `http://localhost:5173/**` (verified after reload, Total URLs: 2)
+- [ ] OWNER still: custom SMTP for the auth mailer (built-in sends 2–4/hr from supabase.io; can use Resend SMTP — smtp.resend.com, user `resend`, password = the API key — but entering the key is an owner action); `VITE_WHATSAPP_NUMBER` value for the WhatsApp order panel
+
+### Wave 3 — P1 make membership real
+- [ ] Migration: `memberships.user_id` FK + owner-select RLS + `place_membership` requires `auth.uid()` (mirror `place_cod_order` hardening); status history; admin edit/extend/create
+- [ ] `membership_tiers` table + admin tier CRUD (kill JSX/SQL price duplication)
+- [ ] Expiry: derive expired at query time (+ approval-time clock start, not application-time)
+- [ ] `useMyMembership` + `isMember` in AuthContext; My Membership on account surface
+- [ ] Enforce `is_member_only` in UI + `place_cod_order`
+- [ ] Membership confirmation email (once Resend key lands)
+
+### Wave 4 — P2/P3
+- [ ] Navbar account menu + `/account`; `/orders/:id` detail (owner RLS, line items, timeline, reorder); checkout prefill from last order
+- [ ] Status-change email + admin new-order notification; newsletter admin view + unsubscribe
+- [ ] Legal pages: Privacy (POPIA), Terms (wire dead checkout link), Returns/Delivery; server-side age check in `place_cod_order`
+- [ ] Stock restore on order cancel
+
+### Layered tests (target: 11+ new specs across layers, added with each wave)
+Layer 1 service-role probes for every new read path; Layer 2 anon/user negative+positive controls
+(contact_messages, memberships owner-select, place_membership auth requirement, tiers table);
+Layer 3 embed audit stays green; e2e for WhatsApp link build + password-reset UI.
+
+---
+
 ## Review
 
 ### 2026-06-22 session — handoff prep

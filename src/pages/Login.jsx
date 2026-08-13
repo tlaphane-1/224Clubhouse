@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import ForgotPasswordForm from '../components/auth/ForgotPasswordForm'
 import toast from 'react-hot-toast'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [forgot, setForgot] = useState(false)
   const { signIn, isAdmin, user } = useAuth()
   const navigate = useNavigate()
 
@@ -42,8 +44,14 @@ export default function Login() {
             <div className="text-white text-[9px] tracking-[0.5em] uppercase font-light mt-0.5">Admin Panel</div>
           </div>
 
-          <h2 className="font-heading text-xl font-semibold text-white text-center mb-8">Sign In</h2>
+          <h2 className="font-heading text-xl font-semibold text-white text-center mb-8">
+            {forgot ? 'Reset Password' : 'Sign In'}
+          </h2>
 
+          {forgot ? (
+            // Same recovery flow as customers: emails a link to /reset-password.
+            <ForgotPasswordForm initialEmail={email} onBack={() => setForgot(false)} />
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-muted text-xs uppercase tracking-widest mb-1.5">Email</label>
@@ -74,7 +82,17 @@ export default function Login() {
             >
               {loading ? 'Signing In...' : 'Sign In'}
             </button>
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => setForgot(true)}
+                className="text-muted hover:text-gold text-xs transition-colors"
+              >
+                Forgot password?
+              </button>
+            </div>
           </form>
+          )}
         </div>
       </div>
     </div>
