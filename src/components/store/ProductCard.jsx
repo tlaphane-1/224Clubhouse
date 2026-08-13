@@ -1,15 +1,28 @@
-import { ShoppingCart } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ShoppingCart, Lock } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import Badge from '../ui/Badge'
 import { useCart } from '../../context/CartContext'
+import { useAuth } from '../../context/AuthContext'
+import { useMyMembership } from '../../hooks/useMyMembership'
+import { memberPurchaseGate } from '../../utils/memberGate'
 import { formatZAR } from '../../utils/formatCurrency'
 
 const IMAGE_PLACEHOLDER = null
 
 export default function ProductCard({ product }) {
   const { addItem } = useCart()
+  const { user } = useAuth()
+  const membership = useMyMembership()
+  const navigate = useNavigate()
   const isOutOfStock = product.stock_quantity === 0
+
+  // Purchase gate only — browsing member-only products stays open. Locks once
+  // the membership query settles (success OR failure — see memberGate: a failed
+  // read fails closed) so nobody is handed an Add button that the server will
+  // reject at the end of checkout. Still loading = normal control, so an active
+  // member never sees a "join" flash.
+  const memberLocked = memberPurchaseGate(user, membership).isLocked(product)
 
   const handleAddToCart = (e) => {
     e.preventDefault()
@@ -20,6 +33,14 @@ export default function ProductCard({ product }) {
       style: { background: '#111111', color: '#fff', border: '1px solid #222222' },
       iconTheme: { primary: '#C9A84C', secondary: '#000' },
     })
+  }
+
+  // The card is wrapped in a <Link>, so a nested anchor is invalid HTML —
+  // navigate programmatically instead.
+  const handleJoinToUnlock = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    navigate('/membership')
   }
 
   return (
@@ -83,19 +104,31 @@ export default function ProductCard({ product }) {
             <div className="flex items-center justify-between mt-3">
               <span className="text-gold font-bold text-lg">{formatZAR(product.price)}</span>
 
-              <button
-                onClick={handleAddToCart}
-                disabled={isOutOfStock}
-                className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide px-3 py-2 rounded-lg
-                            transition-all duration-200 ${
-                              isOutOfStock
-                                ? 'text-muted cursor-not-allowed'
-                                : 'bg-gold/10 text-gold hover:bg-gold hover:text-black'
-                            }`}
-              >
-                <ShoppingCart size={14} />
-                Add
-              </button>
+              {memberLocked ? (
+                <button
+                  onClick={handleJoinToUnlock}
+                  title="Join to unlock"
+                  className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide px-3 py-2 rounded-lg
+                              border border-gold/40 text-gold hover:bg-gold hover:text-black transition-all duration-200"
+                >
+                  <Lock size={14} />
+                  Members
+                </button>
+              ) : (
+                <button
+                  onClick={handleAddToCart}
+                  disabled={isOutOfStock}
+                  className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide px-3 py-2 rounded-lg
+                              transition-all duration-200 ${
+                                isOutOfStock
+                                  ? 'text-muted cursor-not-allowed'
+                                  : 'bg-gold/10 text-gold hover:bg-gold hover:text-black'
+                              }`}
+                >
+                  <ShoppingCart size={14} />
+                  Add
+                </button>
+              )}
             </div>
           </div>
         </div>

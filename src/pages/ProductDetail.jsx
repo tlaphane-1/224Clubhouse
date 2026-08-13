@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { useProduct, useProducts } from '../hooks/useProducts'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
+import { useMyMembership } from '../hooks/useMyMembership'
+import { memberPurchaseGate } from '../utils/memberGate'
 import Badge from '../components/ui/Badge'
 import ProductCard from '../components/store/ProductCard'
 import { formatZAR } from '../utils/formatCurrency'
@@ -13,6 +16,8 @@ export default function ProductDetail() {
   const { data: product, isLoading, error } = useProduct(slug)
   const { data: allProducts } = useProducts(product?.category)
   const { addItem } = useCart()
+  const { user } = useAuth()
+  const membership = useMyMembership()
   const [quantity, setQuantity] = useState(1)
   const [imageIndex, setImageIndex] = useState(0)
 
@@ -41,6 +46,13 @@ export default function ProductDetail() {
 
   const images = product.images?.length ? product.images : null
   const related = allProducts?.filter(p => p.id !== product.id).slice(0, 4)
+
+  // Purchase gate only — the page itself always renders. Locks once the
+  // membership query settles (success OR failure — see memberGate: a failed
+  // read fails closed) so nobody is handed an Add button that the server will
+  // reject at the end of checkout. Still loading = normal control, so an active
+  // member never sees a "join" flash.
+  const memberLocked = memberPurchaseGate(user, membership).isLocked(product)
 
   const handleAddToCart = () => {
     addItem(product, quantity)
@@ -141,7 +153,23 @@ export default function ProductDetail() {
               <p className="text-muted leading-relaxed mb-8 text-sm">{product.description}</p>
             )}
 
-            {product.stock_quantity > 0 ? (
+            {memberLocked ? (
+              <div>
+                <div className="border border-gold/40 bg-gold/5 rounded-xl p-5 mb-4 flex items-start gap-3">
+                  <Lock size={18} className="text-gold mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-white font-semibold text-sm mb-1">Members only</p>
+                    <p className="text-muted text-sm leading-relaxed">
+                      This product is reserved for active 224 Clubhouse members.
+                    </p>
+                  </div>
+                </div>
+                <Link to="/membership" className="btn-gold w-full py-4 flex items-center justify-center gap-3">
+                  <Lock size={16} />
+                  Join to unlock
+                </Link>
+              </div>
+            ) : product.stock_quantity > 0 ? (
               <>
                 {/* Quantity */}
                 <div className="flex items-center gap-4 mb-6">
