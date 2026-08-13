@@ -12,7 +12,7 @@ export default function CheckoutForm({ form, onChange, errors, lockEmail = false
     <div className="space-y-5">
       <div>
         <label className={labelCls}>Full Name *</label>
-        <input className={inputCls('name')} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Your full name" />
+        <input className={inputCls('name')} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Your full name" autoComplete="name" />
         {errors?.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
       </div>
 
@@ -25,6 +25,7 @@ export default function CheckoutForm({ form, onChange, errors, lockEmail = false
             value={form.email}
             onChange={e => set('email', e.target.value)}
             placeholder="you@email.com"
+            autoComplete="email"
             disabled={lockEmail}
           />
           {lockEmail && <p className="text-muted text-xs mt-1">Orders are tied to your account email.</p>}
@@ -32,7 +33,7 @@ export default function CheckoutForm({ form, onChange, errors, lockEmail = false
         </div>
         <div>
           <label className={labelCls}>Phone Number *</label>
-          <input type="tel" className={inputCls('phone')} value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="071 000 0000" />
+          <input type="tel" className={inputCls('phone')} value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="071 000 0000" autoComplete="tel" />
           {errors?.phone && <p className="text-red-400 text-xs mt-1">{errors.phone}</p>}
         </div>
       </div>
@@ -43,31 +44,31 @@ export default function CheckoutForm({ form, onChange, errors, lockEmail = false
         <div className="space-y-4">
           <div>
             <label className={labelCls}>Street Address *</label>
-            <input className={inputCls('street')} value={form.street} onChange={e => set('street', e.target.value)} placeholder="123 Main Street" />
+            <input className={inputCls('street')} value={form.street} onChange={e => set('street', e.target.value)} placeholder="123 Main Street" autoComplete="address-line1" />
             {errors?.street && <p className="text-red-400 text-xs mt-1">{errors.street}</p>}
           </div>
 
           <div>
             <label className={labelCls}>Apartment / Suite (optional)</label>
-            <input className={inputCls('apartment')} value={form.apartment} onChange={e => set('apartment', e.target.value)} placeholder="Apt 4B" />
+            <input className={inputCls('apartment')} value={form.apartment} onChange={e => set('apartment', e.target.value)} placeholder="Apt 4B" autoComplete="address-line2" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>City *</label>
-              <input className={inputCls('city')} value={form.city} onChange={e => set('city', e.target.value)} placeholder="Boksburg" />
+              <input className={inputCls('city')} value={form.city} onChange={e => set('city', e.target.value)} placeholder="Boksburg" autoComplete="address-level2" />
               {errors?.city && <p className="text-red-400 text-xs mt-1">{errors.city}</p>}
             </div>
             <div>
               <label className={labelCls}>Postal Code *</label>
-              <input className={inputCls('postalCode')} value={form.postalCode} onChange={e => set('postalCode', e.target.value)} placeholder="1459" />
+              <input className={inputCls('postalCode')} value={form.postalCode} onChange={e => set('postalCode', e.target.value)} placeholder="1459" autoComplete="postal-code" />
               {errors?.postalCode && <p className="text-red-400 text-xs mt-1">{errors.postalCode}</p>}
             </div>
           </div>
 
           <div>
             <label className={labelCls}>Province *</label>
-            <select className={inputCls('province')} value={form.province} onChange={e => set('province', e.target.value)}>
+            <select className={inputCls('province')} value={form.province} onChange={e => set('province', e.target.value)} autoComplete="address-level1">
               <option value="">Select province</option>
               {SA_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>

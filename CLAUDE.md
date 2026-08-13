@@ -44,7 +44,7 @@ supabase migration new <name>                     # scaffold a new migration
 ### Dual backend — Supabase is primary, Firebase is optional
 
 - **Supabase** (`src/lib/supabase.js`) is the source of truth: Postgres (products, orders, events, memberships, newsletter_subscribers), Auth, and Storage. Uses the **anon key** client-side; RLS enforces access.
-- **Firebase Realtime Database** (`src/lib/firebase.js`) is used *only* for live order-status push. It is **guarded**: `db` is `null` unless `VITE_FIREBASE_DATABASE_URL` is set. Every Firebase call must be wrapped in `if (db)` — see `Checkout.jsx`, `useOrders.js`, `useOrderStatus.js`. The app works fully without Firebase configured.
+- **Firebase Realtime Database** (`src/lib/firebase.js`) is used *only* for live order-status push. It is **guarded**: `db` is `null` unless `VITE_FIREBASE_DATABASE_URL` is set. Every Firebase call must be wrapped in `if (db)` — see `Checkout.jsx`, `useOrders.js`. The app works fully without Firebase configured.
 
 ### Auth & admin authorization (security model)
 
