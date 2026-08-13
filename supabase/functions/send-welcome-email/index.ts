@@ -1,4 +1,6 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { escapeHtml } from '../_shared/escapeHtml.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 // Interim: sends go out from a domain already verified on the Resend account until
@@ -12,7 +14,7 @@ interface WelcomeEmailPayload {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
@@ -40,7 +42,7 @@ serve(async (req) => {
       Welcome to the 224 Family 🔥
     </h1>
     <p style="color:#888888; text-align:center; margin-bottom:40px; font-size:15px; line-height:1.6;">
-      Hey ${firstName}! You're in. Thanks for joining the 224 Clubhouse community —<br/>
+      Hey ${escapeHtml(firstName)}! You're in. Thanks for joining the 224 Clubhouse community —<br/>
       you'll be the first to know about new drops, events, and exclusive offers.
     </p>
 
@@ -112,13 +114,9 @@ serve(async (req) => {
       throw new Error(err)
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return jsonResponse({ success: true })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    const message = error instanceof Error ? error.message : String(error)
+    return jsonResponse({ error: message }, 500)
   }
 })

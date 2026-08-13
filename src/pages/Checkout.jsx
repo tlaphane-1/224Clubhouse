@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { Lock } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
+import { useLastOrder } from '../hooks/useMyOrders'
+import { useMyMembership } from '../hooks/useMyMembership'
+import { memberPurchaseGate } from '../utils/memberGate'
 import { supabase } from '../lib/supabase'
 import CheckoutForm from '../components/checkout/CheckoutForm'
 import CustomerAuth from '../components/auth/CustomerAuth'
@@ -45,19 +49,57 @@ export default function Checkout() {
   const shippingFee = cartSubtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
   const total = cartSubtotal + shippingFee
 
+  // place_cod_order rejects the WHOLE order if any line is member-only and the
+  // buyer isn't an active member. Catch it here instead, so the last step of
+  // checkout can't end in a raw RPC error. Cart.jsx blocks the same case first;
+  // this covers a direct /checkout hit or a membership lapsing mid-session.
+  // Never blocks while the membership query is still loading (see memberGate).
+  const membership = useMyMembership()
+  const gate = memberPurchaseGate(user, membership)
+  const lockedItems = items.filter(item => gate.isLocked(item))
+
   useEffect(() => {
     document.title = 'Checkout | 224 Clubhouse'
     if (items.length === 0) navigate('/cart')
   }, [items, navigate])
 
+  // Returning customers shouldn't retype their delivery details. Until the
+  // customer touches the form, empty fields DISPLAY values from their most
+  // recent order (derived below — no effect, no state write on data arrival).
+  // The first edit snapshots the merged form into state (CheckoutForm hands
+  // back the whole form object), so nothing typed is ever overwritten and a
+  // field the customer clears stays cleared.
+  const { data: lastOrder } = useLastOrder()
+  const [formTouched, setFormTouched] = useState(false)
+  const handleFormChange = (next) => {
+    setFormTouched(true)
+    setForm(next)
+  }
+  const lastAddr = lastOrder?.shipping_address ?? {}
+  const prefill = {
+    name: lastOrder?.customer_name ?? '',
+    phone: lastOrder?.customer_phone ?? '',
+    street: lastAddr.street ?? '',
+    apartment: lastAddr.apartment ?? '',
+    city: lastAddr.city ?? '',
+    province: lastAddr.province ?? '',
+    postalCode: lastAddr.postalCode ?? '',
+  }
+  const baseForm = formTouched
+    ? form
+    : Object.fromEntries(
+        Object.entries(form).map(([k, v]) => [k, v !== '' ? v : (prefill[k] ?? '')]),
+      )
+
   // The server stamps the order with the ACCOUNT email (place_cod_order
   // overrides whatever the client sends), so the form mirrors it read-only —
   // derived here rather than synced into state.
-  const checkoutForm = { ...form, email: user?.email ?? '' }
+  const checkoutForm = { ...baseForm, email: user?.email ?? '' }
 
   const handlePlaceOrder = async () => {
     if (processing) return // guard against double-submit -> duplicate orders
     if (!user) return // render gate should prevent this; server enforces regardless
+    if (lockedItems.length > 0) return // button is disabled; the RPC would reject the whole order
     const validationErrors = validate(checkoutForm)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
@@ -108,16 +150,12 @@ export default function Checkout() {
     // Receipt email — fire and forget. The order is already placed; if Resend is
     // misconfigured or slow the customer must still reach their confirmation page,
     // so this never blocks navigation and never surfaces an error to them.
+    // Only the order id goes over the wire: the function reads the recipient,
+    // name, items and total from the row itself (and checks the caller owns it),
+    // so a caller can never aim a branded email at an address of their choosing.
     supabase.functions
       .invoke('send-order-email', {
-        body: {
-          orderNumber: data.order_number,
-          customerName: checkoutForm.name,
-          customerEmail: checkoutForm.email,
-          items: items.map(i => ({ name: i.name, price: i.price, quantity: i.quantity })),
-          total: data.total,
-          paymentMethod: method,
-        },
+        body: { orderId: data.id },
       })
       .catch(() => {
         /* the order stands with or without the receipt */
@@ -167,7 +205,7 @@ export default function Checkout() {
               <h2 className="font-semibold text-white mb-6 uppercase tracking-widest text-sm">
                 Contact & Delivery
               </h2>
-              <CheckoutForm form={checkoutForm} onChange={setForm} errors={errors} lockEmail />
+              <CheckoutForm form={checkoutForm} onChange={handleFormChange} errors={errors} lockEmail />
             </div>
 
             {/* Age confirmation */}
@@ -183,7 +221,8 @@ export default function Checkout() {
                 </div>
                 <span className="text-muted text-sm leading-relaxed">
                   I confirm that I am <span className="text-white font-semibold">21 years of age or older</span> and agree to the{' '}
-                  <span className="text-gold">terms of service</span>. I understand that cannabis products are intended for adults only.
+                  <Link to="/terms" className="text-gold hover:text-gold-light underline transition-colors">terms of service</Link>, including the{' '}
+                  <Link to="/privacy" className="text-gold hover:text-gold-light underline transition-colors">Privacy Policy</Link>. I understand that cannabis products are intended for adults only.
                 </span>
               </label>
             </div>
@@ -205,9 +244,28 @@ export default function Checkout() {
                 </div>
               ) : (
                 <>
+                  {lockedItems.length > 0 && (
+                    <div className="border border-gold/40 bg-gold/5 rounded-lg p-4 mb-4 flex items-start gap-3">
+                      <Lock size={16} className="text-gold mt-0.5 shrink-0" />
+                      <p className="text-muted text-sm leading-relaxed">
+                        <span className="text-white font-semibold">Members only:</span>{' '}
+                        {lockedItems.map(i => i.name).join(', ')}{' '}
+                        {lockedItems.length > 1 ? 'are' : 'is'} reserved for active members.{' '}
+                        <Link to="/cart" className="text-gold hover:text-gold-light underline transition-colors">
+                          Remove {lockedItems.length > 1 ? 'them' : 'it'} from your cart
+                        </Link>{' '}
+                        or{' '}
+                        <Link to="/membership" className="text-gold hover:text-gold-light underline transition-colors">
+                          join 224
+                        </Link>{' '}
+                        to place this order.
+                      </p>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={handlePlaceOrder}
+                    disabled={lockedItems.length > 0}
                     className="btn-gold w-full py-4 text-base"
                   >
                     Place Order — {formatZAR(total)}

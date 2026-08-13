@@ -50,6 +50,20 @@ export function useUpdateOrderStatus() {
           updatedAt: new Date().toISOString(),
         })
       }
+
+      // Status email — fire and forget. The status is already updated; if Resend is
+      // misconfigured or slow the admin's workflow must not stall or show an error,
+      // so this never blocks the mutation and never surfaces a failure.
+      // Only the order id goes over the wire: the function verifies the caller is
+      // an admin and reads recipient, name and the just-written status from the
+      // row, so no caller can aim a branded email at an address of their choosing.
+      supabase.functions
+        .invoke('send-status-email', {
+          body: { orderId },
+        })
+        .catch(() => {
+          /* the status change stands with or without the email */
+        })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })

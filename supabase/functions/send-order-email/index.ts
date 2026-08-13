@@ -1,4 +1,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { escapeHtml } from '../_shared/escapeHtml.ts'
+import { callerClient, serviceClient } from '../_shared/supabaseClients.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 // Interim: sends go out from a domain already verified on the Resend account until
@@ -11,14 +14,12 @@ interface OrderItem {
   quantity: number
 }
 
+// The ONLY thing the client may supply. Recipient, name, items and totals are
+// read from the database: anything caller-supplied would let anyone with the
+// (public) anon key send branded mail from the club's verified domain to any
+// address they like.
 interface OrderEmailPayload {
-  orderNumber: string
-  customerName: string
-  customerEmail: string
-  items: OrderItem[]
-  total: number
-  /** 'cash' | 'card' — payment happens on delivery, so nothing is paid yet. */
-  paymentMethod?: string
+  orderId: string
 }
 
 const SITE_URL = 'https://224clubhouse.web.app'
@@ -35,17 +36,50 @@ function formatZAR(cents: number): string {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
     const payload: OrderEmailPayload = await req.json()
-    const { orderNumber, customerName, customerEmail, items, total, paymentMethod } = payload
+    const { orderId } = payload
+    if (!orderId) return jsonResponse({ error: 'orderId is required' }, 400)
+
+    // --- Authorization: the caller must OWN this order -------------------
+    // Customer-triggered at checkout, so this is not an admin gate: the JWT
+    // must resolve to the user whose id is stamped on the order.
+    const authHeader = req.headers.get('Authorization') ?? ''
+    if (!authHeader) return jsonResponse({ error: 'Not authenticated' }, 401)
+
+    // getUser() must be given the JWT explicitly: there is no persisted session
+    // in an edge function, so the no-argument form would always come back empty.
+    // A logged-out caller sends the anon key here, which resolves to no user.
+    const jwt = authHeader.replace(/^Bearer\s+/i, '')
+    const { data: userData, error: userError } = await callerClient(authHeader).auth.getUser(jwt)
+    const caller = userData?.user
+    if (userError || !caller) return jsonResponse({ error: 'Not authenticated' }, 401)
+
+    // --- Facts come from the DB, never from the payload ------------------
+    const admin = serviceClient()
+    const { data: order, error: orderError } = await admin
+      .from('orders')
+      .select('order_number, customer_name, customer_email, items, total, payment_method, user_id')
+      .eq('id', orderId)
+      .single()
+
+    if (orderError || !order) return jsonResponse({ error: 'Order not found' }, 404)
+    if (order.user_id !== caller.id) return jsonResponse({ error: 'Not authorized' }, 403)
+
+    const orderNumber: string = order.order_number
+    const customerName: string = order.customer_name
+    const customerEmail: string = order.customer_email
+    const items: OrderItem[] = Array.isArray(order.items) ? order.items : []
+    const total: number = order.total
+    const paymentMethod: string | undefined = order.payment_method ?? undefined
 
     const itemRows = items.map(item => `
       <tr>
-        <td style="padding: 8px 0; color: #ffffff; border-bottom: 1px solid #222222;">${item.name}</td>
-        <td style="padding: 8px 0; color: #888888; text-align: center; border-bottom: 1px solid #222222;">${item.quantity}</td>
+        <td style="padding: 8px 0; color: #ffffff; border-bottom: 1px solid #222222;">${escapeHtml(item.name)}</td>
+        <td style="padding: 8px 0; color: #888888; text-align: center; border-bottom: 1px solid #222222;">${escapeHtml(item.quantity)}</td>
         <td style="padding: 8px 0; color: #C9A84C; text-align: right; border-bottom: 1px solid #222222;">${formatZAR(item.price * item.quantity)}</td>
       </tr>
     `).join('')
@@ -71,7 +105,7 @@ serve(async (req) => {
       Order Confirmed 🌿
     </h1>
     <p style="color:#888888; text-align:center; margin-bottom:40px; font-size:15px;">
-      Thank you, ${customerName}! Your order has been received and is being processed.
+      Thank you, ${escapeHtml(customerName)}! Your order has been received and is being processed.
     </p>
 
     <!-- Order Card -->
@@ -81,7 +115,7 @@ serve(async (req) => {
            track their order, which is what prompted adding this. -->
       <div style="margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid #222222; text-align:center;">
         <div style="color:#888888; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">Your Order Number</div>
-        <div style="color:#C9A84C; font-family:monospace; font-size:22px; font-weight:700; letter-spacing:1px;">${orderNumber}</div>
+        <div style="color:#C9A84C; font-family:monospace; font-size:22px; font-weight:700; letter-spacing:1px;">${escapeHtml(orderNumber)}</div>
         <div style="color:#888888; font-size:12px; margin-top:8px;">Keep this to track your order.</div>
       </div>
 
@@ -161,13 +195,9 @@ serve(async (req) => {
       throw new Error(err)
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return jsonResponse({ success: true })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    const message = error instanceof Error ? error.message : String(error)
+    return jsonResponse({ error: message }, 500)
   }
 })
