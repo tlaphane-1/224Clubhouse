@@ -144,7 +144,20 @@ Branch: `feature/memberships-and-pages`. Commit incrementally; deploy only after
 - [ ] Deferred post-ship: admin new-order notification email, newsletter unsubscribe route, WELCOME10 decision, stock restore on cancel, server-side age check in place_cod_order, events ticketing, reporting/CSVs
 - vite.config.js: fileParallelism:false — live-DB contract suites were timing out under parallel file execution (root-caused, not flaky-skipped)
 
-### Ship sequence (in progress): code-review high over uncommitted diff → fix criticals → commit chunks → supabase db push (breaks old anon membership flow; frontend deploys immediately after) → deploy send-membership-email + send-status-email --use-api → firebase deploy → un-skipped membership contract tests live → smoke test
+### ✅ SHIPPED 2026-08-13 ~17:45
+Migration `20260813150000` applied to production (`aogdkqczvlffgydgxsmz`); all 4 edge functions
+redeployed `--use-api`; frontend deployed to Firebase Hosting. **Contract suite re-run live:
+59 passed / 4 skipped** (was 50/13 — all 10 membership tests un-skipped and passed against prod).
+Smoke-verified live: /membership renders tiers from the DB, /account gates with sign-in + forgot
+password, /privacy renders with draft banner, /cart WhatsApp panel with the real number.
+
+Code-review (high) found 10 confirmed issues pre-ship; all fixed before commit. Two were
+ship-blockers: edge functions were anon-callable with attacker-chosen recipient + unescaped HTML
+(phishing from the verified sending domain), and broken CORS meant browser-invoked sends silently
+never delivered — including the pre-existing send-order-email, so checkout receipts had been
+failing in browsers all along (the 2026-08-13 "delivered" proof was a CLI call, not a page).
+
+### Original ship sequence: code-review high over uncommitted diff → fix criticals → commit chunks → supabase db push (breaks old anon membership flow; frontend deploys immediately after) → deploy send-membership-email + send-status-email --use-api → firebase deploy → un-skipped membership contract tests live → smoke test
 
 ### Layered tests (target: 11+ new specs across layers, added with each wave)
 Layer 1 service-role probes for every new read path; Layer 2 anon/user negative+positive controls
