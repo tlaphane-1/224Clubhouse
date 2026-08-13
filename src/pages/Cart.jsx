@@ -4,6 +4,7 @@ import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { formatZAR } from '../utils/formatCurrency'
 import { SHIPPING_FEE, SHIPPING_THRESHOLD } from '../components/checkout/OrderSummary'
+import WhatsAppOrderPanel from '../components/store/WhatsAppOrderPanel'
 
 export default function Cart() {
   const { items, removeItem, updateQuantity, cartSubtotal } = useCart()
@@ -103,7 +104,8 @@ export default function Cart() {
 
           {/* Order Summary */}
           <div>
-            <div className="bg-surface border border-border rounded-xl p-6 sticky top-28">
+            <div className="sticky top-28 space-y-6">
+            <div className="bg-surface border border-border rounded-xl p-6">
               <h3 className="font-heading text-lg font-semibold text-white mb-5">Order Summary</h3>
 
               <div className="space-y-3 mb-5 text-sm">
@@ -132,6 +134,9 @@ export default function Cart() {
               <Link to="/checkout" className="btn-gold w-full py-4 text-center block text-sm uppercase tracking-widest">
                 Proceed to Checkout
               </Link>
+            </div>
+
+            <WhatsAppOrderPanel />
             </div>
           </div>
         </div>
