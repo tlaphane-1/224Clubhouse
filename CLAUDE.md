@@ -48,9 +48,11 @@ supabase migration new <name>                     # scaffold a new migration
 
 ### Auth & admin authorization (security model)
 
-- Login is Supabase email/password (`AuthContext.jsx`).
-- **Admin status is a server-side boundary.** `AuthContext` resolves it via the `is_admin()` Postgres RPC, which checks the `admin_users` table under RLS (migration `*_admin_authorization.sql`). The client `isAdmin` only drives UI (showing `/admin/*`); the real enforcement is RLS — write policies on products/events/memberships/newsletter and storage upload/delete all require `is_admin()`. Add/remove admins by editing the `admin_users` table (dashboard or a service-role script); there is no admin env var.
-- **`orders` is the exception (still being hardened).** Its RLS is deliberately left as the original `auth.role() = 'authenticated'` because order creation is mid-migration to a server-side, payment-verified flow. Until that lands, `orders` writes are not yet locked down. See `tasks/todo.md` Workstream 2.
+- Login is Supabase email/password (`AuthContext.jsx`). Two audiences share it:
+  - **Customers** sign in / sign up inline via `CustomerAuth.jsx` (rendered by Checkout and `/orders` when logged out — there is no standalone customer login route). Signup requires **email confirmation** (owner decision 2026-08-08); the confirmation link returns to the page it was requested from via the default implicit flow — no callback route. There is no password-reset flow yet.
+  - **Admins** use `/admin/login`. **Admin status is a server-side boundary:** `AuthContext` resolves it via the `is_admin()` Postgres RPC, which checks the `admin_users` table under RLS (migration `*_admin_authorization.sql`). The client `isAdmin` only drives UI (showing `/admin/*`); the real enforcement is RLS — write policies on products/events/memberships/newsletter and storage upload/delete all require `is_admin()`. Add/remove admins by editing the `admin_users` table (dashboard or a service-role script); there is no admin env var.
+- **`orders` RLS** (migrations `*_security_hardening.sql` + `*_customer_accounts_orders.sql`): select is admin **or** owner (`user_id = auth.uid()`); update/delete admin-only; **no insert policy** — creation goes through the `place_cod_order` SECURITY DEFINER RPC, which is granted to `authenticated` only, requires `auth.uid()`, stamps `user_id`, and **overrides `customer_email` with the account email** (client value ignored). Customer-facing reads that must work anonymously (pre-account orders) use the `get_order_tracking` / `get_orders_by_email` RPCs.
+- Old orders (before 2026-08-08) have `user_id = null` — deliberately **not** backfilled (linking by unverified email is an account-takeover vector). They are reachable only via `/track`.
 
 ### Data layer — TanStack Query hooks in `src/hooks/`
 
@@ -66,14 +68,13 @@ All DB access goes through hooks (`useProducts`, `useOrders`, `useEvents`, `useM
 
 ### Checkout flow (`src/pages/Checkout.jsx`)
 
-Paystack inline popup (`@paystack/inline-js` attaches `window.PaystackPop`; see `PaystackButton.jsx`). On payment success, in order:
-1. Insert `orders` row (status `paid`, with Paystack reference).
-2. Call `decrement_stock` RPC per item (failures swallowed — RPC is best-effort).
-3. Mirror status to Firebase if `db` is configured.
-4. Invoke the `send-order-email` Supabase Edge Function.
-5. Clear cart, navigate to `/order-confirmation/:id`.
+Cash/card **on delivery** — online payment is disabled (`PaystackButton.jsx` retained for re-enable; the server-verified Paystack plan is in `tasks/todo.md` Workstream 2). **Checkout requires a signed-in customer**: logged out, the form column renders `CustomerAuth`; logged in, the email field is locked to the account email (the server enforces this regardless). On Place Order:
+1. Call the `place_cod_order` RPC — it validates, locks product rows, recomputes totals from DB prices, decrements stock atomically, and inserts the order (`pending`, `user_id` + account email stamped).
+2. `rememberOrder(...)` into localStorage (so the confirmation page survives a refresh).
+3. Invoke the `send-order-email` Edge Function, fire-and-forget.
+4. Invalidate the `my-orders` query, clear cart, navigate to `/order-confirmation/:orderNumber`.
 
-Note: payment is **not verified server-side** — the client trusts the Paystack callback before writing the order.
+Customers find past orders on `/orders` (`MyOrders.jsx` + `useMyOrders`, owner-select RLS with an explicit `user_id` filter so admins don't see everyone's orders there), or via `/track` for pre-account orders.
 
 ### Images
 

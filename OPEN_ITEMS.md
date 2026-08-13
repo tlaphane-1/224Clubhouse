@@ -119,9 +119,9 @@ and age consent is only a localStorage boolean.
 
 Verified wrong on 2026-08-07:
 
-- **`CLAUDE.md:53`** says `orders` RLS is "deliberately left as `auth.role() = 'authenticated'`".
-  It is not — `20260623120000_security_hardening.sql` dropped that policy and replaced it with
-  admin-only select/update/delete. Anonymous order *creation* goes through SECURITY DEFINER RPCs.
+- ~~**`CLAUDE.md:53`** says `orders` RLS is "deliberately left as `auth.role() = 'authenticated'`".~~
+  **Corrected 2026-08-13** — CLAUDE.md's auth and checkout sections now describe the
+  account-required flow and the current RLS (admin + owner select, RPC-only creation).
 - **`tasks/todo.md:66`** says the contact form calls a non-existent `send-contact-email` and fakes
   success. It no longer does — `Contact.jsx:68` inserts into a `contact_messages` table.
 
