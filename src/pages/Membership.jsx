@@ -14,6 +14,12 @@ import toast from 'react-hot-toast'
 const TIER_ICONS = { daily: Zap, weekly: Star, monthly: Crown }
 const FEATURED_SLUG = 'weekly'
 
+// No Paystack account yet, so there is no online payment to take: members
+// apply here and settle at the club, which is also how the lounge already
+// works. Setting VITE_PAYSTACK_PUBLIC_KEY switches the online flow back on —
+// nothing else needs to change.
+const PAY_ONLINE = Boolean(import.meta.env.VITE_PAYSTACK_PUBLIC_KEY)
+
 // Prices are whole rands today (R10/R30/R50) — keep the compact "R10" look,
 // but fall back to full cents formatting if an admin ever sets e.g. 1050.
 function displayPrice(cents) {
@@ -96,6 +102,46 @@ export default function Membership() {
     setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
   }
 
+  // Creates the pending application. `reference` is the Paystack reference when
+  // paid online, or null when the member settles at the club.
+  async function submitApplication(reference) {
+    try {
+      const { error } = await supabase.rpc('place_membership', {
+        p_customer: {
+          full_name: form.full_name,
+          phone: form.phone,
+          date_of_birth: form.date_of_birth,
+          id_number: form.id_number || null,
+        },
+        p_tier: tier.slug,
+        p_reference: reference,
+      })
+      if (error) throw error
+      queryClient.invalidateQueries({ queryKey: ['my-membership'] })
+      setStep('success')
+    } catch (err) {
+      const msg = err?.message || ''
+      if (/already have a pending or active membership/i.test(msg)
+        || /memberships_one_pending_per_user|duplicate key/i.test(msg)) {
+        // Another tab/device applied first — refresh so the status card shows.
+        toast.error(
+          PAY_ONLINE
+            ? 'You already have a pending or active membership. If you were charged twice, contact us for a refund.'
+            : 'You already have a pending or active membership on this account.',
+        )
+        queryClient.invalidateQueries({ queryKey: ['my-membership'] })
+        setStep('tiers')
+      } else if (/sign in required/i.test(msg)) {
+        toast.error('Your session expired — please sign in again, then apply.')
+      } else if (PAY_ONLINE) {
+        toast.error('Payment received but registration failed. Please contact us.')
+      } else {
+        toast.error('We could not submit your application. Please try again.')
+      }
+      console.error(err)
+    }
+  }
+
   function handlePay() {
     if (!tier) return
     if (!user) {
@@ -134,6 +180,16 @@ export default function Membership() {
       return
     }
 
+    // Pay-at-the-club: with no Paystack account yet there is no online payment
+    // to take, and every application waits for admin approval anyway — so the
+    // application is submitted here and settled in person. The moment
+    // VITE_PAYSTACK_PUBLIC_KEY is set, the Paystack path below takes over.
+    if (!PAY_ONLINE) {
+      setLoading(true)
+      submitApplication(null).finally(() => setLoading(false))
+      return
+    }
+
     if (!window.PaystackPop) {
       toast.error('Payment system not loaded. Please refresh the page.')
       return
@@ -154,38 +210,8 @@ export default function Membership() {
           { display_name: 'Tier', variable_name: 'tier', value: tier.name },
         ],
       },
-      callback: async (response) => {
-        try {
-          const { error } = await supabase.rpc('place_membership', {
-            p_customer: {
-              full_name: form.full_name,
-              phone: form.phone,
-              date_of_birth: form.date_of_birth,
-              id_number: form.id_number || null,
-            },
-            p_tier: tier.slug,
-            p_reference: response.reference,
-          })
-          if (error) throw error
-          queryClient.invalidateQueries({ queryKey: ['my-membership'] })
-          setStep('success')
-        } catch (err) {
-          const msg = err?.message || ''
-          if (/already have a pending or active membership/i.test(msg)
-            || /memberships_one_pending_per_user|duplicate key/i.test(msg)) {
-            // Another tab/device applied first — refresh so the status card shows.
-            toast.error('You already have a pending or active membership. If you were charged twice, contact us for a refund.')
-            queryClient.invalidateQueries({ queryKey: ['my-membership'] })
-            setStep('tiers')
-          } else if (/sign in required/i.test(msg)) {
-            toast.error('Your session expired — please sign in again. Your payment reference is safe; contact us if the application does not appear.')
-          } else {
-            toast.error('Payment received but registration failed. Please contact us.')
-          }
-          console.error(err)
-        } finally {
-          setLoading(false)
-        }
+      callback: (response) => {
+        submitApplication(response.reference).finally(() => setLoading(false))
       },
       onClose: () => setLoading(false),
     })
@@ -207,7 +233,9 @@ export default function Membership() {
             <span className="text-gold font-semibold">{tier?.name}</span> membership application and will confirm it shortly.
           </p>
           <p className="text-muted text-sm leading-relaxed mb-8">
-            Your membership starts the moment we confirm it — you can check its status right here any time.
+            {PAY_ONLINE
+              ? 'Your membership starts the moment we confirm it — you can check its status right here any time.'
+              : `Pay ${tier ? displayPrice(tier.price_cents) : ''} at the club and we'll activate it on the spot. Your membership starts the moment we confirm it — check its status here any time.`}
           </p>
           <div className="bg-gold/5 border border-gold/20 rounded-xl p-4 mb-8">
             <p className="text-gold text-xs uppercase tracking-widest mb-2">Address</p>
@@ -376,6 +404,11 @@ export default function Membership() {
               >
                 {effectiveStatus === 'expired' ? 'Renew' : 'Apply for'} {tier.name} — {displayPrice(tier.price_cents)}
               </button>
+              {!PAY_ONLINE && (
+                <p className="text-muted text-xs mt-3">
+                  Apply online — pay at the club when you collect your membership.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -510,7 +543,11 @@ export default function Membership() {
                       disabled={loading}
                       className="btn-gold flex-1 py-3 text-sm uppercase tracking-widest disabled:opacity-50"
                     >
-                      {loading ? 'Processing...' : `Pay ${displayPrice(tier.price_cents)}`}
+                      {loading
+                        ? (PAY_ONLINE ? 'Processing...' : 'Submitting...')
+                        : PAY_ONLINE
+                          ? `Pay ${displayPrice(tier.price_cents)}`
+                          : `Submit application — ${displayPrice(tier.price_cents)} at the club`}
                     </button>
                   </div>
                 </div>
