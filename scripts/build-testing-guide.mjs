@@ -86,7 +86,8 @@ ${extraStyle}
     <tr><td><strong>Admin login</strong></td><td><code>https://224clubhouse.web.app/admin/login</code></td></tr>
     <tr><td><strong>Store WhatsApp</strong></td><td><code>+27 75 086 8783</code></td></tr>
     <tr><td><strong>Test on</strong></td><td>One phone <em>and</em> one computer. Several problems only appear on one of them.</td></tr>
-    <tr><td><strong>You will need</strong></td><td>An email address you can open during the test (for sign-up and password links).</td></tr>
+    <tr><td><strong>You will need</strong></td><td>An email address you can open during the test (for sign-up, password and unsubscribe links).</td></tr>
+    <tr><td><strong>Set up first</strong></td><td>Using the admin area, create <em>two</em> test events — one normal, one marked Members Only — and one test discount code (tests A-14, A-21). Sections 2 and 3 need them.</td></tr>
   </tbody>
 </table>
 
@@ -100,10 +101,15 @@ ${extraStyle}
   <tbody>
     <tr><td><strong>Visitor</strong></td><td>Anyone browsing, not signed in</td><td>1</td></tr>
     <tr><td><strong>Customer</strong></td><td>Signed-in shopper with an account</td><td>2</td></tr>
-    <tr><td><strong>Member</strong></td><td>Customer with an approved membership</td><td>3</td></tr>
-    <tr><td><strong>Admin / Owner</strong></td><td>You and your staff, in the control room</td><td>4</td></tr>
+    <tr><td><strong>Guest at an event</strong></td><td>Somebody booking a spot for a night at the club</td><td>3</td></tr>
+    <tr><td><strong>Member</strong></td><td>Customer with an approved membership</td><td>4</td></tr>
+    <tr><td><strong>Admin / Owner</strong></td><td>You and your staff, in the control room</td><td>5</td></tr>
   </tbody>
 </table>
+
+<div class="tip">
+  <p><strong>Work in this order.</strong> Sections build on each other: the account you make in section 2 is the one that books an event in section 3 and becomes a member in section 4. A few tests need an admin to do something first — where that happens, the test says which admin test to run.</p>
+</div>
 
 <h2>1. Visitor — not signed in</h2>
 <div class="role-card">
@@ -123,7 +129,7 @@ ${T('V-6', 'WhatsApp ordering', 'In the cart, choose Collection, then Send order
 ${T('V-7', 'WhatsApp delivery needs an address', 'Switch to Delivery, leave the address blank, press send.', 'It refuses and points at the address box instead of sending an incomplete order.')}
 ${T('V-8', 'Membership page', 'Open Membership.', 'All three tiers show with the correct prices (R10 daily, R30 weekly, R50 monthly).')}
 ${T('V-9', 'Applying needs an account', 'Choose a tier and press Apply.', 'You are asked to sign in first. No payment is requested before that.')}
-${T('V-10', 'Events', 'Open Events.', 'Upcoming events appear. Past events do not.')}
+${T('V-10', 'Events', 'Open Events, then tap any event card.', 'Upcoming events appear and past ones do not. Tapping a card opens that event on its own page, with the date, time, address, entry price and how many spots are left.')}
 ${T('V-11', 'Contact form', 'Send yourself a test message through Contact.', 'You get a clear confirmation. (You will read this message in test A-9.)')}
 ${T('V-12', 'Legal pages', 'Open Privacy, Terms and Delivery &amp; Returns from the footer.', 'All three open and read correctly. They currently show a "Draft" banner — expected until you approve them.')}
 ${T('V-13', 'Track an order', 'Open Track Order.', 'You can look up an order using an order number and email.')}
@@ -135,6 +141,7 @@ ${T('V-13', 'Track an order', 'Open Track Order.', 'You can look up an order usi
   <p><strong>Who:</strong> Somebody buying from you.</p>
   <p><strong>What matters:</strong> Ordering works, and afterwards they can find the order themselves without phoning you.</p>
   <p><strong>Setup:</strong> Create a brand-new account during test C-1 so you see exactly what a real customer sees.</p>
+  <p><strong>Watch the order:</strong> C-13 happens <em>during</em> the checkout in C-4, before you press Place Order. <code>WELCOME10</code> only works on somebody&rsquo;s very first order, so once C-4 is placed you cannot go back and try it.</p>
 </div>
 <table class="tests">
 <thead>${head}</thead>
@@ -151,14 +158,42 @@ ${T('C-9', 'Address is remembered', 'Start a second checkout.', 'Your name, phon
 ${T('C-10', 'Forgot password', 'Sign out, then use "Forgot password?" on the sign-in form.', 'A reset email arrives; its link lets you set a new password and signs you in.')}
 ${T('C-11', 'Cart privacy on a shared device', 'Add something to the cart, then Sign Out.', 'The cart is emptied — the next person on that device does not inherit your basket.')}
 ${T('C-12', 'Members-only still blocked', 'While signed in but not a member, open a Members product.', 'Still locked. If one is already in your cart, the cart says so and checkout is blocked until it is removed.')}
+${T('C-13', 'Use a discount code', 'On the checkout page in C-4, type <code>WELCOME10</code> into the Discount code box and press Apply.', 'The code is accepted and a Discount (WELCOME10) line appears in the summary, taking 10% off the goods. Delivery is still worked out on the price before the discount, so a discount can never take away free delivery.')}
+${T('C-14', 'A wrong code is refused politely', 'Type something invented, such as <code>NONSENSE</code>, and press Apply.', 'A short red line appears under the box — &ldquo;That is not a valid code&rdquo;. The total does not change and nothing breaks.')}
+${T('C-15', 'A code that stops qualifying', 'Apply the minimum-spend code the admin made in A-21, then remove items until the cart drops below that minimum.', 'The code takes itself off and explains why (for example &ldquo;Spend at least R400&rdquo;). The total goes back to full price rather than promising a discount the order would then refuse.')}
+${T('C-16', 'First order only', 'Start a second order and try <code>WELCOME10</code> again.', '&ldquo;That code is for first orders only&rdquo;. The order itself still goes through normally at full price.')}
+${T('C-17', 'Unsubscribe from the newsletter', 'Sign up for the newsletter on the home page, open the welcome email and press Unsubscribe at the bottom.', 'A 224 Clubhouse page confirms you have been removed and names your email address. It also says order and membership emails still come through.')}
+${T('C-18', 'A broken or reused unsubscribe link', 'Open the same unsubscribe link a second time, then try the address again with the code at the end changed.', 'The second click still ends calmly, not in an error. A damaged link says &ldquo;This link isn&rsquo;t valid&rdquo; and gives an email address to write to. No technical error message ever appears.')}
+${T('C-19', 'Signing up again works', 'Sign up for the newsletter again with the same address.', 'You are welcomed back onto the list — not told you are already subscribed and quietly left off it.')}
 </tbody>
 </table>
 
-<h2>3. Member — approved membership</h2>
+<h2>3. Events — booking a spot</h2>
+<div class="role-card">
+  <p><strong>Who:</strong> Somebody who wants to come to a night at the club.</p>
+  <p><strong>What matters:</strong> They can put their name down in advance, they know exactly what to pay at the door, and the room cannot be double-booked.</p>
+  <p><strong>Setup:</strong> Use the signed-in account from section 2, which is <em>not</em> a member yet. You need the two test events from the &ldquo;Set up first&rdquo; row above: one normal, one Members Only.</p>
+  <p><strong>Remember:</strong> There is no online payment for events. Booking a spot puts you on the door list; you pay cash or card when you arrive.</p>
+</div>
+<table class="tests">
+<thead>${head}</thead>
+<tbody>
+${T('E-1', 'The event page', 'From Events, tap your normal test event.', 'Its own page opens showing date, time, the club address, the entry price marked &ldquo;pay at the door&rdquo;, and how many spots are left if you set a limit.')}
+${T('E-2', 'Booking needs an account', 'In a private/incognito window, open the same event.', 'Instead of a booking form you are asked to sign in or create an account. Nobody can put a name on the door list anonymously.')}
+${T('E-3', 'Members-only night is blocked', 'Signed in but not yet a member, open the Members Only test event.', 'A &ldquo;Members only&rdquo; panel appears with a Become a member button. There is no way to book it.')}
+${T('E-4', 'Reserve a spot', 'On the normal event, fill in name and phone, choose how many spots, press Reserve my spot.', 'Your email is filled in from your account and cannot be changed. The amount shows as &ldquo;Due at the door&rdquo;. Nothing is charged and no card is asked for.')}
+${T('E-5', 'Spot limits', 'Press the + button repeatedly.', 'It stops at 10 spots, or at the number of spots actually left if that is fewer.')}
+${T('E-6', 'You are on the list', 'Refresh the page, then go back to Events.', '&ldquo;You&rsquo;re on the list&rdquo; shows your spots, what to settle at the door, the name on the list, the address and a 21+ ID reminder. Trying to book the same event again tells you that you already have a reservation.')}
+${T('E-7', 'Fully booked', 'Ask the admin to set that event&rsquo;s capacity to the number already booked (test A-17), then refresh.', 'The page says &ldquo;Fully booked&rdquo;, the event card is badged Fully Booked, and the booking form is gone. Your own booking is still shown to you.')}
+${T('E-8', 'Members-only unlocks', 'After the admin approves your membership (test A-5), reopen the Members Only event.', 'The booking form now appears and you can reserve a spot as normal.')}
+</tbody>
+</table>
+
+<h2>4. Member — approved membership</h2>
 <div class="role-card">
   <p><strong>Who:</strong> A customer who has paid and been approved.</p>
   <p><strong>What matters:</strong> They can see their own membership, and it actually unlocks something.</p>
-  <p><strong>Setup:</strong> Use the account from section 2. You will need an admin to approve the application in test A-4 partway through.</p>
+  <p><strong>Setup:</strong> Use the account from section 2. You will need an admin to approve the application in test A-5 partway through.</p>
 </div>
 <table class="tests">
 <thead>${head}</thead>
@@ -167,14 +202,14 @@ ${T('M-1', 'Apply for a membership', 'On Membership, pick a tier and apply.', 'T
 ${T('M-2', 'Under-21 is refused', 'Try a date of birth under 21 years old, including one a few days short.', 'It is refused immediately, with a clear message.')}
 ${T('M-3', 'Application recorded', 'Submit the application.', 'You are told it is received and that you pay at the club. My Account shows it as pending. No card details are ever asked for.')}
 ${T('M-4', 'No duplicates', 'Try to apply a second time while pending.', 'You are told you already have an application, and no second one is created.')}
-${T('M-5', 'Approval', 'Ask the admin to approve you (test A-4), then refresh My Account.', 'Status becomes active with an expiry date counting from the approval, not from when you applied.')}
+${T('M-5', 'Approval', 'Ask the admin to approve you (test A-5), then refresh My Account.','Status becomes active with an expiry date counting from the approval, not from when you applied.')}
 ${T('M-6', 'Confirmation email', 'Check your inbox.', 'A confirmation arrives with your tier and valid-until date.')}
 ${T('M-7', 'Members-only unlocked', 'Open the Members-only product from test V-3.', 'Add to Cart now works, and the order goes through checkout normally.')}
 ${T('M-8', 'Expiry (optional, slower test)', 'Ask the admin to set the membership to Expired.', 'Your account shows it expired and offers to renew, rather than pretending you were never a member.')}
 </tbody>
 </table>
 
-<h2>4. Admin / Owner — the control room</h2>
+<h2>5. Admin / Owner — the control room</h2>
 <div class="role-card">
   <p><strong>Who:</strong> You and trusted staff.</p>
   <p><strong>What matters:</strong> Nothing reaches customers that you cannot see, change, or answer.</p>
@@ -192,12 +227,22 @@ ${T('A-6', 'Member details', 'Expand that membership row.', 'You can see date of
 ${T('A-7', 'Walk-in member', 'Press Add Walk-in Member and create one with a tier.', 'Created as active straight away. Under-21 dates of birth are refused.')}
 ${T('A-8', 'Link a walk-in to their account', 'On a walk-in with no account, press Link to Account and enter their email.', 'It links, and that person can then buy members-only products online.')}
 ${T('A-9', 'Read contact messages', 'Open Messages.', 'The test message from V-11 is there, with a one-click reply link.')}
-${T('A-10', 'Newsletter list', 'Open Newsletter and press Export CSV.', 'Subscribers are listed and the file downloads, ready for a mailing tool.')}
+${T('A-10', 'Newsletter list', 'Open Newsletter and press Export CSV.', 'Subscribers are listed with Active / Unsubscribed filters and counts. The file downloads ready for a mailing tool, and contains active subscribers only.')}
 ${T('A-11', 'Products', 'Add a product, upload a photo, then edit and hide it.', 'All of it works and the change shows on the shop immediately.')}
 ${T('A-12', 'Stock is protected', 'Set a product to 1 in stock and order it.', 'Stock drops to 0 and the product can no longer be over-ordered.')}
 ${T('A-13', 'Tiers', 'Open the Membership Tiers section and change a price.', 'The new price appears on the public Membership page. Existing members keep what they paid for.')}
-${T('A-14', 'Events', 'Add an event with a date and photo.', 'It appears on the public Events page.')}
+${T('A-14', 'Events', 'Add two events with dates and photos — one normal with a ticket price, one ticked Members Only.', 'Both appear on the public Events page, correctly badged, and each opens its own page when tapped.')}
 ${T('A-15', 'Phone check', 'Open the admin area on your phone.', 'The menu and order list are usable on a small screen.')}
+${T('A-16', 'The door list', 'In Events, press the arrow or the people icon on your test event.', 'A door list opens underneath: expected headcount, how many are checked in, the total due at the door, and every guest&rsquo;s name, email, phone and number of spots.')}
+${T('A-17', 'Set how many can come', 'In the door list, type a number into Capacity and press Save. Leave it blank for unlimited.', 'It saves. The public event page then shows spots left, and says Fully booked once they run out.')}
+${T('A-18', 'Check a guest in', 'Press the tick beside a guest, then the X beside another.', 'The tick marks them attended and the &ldquo;Checked in&rdquo; count rises. The X cancels that booking and frees the spot for somebody else — cancelled guests stay visible but stop counting towards the headcount.')}
+${T('A-19', 'Export the door list', 'Press Export door list.', 'A spreadsheet file downloads with names, contact details, spots, status and what each guest owes — printable to take to the door.')}
+${T('A-20', 'Discount codes', 'Open Discounts.', '<code>WELCOME10</code> is listed: 10% off, first order only, marked Live, with a count of how many times it has been used.')}
+${T('A-21', 'Create a code', 'Press Add Code. Make one — for example <code>TEST50</code>, R50 off, minimum spend R400 — and save it.', 'It saves and shows as Live. Codes are 3–40 characters using only letters, numbers, - and _; anything else is refused with a plain message.')}
+${T('A-22', 'Switch a code off', 'Press the toggle beside your test code.', 'It becomes Inactive and stops working at checkout straight away. There is no Delete — codes are kept because placed orders record which code was used.')}
+${T('A-23', 'Opt-outs stay off the list', 'After the customer unsubscribes in C-17, open Newsletter.', 'They appear under the Unsubscribed filter with the date, the Active count has dropped by one, and pressing Export CSV produces a file that does <em>not</em> contain them.')}
+${T('A-24', 'Cancelling returns the stock', 'Note a product&rsquo;s stock number, order some of it, then set that order to Cancelled.', 'The stock goes back up by the quantity ordered, so cancelled goods can be sold again. The order&rsquo;s history says how many units were put back.')}
+${T('A-25', 'A delivered order does not return stock', 'Take a second order all the way to Delivered, then cancel it.', 'The cancellation goes through but the stock does <strong>not</strong> go up — those goods physically left the building. The order&rsquo;s history says so in words, and asks you to adjust the stock by hand if the goods came back. This is correct behaviour, not a fault.')}
 </tbody>
 </table>
 
@@ -205,11 +250,12 @@ ${T('A-15', 'Phone check', 'Open the admin area on your phone.', 'The menu and o
 <div class="known">
 <p>These are known and deliberate. Please do not log them as bugs.</p>
 <ul>
+  <li><strong>Nothing is paid online yet.</strong> The Paystack merchant account is still being applied for. Until it comes through, shop orders are cash or card <em>on delivery</em>, memberships are paid at the club, and event spots are settled at the door. Customers book and apply on the website; you take the money in person. Online payment switches on later without anything else changing.</li>
+  <li><strong>The new-order alert email is not switched on yet.</strong> The website is ready to email you the moment an order comes in, but it stays silent until the alert address is configured on the server. Customers still get their own receipt. Please do not log &ldquo;I did not get an alert&rdquo; as a fault — it is a setting, not a bug.</li>
   <li><strong>Emails come from a different domain.</strong> Until <code>224clubhouse.co.za</code> is verified with the mail provider, messages are sent from another verified domain. The name still reads 224 Clubhouse.</li>
   <li><strong>Legal pages show a "Draft" banner.</strong> They stay marked as drafts until management has read and approved them. Two questions still need your answer: your delivery area, and what happens when a delivery fails.</li>
   <li><strong>Sign-up and password emails are slow in bulk.</strong> The account mailer is limited to a few messages an hour until a dedicated mail service is connected. Fine for testing, not for a launch-day rush.</li>
-  <li><strong>Online card payment is off.</strong> Orders are cash or card on delivery by design.</li>
-  <li><strong>Membership is pay-at-the-club.</strong> The Paystack merchant account is still being applied for, so there is no online payment yet. Members apply on the website and pay in person; you approve them once they have paid. Online payment switches on later without any other change.</li>
+  <li><strong>WhatsApp orders do not appear in the admin.</strong> The WhatsApp button writes the order into a message and sends it to you — that message <em>is</em> the order. Nothing is created in the Orders screen, so no stock is reserved and no receipt is sent. Treat those the way you would a phone order.</li>
   <li><strong>Old orders placed before accounts existed</strong> do not appear under My Orders. They are still found through Track Order.</li>
 </ul>
 </div>
