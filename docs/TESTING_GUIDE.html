@@ -329,10 +329,10 @@
 <table class="tests">
 <thead><tr><th>ID</th><th>What to test / how</th><th>What should happen</th><th>Pass</th></tr></thead>
 <tbody>
-<tr><td class="id">M-1</td><td>Apply for a membership<br><span style="color:var(--muted);font-size:9.5pt">On Membership, pick a tier and apply.</span></td><td>The form asks for name, phone and date of birth. Your account email is shown and cannot be changed.</td><td class="res">☐</td></tr>
-<tr><td class="id">M-2</td><td>Under-21 is refused<br><span style="color:var(--muted);font-size:9.5pt">Try a date of birth under 21 years old.</span></td><td>It is refused immediately, before any payment is requested.</td><td class="res">☐</td></tr>
-<tr><td class="id">M-3</td><td>Application recorded<br><span style="color:var(--muted);font-size:9.5pt">Complete the application.</span></td><td>You are told it is awaiting confirmation. My Account shows the membership as pending.</td><td class="res">☐</td></tr>
-<tr><td class="id">M-4</td><td>No duplicates<br><span style="color:var(--muted);font-size:9.5pt">Try to apply a second time while pending.</span></td><td>You are told you already have an application. It does not take another payment.</td><td class="res">☐</td></tr>
+<tr><td class="id">M-1</td><td>Apply for a membership<br><span style="color:var(--muted);font-size:9.5pt">On Membership, pick a tier and apply.</span></td><td>The form asks for name, phone and date of birth. Your account email is shown and cannot be changed. The button says payment happens at the club.</td><td class="res">☐</td></tr>
+<tr><td class="id">M-2</td><td>Under-21 is refused<br><span style="color:var(--muted);font-size:9.5pt">Try a date of birth under 21 years old, including one a few days short.</span></td><td>It is refused immediately, with a clear message.</td><td class="res">☐</td></tr>
+<tr><td class="id">M-3</td><td>Application recorded<br><span style="color:var(--muted);font-size:9.5pt">Submit the application.</span></td><td>You are told it is received and that you pay at the club. My Account shows it as pending. No card details are ever asked for.</td><td class="res">☐</td></tr>
+<tr><td class="id">M-4</td><td>No duplicates<br><span style="color:var(--muted);font-size:9.5pt">Try to apply a second time while pending.</span></td><td>You are told you already have an application, and no second one is created.</td><td class="res">☐</td></tr>
 <tr><td class="id">M-5</td><td>Approval<br><span style="color:var(--muted);font-size:9.5pt">Ask the admin to approve you (test A-4), then refresh My Account.</span></td><td>Status becomes active with an expiry date counting from the approval, not from when you applied.</td><td class="res">☐</td></tr>
 <tr><td class="id">M-6</td><td>Confirmation email<br><span style="color:var(--muted);font-size:9.5pt">Check your inbox.</span></td><td>A confirmation arrives with your tier and valid-until date.</td><td class="res">☐</td></tr>
 <tr><td class="id">M-7</td><td>Members-only unlocked<br><span style="color:var(--muted);font-size:9.5pt">Open the Members-only product from test V-3.</span></td><td>Add to Cart now works, and the order goes through checkout normally.</td><td class="res">☐</td></tr>
@@ -375,7 +375,7 @@
   <li><strong>Legal pages show a "Draft" banner.</strong> They stay marked as drafts until management has read and approved them. Two questions still need your answer: your delivery area, and what happens when a delivery fails.</li>
   <li><strong>Sign-up and password emails are slow in bulk.</strong> The account mailer is limited to a few messages an hour until a dedicated mail service is connected. Fine for testing, not for a launch-day rush.</li>
   <li><strong>Online card payment is off.</strong> Orders are cash or card on delivery by design.</li>
-  <li><strong>Membership payment is not yet verified automatically.</strong> This is why every application waits for your approval — please keep checking payments before approving.</li>
+  <li><strong>Membership is pay-at-the-club.</strong> The Paystack merchant account is still being applied for, so there is no online payment yet. Members apply on the website and pay in person; you approve them once they have paid. Online payment switches on later without any other change.</li>
   <li><strong>Old orders placed before accounts existed</strong> do not appear under My Orders. They are still found through Track Order.</li>
 </ul>
 </div>
