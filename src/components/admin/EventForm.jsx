@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { Upload } from 'lucide-react'
 import { safeFileName } from '../../utils/safeFileName'
+import { withTimeout } from '../../utils/withTimeout'
 
 const DEFAULT_LOCATION = '224 Rondebult Ave, Libradene, Boksburg'
 
@@ -32,7 +33,11 @@ export default function EventForm({ event, onClose }) {
     setUploading(true)
     try {
       const path = `events/${Date.now()}-${safeFileName(file.name)}`
-      const { error } = await supabase.storage.from('event-images').upload(path, file)
+      const { error } = await withTimeout(
+        supabase.storage.from('event-images').upload(path, file),
+        60000, // uploads carry a file, so they get far longer than a plain write
+        'image upload',
+      )
       if (error) throw error
       const { data } = supabase.storage.from('event-images').getPublicUrl(path)
       set('image_url', data.publicUrl)
@@ -60,11 +65,15 @@ export default function EventForm({ event, onClose }) {
       }
 
       if (event) {
-        const { error } = await supabase.from('events').update(payload).eq('id', event.id)
+        const { error } = await withTimeout(
+          supabase.from('events').update(payload).eq('id', event.id), undefined, 'save',
+        )
         if (error) throw error
         toast.success('Event updated')
       } else {
-        const { error } = await supabase.from('events').insert(payload)
+        const { error } = await withTimeout(
+          supabase.from('events').insert(payload), undefined, 'save',
+        )
         if (error) throw error
         toast.success('Event created')
       }

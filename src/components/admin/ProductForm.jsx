@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { slugify } from '../../utils/slugify'
 import { safeFileName } from '../../utils/safeFileName'
+import { withTimeout } from '../../utils/withTimeout'
 import Button from '../ui/Button'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
@@ -32,7 +33,11 @@ export default function ProductForm({ product, onClose }) {
     try {
       const urls = await Promise.all(files.map(async (file, i) => {
         const path = `products/${Date.now()}-${i}-${safeFileName(file.name)}`
-        const { error } = await supabase.storage.from('product-images').upload(path, file)
+        const { error } = await withTimeout(
+          supabase.storage.from('product-images').upload(path, file),
+          60000, // uploads carry a file, so they get far longer than a plain write
+          'image upload',
+        )
         if (error) throw error
         const { data } = supabase.storage.from('product-images').getPublicUrl(path)
         return data.publicUrl
@@ -71,11 +76,15 @@ export default function ProductForm({ product, onClose }) {
       }
 
       if (product) {
-        const { error } = await supabase.from('products').update(payload).eq('id', product.id)
+        const { error } = await withTimeout(
+          supabase.from('products').update(payload).eq('id', product.id), undefined, 'save',
+        )
         if (error) throw error
         toast.success('Product updated')
       } else {
-        const { error } = await supabase.from('products').insert(payload)
+        const { error } = await withTimeout(
+          supabase.from('products').insert(payload), undefined, 'save',
+        )
         if (error) throw error
         toast.success('Product created')
       }
