@@ -22,15 +22,21 @@
  *     figures /track prints actually reconcile on a discounted order. That one
  *     case is gated on its own probe and skips if only 20260814103000 is live.
  *
- * REQUIRES migration 20260814103000 to be applied. Like the membership spec,
- * this is committed BEFORE its migration is pushed, so on top of the usual key
- * gate it probes discount_codes with the SERVICE-ROLE client at module load:
- * if the table isn't there yet the live suite auto-skips (and the skip banner
- * says why) instead of hard-failing.
+ * REQUIRES migration 20260814103000. discount_codes is admin-only, so the ANON
+ * client would see an empty list whether or not the table exists — only the
+ * service role can tell "not migrated" (error) from "migrated" (rows).
+ * `probeMigration` separates that clean absence from a broken probe, which the
+ * old `MIGRATED = !error` form collapsed into a silent green skip.
  *
- * Because it MUTATES (creates a user, a code and an order, decrements stock),
- * afterAll cleans up with the service-role client and puts the stock back.
- * Idempotent — leftovers are purged first.
+ * ISOLATION: the account, the product it buys and the discount code all carry
+ * RUN_TAG. The per-run account matters more here than anywhere else — the
+ * first_order_only assertions are statements about how many orders THIS account
+ * has, so a shared account would make them depend on whatever another run did.
+ * The suite also buys its OWN product, so no seeded stock moves and there is no
+ * read-modify-write stock restore to race.
+ *
+ * afterAll deletes the orders it placed: admin/Dashboard.jsx sums order totals
+ * for its revenue tiles, so a leftover test order would read as a real sale.
  *
  * Auto-skips unless BOTH VITE_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY
  * are set (service role is required for safe cleanup).
@@ -39,76 +45,48 @@
  *   npx vitest run src/__tests__/discountCodes.contract.test.js
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { createClient } from '@supabase/supabase-js'
+import {
+  anonClient, serviceClient, probeMigration, describeGate,
+  testSlug, testCode, createTestUser, signInAs, deleteTestUsers, mustSucceed,
+} from './helpers/liveFixtures.js'
 
-const URL =
-  process.env.SUPABASE_URL ||
-  process.env.VITE_SUPABASE_URL ||
-  'https://aogdkqczvlffgydgxsmz.supabase.co'
-const ANON = process.env.VITE_SUPABASE_ANON_KEY
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
-const KEYS_MISSING = !ANON || !SERVICE
+const gate = await probeMigration({
+  migration: '20260814103000_discount_codes',
+  label: 'discount_codes',
+  probe: () => serviceClient().from('discount_codes').select('code').limit(1),
+})
+const SKIP = !gate.applied
 
-// Migration probe. discount_codes is admin-only, so the ANON client would see
-// an empty list whether or not the table exists — only the service role can
-// tell "not migrated" (error) from "migrated" (rows). Top-level await is fine
-// here: vitest test modules are ESM and the env setup file has already run.
-//
-// Second probe: 20260814110000 adds the discount fields to get_order_tracking
-// inside an EXISTING function signature, so there is nothing readable to
-// detect it by — it ships a one-line marker function for exactly this, the
-// same idiom order_cancel_restocks() uses.
-let MIGRATED = false
+// 20260814110000 adds the discount fields to get_order_tracking inside an
+// EXISTING function signature, so there is nothing readable to detect it by —
+// it ships a one-line marker function for exactly this.
 let FIXES_MIGRATED = false
-if (!KEYS_MISSING) {
-  const probe = createClient(URL, SERVICE, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-  const { error } = await probe.from('discount_codes').select('code').limit(1)
-  MIGRATED = !error
-  const { data: fixData, error: fixErr } = await probe.rpc('discount_newsletter_fixes_applied')
-  FIXES_MIGRATED = !fixErr && fixData === true
+if (!SKIP) {
+  const { data, error } = await serviceClient().rpc('discount_newsletter_fixes_applied')
+  FIXES_MIGRATED = !error && data === true
 }
-const SKIP = KEYS_MISSING || !MIGRATED
 
-// Clearly-marked test identities so cleanup can target exactly our rows.
-const TEST_EMAIL = 'vitest+discount@example.com'
-const TEST_PASSWORD = 'vitest-disc-5m4!Local'
-const TEST_CODE = 'VITEST-DISCOUNT'
+const TEST_CODE = testCode('discount')
 const TEST_PERCENT = 25
 const TEST_QTY = 1
+const PRODUCT_SLUG = testSlug('discount-product')
+const PRODUCT_PRICE = 12000
+const START_STOCK = 5
 
 // Constants the RPC hardcodes (and OrderSummary.jsx mirrors).
 const SHIPPING_THRESHOLD = 50000
 const SHIPPING_FEE = 8000
 
-const anon = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
-const admin = SKIP
-  ? null
-  : createClient(URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+const anon = SKIP ? null : anonClient()
+const admin = SKIP ? null : serviceClient()
 // Signed in as the test customer in beforeAll — the role real buyers hold.
-const userClient = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
+const userClient = SKIP ? null : anonClient()
 
 // Shared state across the ordered tests.
-let product = null
+let productId = null
 let testUserId = null
-let consumedStock = 0
+let testUserEmail = null
 let discountedOrderNumber = null
-
-async function purgeTestRows() {
-  await admin.from('orders').delete().eq('customer_email', TEST_EMAIL)
-  await admin.from('discount_codes').delete().eq('code', TEST_CODE)
-}
-
-async function purgeTestUser() {
-  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-  const leftover = data?.users?.find((u) => u.email === TEST_EMAIL)
-  if (leftover) await admin.auth.admin.deleteUser(leftover.id)
-}
 
 const orderPayload = (extra = {}) => ({
   p_customer: {
@@ -121,77 +99,57 @@ const orderPayload = (extra = {}) => ({
     province: 'Gauteng',
     postalCode: '1459',
   },
-  p_items: [{ id: product.id, quantity: TEST_QTY }],
+  p_items: [{ id: productId, quantity: TEST_QTY }],
   p_payment_method: 'cash_on_delivery',
   ...extra,
 })
 
 describe.skipIf(SKIP)('Discount codes contract — server-computed discounts', () => {
   beforeAll(async () => {
-    await purgeTestRows()
-    await purgeTestUser()
-
     // A confirmed customer account with NO order history — first_order_only
-    // codes must be valid for it until it places one.
-    const { data: created, error: createErr } = await admin.auth.admin.createUser({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-    })
-    expect(createErr).toBeNull()
-    testUserId = created.user.id
+    // codes must be valid for it until it places one. Run-tagged, so that
+    // "no order history" is a fact about this run alone.
+    const user = await createTestUser(admin, 'discount')
+    testUserId = user.id
+    testUserEmail = user.email
+    await signInAs(userClient, testUserEmail)
 
-    const { error: signInErr } = await userClient.auth.signInWithPassword({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-    })
-    expect(signInErr).toBeNull()
-
-    // A real, available, NON member-only product (the member-only gate would
+    // Our own available, NON member-only product (the member-only gate would
     // reject this account and mask what we're testing). Two orders get placed
-    // below — the discounted one and the 3-argument compatibility check — so
-    // it needs stock for both.
-    const { data, error } = await anon
+    // below — the discounted one and the 3-argument compatibility check.
+    const prod = mustSucceed('create test product', await admin
       .from('products')
-      .select('id, name, price, stock_quantity')
-      .eq('is_available', true)
-      .eq('is_member_only', false)
-      .gte('stock_quantity', TEST_QTY * 2)
-      .limit(1)
-    expect(error).toBeNull()
-    expect(Array.isArray(data) && data.length === 1).toBe(true)
-    product = data[0]
+      .insert({
+        name: `Vitest Discount Product ${PRODUCT_SLUG}`,
+        slug: PRODUCT_SLUG,
+        price: PRODUCT_PRICE,
+        category: 'accessories',
+        stock_quantity: START_STOCK,
+        is_available: true,
+        is_member_only: false,
+      })
+      .select('id, price')
+      .single())
+    productId = prod.id
 
     // A throwaway percentage code that is NOT first-order-only, so the test
     // account can actually place an order with it.
-    const { error: codeErr } = await admin.from('discount_codes').insert({
+    mustSucceed('create test discount code', await admin.from('discount_codes').insert({
       code: TEST_CODE,
       description: 'vitest fixture — safe to delete',
       kind: 'percent',
       value: TEST_PERCENT,
       first_order_only: false,
       is_active: true,
-    })
-    expect(codeErr).toBeNull()
+    }))
   })
 
   afterAll(async () => {
     if (!admin) return
-    await purgeTestRows()
-    if (product && consumedStock > 0) {
-      const { data: cur } = await admin
-        .from('products')
-        .select('stock_quantity')
-        .eq('id', product.id)
-        .single()
-      if (cur) {
-        await admin
-          .from('products')
-          .update({ stock_quantity: cur.stock_quantity + consumedStock })
-          .eq('id', product.id)
-      }
-    }
-    if (testUserId) await admin.auth.admin.deleteUser(testUserId)
+    if (testUserEmail) await admin.from('orders').delete().eq('customer_email', testUserEmail)
+    await admin.from('discount_codes').delete().eq('code', TEST_CODE)
+    await admin.from('products').delete().eq('slug', PRODUCT_SLUG)
+    await deleteTestUsers(admin, testUserId)
   })
 
   it('POSITIVE: the WELCOME10 the welcome email promises actually exists', async () => {
@@ -269,7 +227,7 @@ describe.skipIf(SKIP)('Discount codes contract — server-computed discounts', (
     const { data: orders } = await admin
       .from('orders')
       .select('id')
-      .eq('customer_email', TEST_EMAIL)
+      .eq('customer_email', testUserEmail)
     expect(orders ?? []).toHaveLength(0)
   })
 
@@ -286,7 +244,7 @@ describe.skipIf(SKIP)('Discount codes contract — server-computed discounts', (
     const { data: orders } = await admin
       .from('orders')
       .select('id')
-      .eq('customer_email', TEST_EMAIL)
+      .eq('customer_email', testUserEmail)
     expect(orders ?? []).toHaveLength(0)
   })
 
@@ -296,12 +254,11 @@ describe.skipIf(SKIP)('Discount codes contract — server-computed discounts', (
     }))
     expect(error).toBeNull()
     expect(data).toBeTruthy()
-    consumedStock = TEST_QTY
     discountedOrderNumber = data.order_number
 
     // Everything below is derived from the PRODUCT PRICE IN THE DATABASE —
     // not from anything this client sent.
-    const subtotal = product.price * TEST_QTY
+    const subtotal = PRODUCT_PRICE * TEST_QTY
     const expectedDiscount = Math.floor((subtotal * TEST_PERCENT) / 100)
     // Free shipping is decided on the PRE-discount subtotal, so a discount can
     // never push a qualifying cart back under the threshold.
@@ -322,7 +279,7 @@ describe.skipIf(SKIP)('Discount codes contract — server-computed discounts', (
       .eq('order_number', data.order_number)
       .single()
     expect(row.user_id).toBe(testUserId)
-    expect(row.customer_email).toBe(TEST_EMAIL)
+    expect(row.customer_email).toBe(testUserEmail)
     expect(row.subtotal).toBe(subtotal)
     expect(row.discount_code).toBe(TEST_CODE)
     expect(row.discount_cents).toBe(expectedDiscount)
@@ -330,7 +287,8 @@ describe.skipIf(SKIP)('Discount codes contract — server-computed discounts', (
     expect(row.total).toBe(expectedTotal)
     expect(row.subtotal - row.discount_cents + row.shipping_fee).toBe(row.total)
 
-    // Redemption counted exactly once.
+    // Redemption counted exactly once. The code is run-tagged, so this count is
+    // a fact about this run and cannot be inflated by a parallel one.
     const { data: code } = await admin
       .from('discount_codes')
       .select('times_redeemed')
@@ -351,12 +309,12 @@ describe.skipIf(SKIP)('Discount codes contract — server-computed discounts', (
       // must survive the function being re-created.
       const { data, error } = await anon.rpc('get_order_tracking', {
         p_order_number: discountedOrderNumber,
-        p_email: TEST_EMAIL,
+        p_email: testUserEmail,
       })
       expect(error).toBeNull()
       expect(data).toBeTruthy()
 
-      const subtotal = product.price * TEST_QTY
+      const subtotal = PRODUCT_PRICE * TEST_QTY
       const expectedDiscount = Math.floor((subtotal * TEST_PERCENT) / 100)
       const expectedShipping = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
 
@@ -396,7 +354,7 @@ describe.skipIf(SKIP)('Discount codes contract — server-computed discounts', (
     const before = await admin
       .from('orders')
       .select('id')
-      .eq('customer_email', TEST_EMAIL)
+      .eq('customer_email', testUserEmail)
 
     const { data, error } = await userClient.rpc('place_cod_order', orderPayload({
       p_discount_code: 'WELCOME10',
@@ -409,7 +367,7 @@ describe.skipIf(SKIP)('Discount codes contract — server-computed discounts', (
     const { data: after } = await admin
       .from('orders')
       .select('id')
-      .eq('customer_email', TEST_EMAIL)
+      .eq('customer_email', testUserEmail)
     expect(after?.length ?? 0).toBe(before.data?.length ?? 0)
   })
 
@@ -417,25 +375,15 @@ describe.skipIf(SKIP)('Discount codes contract — server-computed discounts', (
     const { data, error } = await userClient.rpc('place_cod_order', orderPayload())
     expect(error).toBeNull()
     expect(data.order_number).toMatch(/^224-/)
-    consumedStock += TEST_QTY
 
     expect(data.discount_code).toBeNull()
     expect(data.discount_cents).toBe(0)
-    const subtotal = product.price * TEST_QTY
+    const subtotal = PRODUCT_PRICE * TEST_QTY
     expect(data.total).toBe(subtotal + (subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE))
   })
 })
 
-describe.skipIf(!SKIP)(
-  KEYS_MISSING
-    ? 'Discount codes contract skipped (need VITE_SUPABASE_ANON_KEY + SUPABASE_SERVICE_ROLE_KEY)'
-    : 'Discount codes contract skipped (migration 20260814103000_discount_codes not applied — run `supabase db push`)',
-  () => {
-    it('reminds devs how to enable the discount-codes contract test', () => {
-      expect(true).toBe(true)
-    })
-  },
-)
+describeGate('Discount codes contract', gate)
 
 describe.skipIf(SKIP || FIXES_MIGRATED)(
   'get_order_tracking discount fields skipped (migration 20260814110000_discount_newsletter_fixes not applied — run `supabase db push`)',

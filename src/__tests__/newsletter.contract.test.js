@@ -22,15 +22,14 @@
  *     mailed twice and only half opted-out. That case is gated on its own
  *     probe and skips if only 20260814100000 is live.
  *
- * REQUIRES migration 20260814100000 to be applied. Like the membership spec,
- * this is committed BEFORE the migration is pushed, so on top of the key gate
- * it probes for the `unsubscribe_token` column with the SERVICE-ROLE client
- * (which bypasses RLS, so a missing column is the only thing that can fail):
- * if the migration isn't live the live suite auto-skips with a banner saying
- * why, instead of hard-failing every PR build.
+ * REQUIRES migration 20260814100000. The probe uses the SERVICE-ROLE client
+ * (which bypasses RLS, so a missing column is the only thing that can fail).
+ * `probeMigration` separates that clean absence from a broken probe — the old
+ * `MIGRATED = !error` form turned a transient blip into a silent green skip of
+ * the whole opt-out contract.
  *
- * Because it MUTATES (inserts a subscriber row), afterAll cleans up with the
- * service-role client. Idempotent — leftovers are purged first.
+ * ISOLATION: both subscriber addresses carry RUN_TAG, so a concurrent or
+ * orphaned vitest run cannot delete the row this suite is asserting on.
  *
  * Auto-skips unless BOTH VITE_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY
  * are set (service role is required for setup + safe cleanup).
@@ -38,75 +37,53 @@
  * How to run (PowerShell):
  *   npx vitest run src/__tests__/newsletter.contract.test.js
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { createClient } from '@supabase/supabase-js'
+import { describe, it, expect, afterAll } from 'vitest'
+import {
+  anonClient, serviceClient, probeMigration, describeGate, RUN_TAG,
+} from './helpers/liveFixtures.js'
 
-const URL =
-  process.env.SUPABASE_URL ||
-  process.env.VITE_SUPABASE_URL ||
-  'https://aogdkqczvlffgydgxsmz.supabase.co'
-const ANON = process.env.VITE_SUPABASE_ANON_KEY
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
-const KEYS_MISSING = !ANON || !SERVICE
-
-// Migration probe. Service role bypasses RLS, so an error here means the
-// column genuinely isn't there yet (an empty table still resolves cleanly).
-//
-// Second probe: 20260814110000's email normalisation is a trigger plus a data
-// backfill — neither is visible through PostgREST — so it ships a one-line
-// marker function to detect, the same idiom order_cancel_restocks() uses.
-let MIGRATED = false
-let FIXES_MIGRATED = false
-if (!KEYS_MISSING) {
-  const probe = createClient(URL, SERVICE, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-  const { error } = await probe
+const gate = await probeMigration({
+  migration: '20260814100000_newsletter_unsubscribe',
+  label: 'newsletter_subscribers.unsubscribe_token',
+  probe: () => serviceClient()
     .from('newsletter_subscribers')
     .select('unsubscribe_token, unsubscribed_at')
-    .limit(1)
-  MIGRATED = !error
-  const { data: fixData, error: fixErr } = await probe.rpc('discount_newsletter_fixes_applied')
-  FIXES_MIGRATED = !fixErr && fixData === true
-}
-const SKIP = KEYS_MISSING || !MIGRATED
+    .limit(1),
+})
+const SKIP = !gate.applied
 
-// Clearly-marked test identity so cleanup can target exactly our row.
-const TEST_EMAIL = 'vitest+newsletter@example.com'
+// 20260814110000's email normalisation is a trigger plus a data backfill —
+// neither is visible through PostgREST — so it ships a marker function.
+let FIXES_MIGRATED = false
+if (!SKIP) {
+  const { data, error } = await serviceClient().rpc('discount_newsletter_fixes_applied')
+  FIXES_MIGRATED = !error && data === true
+}
+
+// Run-tagged identities so cleanup targets exactly our rows and no other run's.
+const TEST_EMAIL = `vitest+newsletter-${RUN_TAG}@example.com`
 // A second identity for the case-normalisation case. Stored form is the
 // lowercase one; the other two spellings are what a visitor might type.
-const CASE_EMAIL_LOWER = 'vitest+newsletter.case@example.com'
-const CASE_EMAIL_MIXED = 'ViTest+Newsletter.Case@Example.COM'
-const CASE_EMAIL_TYPED = '  VITEST+newsletter.CASE@example.com '
+const CASE_EMAIL_LOWER = `vitest+newsletter.case-${RUN_TAG}@example.com`
+const CASE_EMAIL_MIXED = `ViTest+Newsletter.Case-${RUN_TAG}@Example.COM`
+const CASE_EMAIL_TYPED = `  VITEST+newsletter.CASE-${RUN_TAG}@example.com `
 // A syntactically valid UUID that is not in the table.
 const RANDOM_TOKEN = '00000000-0000-4000-8000-0000000c0ffe'
 
-const anon = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
-const admin = SKIP
-  ? null
-  : createClient(URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+const anon = SKIP ? null : anonClient()
+const admin = SKIP ? null : serviceClient()
 
 // Shared state across the ordered tests.
 let token = null
 let firstUnsubscribedAt = null
 
-async function purgeTestSubscriber() {
-  await admin
-    .from('newsletter_subscribers')
-    .delete()
-    .in('email', [TEST_EMAIL, CASE_EMAIL_LOWER, CASE_EMAIL_MIXED, CASE_EMAIL_TYPED.trim()])
-}
-
 describe.skipIf(SKIP)('Newsletter contract — token-based unsubscribe', () => {
-  beforeAll(async () => {
-    await purgeTestSubscriber()
-  })
-
   afterAll(async () => {
     if (!admin) return
-    await purgeTestSubscriber()
+    await admin
+      .from('newsletter_subscribers')
+      .delete()
+      .in('email', [TEST_EMAIL, CASE_EMAIL_LOWER, CASE_EMAIL_MIXED, CASE_EMAIL_TYPED.trim()])
   })
 
   it('POSITIVE: a new subscriber row is created with a token and no opt-out', async () => {
@@ -254,16 +231,7 @@ describe.skipIf(SKIP)('Newsletter contract — token-based unsubscribe', () => {
   )
 })
 
-describe.skipIf(!SKIP)(
-  KEYS_MISSING
-    ? 'Newsletter contract skipped (need VITE_SUPABASE_ANON_KEY + SUPABASE_SERVICE_ROLE_KEY)'
-    : 'Newsletter contract skipped (migration 20260814100000_newsletter_unsubscribe not applied — run `supabase db push`)',
-  () => {
-    it('reminds devs how to enable the newsletter contract test', () => {
-      expect(true).toBe(true)
-    })
-  },
-)
+describeGate('Newsletter contract', gate)
 
 describe.skipIf(SKIP || FIXES_MIGRATED)(
   'Newsletter email-normalisation case skipped (migration 20260814110000_discount_newsletter_fixes not applied — run `supabase db push`)',

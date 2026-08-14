@@ -15,17 +15,17 @@
  *     member-only products for signed-in callers WITHOUT an active
  *     membership — no order row, no stock movement.
  *
- * REQUIRES migration 20260813150000 to be applied. Unlike the COD spec
- * (whose RPCs were already live when it was written), this one is committed
- * BEFORE its migration is pushed, so on top of the usual key gate it probes
- * membership_tiers with the anon client at module load: if the table isn't
- * there yet the live suite auto-skips (and the skip banner says why) instead
- * of hard-failing — and, critically, instead of exercising the OLD
- * anon-callable place_membership, which would insert rows the "negative"
- * test never expects.
+ * REQUIRES migration 20260813150000. This spec was committed BEFORE its
+ * migration was pushed, so on top of the key gate it probes membership_tiers at
+ * module load. `probeMigration` distinguishes "table genuinely absent" (a clean
+ * skip) from "the probe broke" (a LOUD failure) — the old `MIGRATED = !error`
+ * form turned a transient network blip into a silent all-green skip of every
+ * RLS and admin-authorization assertion below.
  *
- * Because it MUTATES (creates two users + membership rows), afterAll cleans
- * up with the service-role client. Idempotent — leftovers are purged first.
+ * ISOLATION: the two accounts and the member-only product all carry RUN_TAG, so
+ * a concurrent or orphaned vitest run cannot delete them mid-test. afterAll
+ * removes everything this run created — including any order, which would
+ * otherwise register in the admin dashboard's revenue tiles.
  *
  * Auto-skips unless BOTH VITE_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY
  * are set (service role is required for safe cleanup).
@@ -34,81 +34,38 @@
  *   npx vitest run src/__tests__/membership.contract.test.js
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { createClient } from '@supabase/supabase-js'
+import {
+  anonClient, serviceClient, probeMigration, describeGate,
+  testSlug, createTestUser, signInAs, deleteTestUsers, mustSucceed,
+} from './helpers/liveFixtures.js'
 
-const URL =
-  process.env.SUPABASE_URL ||
-  process.env.VITE_SUPABASE_URL ||
-  'https://aogdkqczvlffgydgxsmz.supabase.co'
-const ANON = process.env.VITE_SUPABASE_ANON_KEY
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
-const KEYS_MISSING = !ANON || !SERVICE
+// Anon has public SELECT on active tiers, so a clean response == applied (an
+// empty result would still prove the table exists).
+const gate = await probeMigration({
+  migration: '20260813150000_membership_accounts_tiers',
+  label: 'membership_tiers',
+  probe: () => anonClient().from('membership_tiers').select('slug').limit(1),
+})
+const SKIP = !gate.applied
 
-// Migration probe: membership_tiers only exists once 20260813150000 is
-// applied. Anon has public SELECT on active tiers, so "no error" == applied
-// (an empty result would still prove the table exists). Top-level await is
-// fine here — vitest test modules are ESM and the env setup file has
-// already populated process.env.
-let MIGRATED = false
-if (!KEYS_MISSING) {
-  const probe = createClient(URL, ANON, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-  const { error } = await probe.from('membership_tiers').select('slug').limit(1)
-  MIGRATED = !error
-}
-const SKIP = KEYS_MISSING || !MIGRATED
-
-// Clearly-marked test identities so cleanup can target exactly our rows.
-const TEST_EMAIL = 'vitest+membership@example.com'
-const TEST_EMAIL_2 = 'vitest+membership2@example.com'
-const TEST_PASSWORD = 'vitest-mem-7k2!Local'
-
-const anon = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
-const admin = SKIP
-  ? null
-  : createClient(URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
-// Signed in as the applicant in beforeAll — the role real members hold.
-const userClient = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
-// A SECOND signed-in customer, to prove owner-select doesn't leak across users.
-const otherClient = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
-
-// Temporary member-only product for the place_cod_order gate test —
-// created (and cleaned) with the service role, clearly marked as ours.
-const TEST_PRODUCT_SLUG = 'vitest-members-only-product'
+// Our own member-only product for the place_cod_order gate test.
+const TEST_PRODUCT_SLUG = testSlug('members-only')
 const TEST_PRODUCT_STOCK = 5
+
+const anon = SKIP ? null : anonClient()
+const admin = SKIP ? null : serviceClient()
+// Signed in as the applicant in beforeAll — the role real members hold.
+const userClient = SKIP ? null : anonClient()
+// A SECOND signed-in customer, to prove owner-select doesn't leak across users.
+const otherClient = SKIP ? null : anonClient()
 
 // Shared state across the ordered tests.
 let testUserId = null
+let testUserEmail = null
 let otherUserId = null
+let otherUserEmail = null
 let membershipId = null
 let memberProductId = null
-
-async function purgeTestMemberships() {
-  await admin.from('memberships').delete().in('email', [TEST_EMAIL, TEST_EMAIL_2])
-}
-
-async function purgeTestProductsAndOrders() {
-  // Orders stamped with the account email (place_cod_order overrides the
-  // caller's) — there should be none unless the member-only gate failed.
-  await admin.from('orders').delete().in('customer_email', [TEST_EMAIL, TEST_EMAIL_2])
-  await admin.from('products').delete().eq('slug', TEST_PRODUCT_SLUG)
-}
-
-async function purgeTestUsers() {
-  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-  for (const u of data?.users ?? []) {
-    if (u.email === TEST_EMAIL || u.email === TEST_EMAIL_2) {
-      await admin.auth.admin.deleteUser(u.id)
-    }
-  }
-}
 
 const applicationPayload = () => ({
   p_customer: {
@@ -126,14 +83,10 @@ const applicationPayload = () => ({
 
 describe.skipIf(SKIP)('Membership contract — account-required applications + tiers', () => {
   beforeAll(async () => {
-    await purgeTestMemberships()
-    await purgeTestUsers()
-    await purgeTestProductsAndOrders()
-
-    const { data: prod, error: ep } = await admin
+    const prod = mustSucceed('create member-only test product', await admin
       .from('products')
       .insert({
-        name: 'Vitest Members-Only Product',
+        name: `Vitest Members-Only Product ${TEST_PRODUCT_SLUG}`,
         slug: TEST_PRODUCT_SLUG,
         price: 12000,
         category: 'accessories',
@@ -142,46 +95,31 @@ describe.skipIf(SKIP)('Membership contract — account-required applications + t
         is_member_only: true,
       })
       .select('id')
-      .single()
-    expect(ep).toBeNull()
+      .single())
     memberProductId = prod.id
 
-    // Confirmed customer accounts (email confirmation is ON in this project,
-    // so bypass it with the admin API rather than clicking a link).
-    const { data: u1, error: e1 } = await admin.auth.admin.createUser({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-    })
-    expect(e1).toBeNull()
-    testUserId = u1.user.id
+    const u1 = await createTestUser(admin, 'membership')
+    testUserId = u1.id
+    testUserEmail = u1.email
+    const u2 = await createTestUser(admin, 'membership2')
+    otherUserId = u2.id
+    otherUserEmail = u2.email
 
-    const { data: u2, error: e2 } = await admin.auth.admin.createUser({
-      email: TEST_EMAIL_2,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-    })
-    expect(e2).toBeNull()
-    otherUserId = u2.user.id
-
-    const { error: s1 } = await userClient.auth.signInWithPassword({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-    })
-    expect(s1).toBeNull()
-    const { error: s2 } = await otherClient.auth.signInWithPassword({
-      email: TEST_EMAIL_2,
-      password: TEST_PASSWORD,
-    })
-    expect(s2).toBeNull()
+    await signInAs(userClient, testUserEmail)
+    await signInAs(otherClient, otherUserEmail)
   })
 
   afterAll(async () => {
     if (!admin) return
-    await purgeTestMemberships()
-    await purgeTestProductsAndOrders()
-    if (testUserId) await admin.auth.admin.deleteUser(testUserId)
-    if (otherUserId) await admin.auth.admin.deleteUser(otherUserId)
+    const emails = [testUserEmail, otherUserEmail].filter(Boolean)
+    if (emails.length) {
+      await admin.from('memberships').delete().in('email', emails)
+      // Should be none — the member-only gate must have blocked it — but a
+      // stray test order would land in the admin dashboard's revenue tiles.
+      await admin.from('orders').delete().in('customer_email', emails)
+    }
+    await admin.from('products').delete().eq('slug', TEST_PRODUCT_SLUG)
+    await deleteTestUsers(admin, testUserId, otherUserId)
   })
 
   it('POSITIVE: anon reads the three seeded active tiers (public pricing page)', async () => {
@@ -228,7 +166,7 @@ describe.skipIf(SKIP)('Membership contract — account-required applications + t
       .eq('id', membershipId)
       .single()
     expect(row?.user_id).toBe(testUserId)
-    expect(row?.email).toBe(TEST_EMAIL)
+    expect(row?.email).toBe(testUserEmail)
     expect(row?.tier_id).toBeTruthy()
     expect(row?.status).toBe('pending')
     expect(row?.starts_at).toBeNull()
@@ -309,7 +247,7 @@ describe.skipIf(SKIP)('Membership contract — account-required applications + t
     const { data: orders } = await admin
       .from('orders')
       .select('id')
-      .eq('customer_email', TEST_EMAIL)
+      .eq('customer_email', testUserEmail)
     expect(orders ?? []).toHaveLength(0)
 
     const { data: prod } = await admin
@@ -347,7 +285,7 @@ describe.skipIf(SKIP)('Membership contract — account-required applications + t
     const { data, error } = await userClient.rpc('admin_create_membership', {
       p_customer: {
         full_name: 'Walkin Vitest',
-        email: TEST_EMAIL_2,
+        email: otherUserEmail,
         phone: '0000000000',
         date_of_birth: '1990-01-01',
       },
@@ -359,18 +297,9 @@ describe.skipIf(SKIP)('Membership contract — account-required applications + t
     const { data: rows } = await admin
       .from('memberships')
       .select('id')
-      .eq('email', TEST_EMAIL_2)
+      .eq('email', otherUserEmail)
     expect(rows ?? []).toHaveLength(0)
   })
 })
 
-describe.skipIf(!SKIP)(
-  KEYS_MISSING
-    ? 'Membership contract skipped (need VITE_SUPABASE_ANON_KEY + SUPABASE_SERVICE_ROLE_KEY)'
-    : 'Membership contract skipped (migration 20260813150000_membership_accounts_tiers not applied — run `supabase db push`)',
-  () => {
-    it('reminds devs how to enable the membership contract test', () => {
-      expect(true).toBe(true)
-    })
-  },
-)
+describeGate('Membership contract', gate)

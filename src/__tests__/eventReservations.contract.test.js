@@ -15,15 +15,19 @@
  *   - admin_update_reservation_status is granted to `authenticated` but
  *     self-checks is_admin() — a customer must be rejected.
  *
- * REQUIRES migration 20260814102000 to be applied. Like the membership spec,
- * this is committed BEFORE its migration is pushed, so on top of the usual key
- * gate it probes the event_seats_remaining computed column with the anon
- * client at module load: no column, no live suite (it auto-skips with a banner
- * saying why) instead of hard-failing.
+ * REQUIRES migration 20260814102000. Committed before its migration was pushed,
+ * so it probes the event_seats_remaining computed column at module load.
+ * `probeMigration` separates "column genuinely absent" (a clean skip) from "the
+ * probe broke" (a LOUD failure) — the old `MIGRATED = !error` form let a
+ * transient blip skip the whole suite while the run stayed green.
  *
- * Because it MUTATES (creates two users + three events + reservation rows),
- * afterAll cleans up with the service-role client. Idempotent — leftovers are
- * purged first. Deleting the test events cascades their reservations.
+ * ISOLATION: the two accounts and all four events carry RUN_TAG, so a
+ * concurrent or orphaned vitest run cannot delete them mid-test. This suite was
+ * the worst offender before: its old `beforeAll` ran
+ * `DELETE FROM events WHERE title LIKE 'Vitest Event —%'`, which wiped a
+ * parallel run's events and cascaded away the reservations it was asserting on.
+ *
+ * afterAll deletes the events it made (reservations cascade).
  *
  * Auto-skips unless BOTH VITE_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY
  * are set (service role is required for safe cleanup).
@@ -32,57 +36,40 @@
  *   npx vitest run src/__tests__/eventReservations.contract.test.js
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { createClient } from '@supabase/supabase-js'
+import {
+  anonClient, serviceClient, probeMigration, describeGate,
+  RUN_TAG, EVENT_TITLE_PREFIX, testEventTitle,
+  createTestUser, signInAs, deleteTestUsers, mustSucceed,
+} from './helpers/liveFixtures.js'
 
-const URL =
-  process.env.SUPABASE_URL ||
-  process.env.VITE_SUPABASE_URL ||
-  'https://aogdkqczvlffgydgxsmz.supabase.co'
-const ANON = process.env.VITE_SUPABASE_ANON_KEY
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
-const KEYS_MISSING = !ANON || !SERVICE
-
-// Migration probe: event_seats_remaining() only exists once 20260814102000 is
-// applied. Anon has public SELECT on events, so "no error" == applied (an
-// empty result would still prove the function resolves).
-let MIGRATED = false
-if (!KEYS_MISSING) {
-  const probe = createClient(URL, ANON, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-  const { error } = await probe
+// Anon has public SELECT on events, so a clean response == applied (an empty
+// result would still prove the computed column resolves).
+const gate = await probeMigration({
+  migration: '20260814102000_event_reservations',
+  label: 'event_seats_remaining',
+  probe: () => anonClient()
     .from('events')
     .select('id, seats_remaining:event_seats_remaining')
-    .limit(1)
-  MIGRATED = !error
-}
-const SKIP = KEYS_MISSING || !MIGRATED
+    .limit(1),
+})
+const SKIP = !gate.applied
 
-// Clearly-marked test identities so cleanup can target exactly our rows.
-const TEST_EMAIL = 'vitest+eventres@example.com'
-const TEST_EMAIL_2 = 'vitest+eventres2@example.com'
-const TEST_PASSWORD = 'vitest-evt-7k2!Local'
-const EVENT_PREFIX = 'Vitest Event —'
 const TICKET_PRICE = 15000 // R150.00 in cents
+// Every event this run creates starts with this, and nothing else does.
+const MY_EVENTS = `${EVENT_TITLE_PREFIX}${RUN_TAG} —%`
 
-const anon = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
-const admin = SKIP
-  ? null
-  : createClient(URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+const anon = SKIP ? null : anonClient()
+const admin = SKIP ? null : serviceClient()
 // Signed in as the guest in beforeAll — the role real customers hold.
-const userClient = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
+const userClient = SKIP ? null : anonClient()
 // A SECOND signed-in customer, to prove owner-select doesn't leak across users.
-const otherClient = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
+const otherClient = SKIP ? null : anonClient()
 
 // Shared state across the ordered tests.
 let testUserId = null
+let testUserEmail = null
 let otherUserId = null
+let otherUserEmail = null
 let openEventId = null
 let membersEventId = null
 let pastEventId = null
@@ -95,30 +82,13 @@ function isoDate(offsetDays) {
   return d.toISOString().split('T')[0]
 }
 
-async function purgeTestEvents() {
-  // Reservations go with the events (on delete cascade); belt-and-braces for
-  // any row whose event was already removed by a half-finished run.
-  await admin.from('event_reservations').delete().in('email', [TEST_EMAIL, TEST_EMAIL_2])
-  await admin.from('events').delete().like('title', `${EVENT_PREFIX}%`)
-}
-
-async function purgeTestUsers() {
-  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-  for (const u of data?.users ?? []) {
-    if (u.email === TEST_EMAIL || u.email === TEST_EMAIL_2) {
-      await admin.auth.admin.deleteUser(u.id)
-    }
-  }
-}
-
-async function createEvent(fields) {
-  const { data, error } = await admin
+async function createEvent(label, fields) {
+  const row = mustSucceed(`create event "${label}"`, await admin
     .from('events')
-    .insert({ ticket_price: TICKET_PRICE, ...fields })
+    .insert({ ticket_price: TICKET_PRICE, title: testEventTitle(label), ...fields })
     .select('id')
-    .single()
-  expect(error).toBeNull()
-  return data.id
+    .single())
+  return row.id
 }
 
 const customer = () => ({
@@ -131,51 +101,30 @@ const customer = () => ({
 
 describe.skipIf(SKIP)('Event reservations contract — reserve online, pay at the door', () => {
   beforeAll(async () => {
-    await purgeTestEvents()
-    await purgeTestUsers()
+    openEventId = await createEvent('Open Night', { date: isoDate(14), is_members_only: false })
+    membersEventId = await createEvent('Members Night', { date: isoDate(21), is_members_only: true })
+    pastEventId = await createEvent('Last Month', { date: isoDate(-30), is_members_only: false })
+    cappedEventId = await createEvent('Capped Night', { date: isoDate(28), is_members_only: false, capacity: 2 })
 
-    openEventId = await createEvent({
-      title: `${EVENT_PREFIX} Open Night`, date: isoDate(14), is_members_only: false,
-    })
-    membersEventId = await createEvent({
-      title: `${EVENT_PREFIX} Members Night`, date: isoDate(21), is_members_only: true,
-    })
-    pastEventId = await createEvent({
-      title: `${EVENT_PREFIX} Last Month`, date: isoDate(-30), is_members_only: false,
-    })
-    cappedEventId = await createEvent({
-      title: `${EVENT_PREFIX} Capped Night`, date: isoDate(28), is_members_only: false, capacity: 2,
-    })
+    const u1 = await createTestUser(admin, 'eventres')
+    testUserId = u1.id
+    testUserEmail = u1.email
+    const u2 = await createTestUser(admin, 'eventres2')
+    otherUserId = u2.id
+    otherUserEmail = u2.email
 
-    // Confirmed customer accounts (email confirmation is ON in this project,
-    // so bypass it with the admin API rather than clicking a link).
-    const { data: u1, error: e1 } = await admin.auth.admin.createUser({
-      email: TEST_EMAIL, password: TEST_PASSWORD, email_confirm: true,
-    })
-    expect(e1).toBeNull()
-    testUserId = u1.user.id
-
-    const { data: u2, error: e2 } = await admin.auth.admin.createUser({
-      email: TEST_EMAIL_2, password: TEST_PASSWORD, email_confirm: true,
-    })
-    expect(e2).toBeNull()
-    otherUserId = u2.user.id
-
-    const { error: s1 } = await userClient.auth.signInWithPassword({
-      email: TEST_EMAIL, password: TEST_PASSWORD,
-    })
-    expect(s1).toBeNull()
-    const { error: s2 } = await otherClient.auth.signInWithPassword({
-      email: TEST_EMAIL_2, password: TEST_PASSWORD,
-    })
-    expect(s2).toBeNull()
+    await signInAs(userClient, testUserEmail)
+    await signInAs(otherClient, otherUserEmail)
   })
 
   afterAll(async () => {
     if (!admin) return
-    await purgeTestEvents()
-    if (testUserId) await admin.auth.admin.deleteUser(testUserId)
-    if (otherUserId) await admin.auth.admin.deleteUser(otherUserId)
+    const emails = [testUserEmail, otherUserEmail].filter(Boolean)
+    // Reservations go with the events (on delete cascade); the explicit delete
+    // is belt-and-braces for a row whose event insert half-finished.
+    if (emails.length) await admin.from('event_reservations').delete().in('email', emails)
+    await admin.from('events').delete().like('title', MY_EVENTS)
+    await deleteTestUsers(admin, testUserId, otherUserId)
   })
 
   it('NEGATIVE: anon cannot call reserve_event_seats (no free-minting reservations)', async () => {
@@ -211,7 +160,7 @@ describe.skipIf(SKIP)('Event reservations contract — reserve online, pay at th
       .eq('id', reservationId)
       .single()
     expect(row?.user_id).toBe(testUserId)
-    expect(row?.email).toBe(TEST_EMAIL) // the spoofed address was ignored
+    expect(row?.email).toBe(testUserEmail) // the spoofed address was ignored
     expect(row?.quantity).toBe(2)
     expect(row?.status).toBe('reserved')
     expect(row?.total_cents).toBe(TICKET_PRICE * 2)
@@ -346,13 +295,4 @@ describe.skipIf(SKIP)('Event reservations contract — reserve online, pay at th
   })
 })
 
-describe.skipIf(!SKIP)(
-  KEYS_MISSING
-    ? 'Event reservations contract skipped (need VITE_SUPABASE_ANON_KEY + SUPABASE_SERVICE_ROLE_KEY)'
-    : 'Event reservations contract skipped (migration 20260814102000_event_reservations not applied — run `supabase db push`)',
-  () => {
-    it('reminds devs how to enable the event reservations contract test', () => {
-      expect(true).toBe(true)
-    })
-  },
-)
+describeGate('Event reservations contract', gate)

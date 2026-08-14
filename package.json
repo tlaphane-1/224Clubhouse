@@ -10,10 +10,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:contract": "vitest run src/__tests__/api.contract.test.js src/__tests__/api.anonContract.test.js src/__tests__/cod.contract.test.js src/__tests__/membership.contract.test.js src/__tests__/discountCodes.contract.test.js src/__tests__/eventReservations.contract.test.js src/__tests__/newsletter.contract.test.js src/__tests__/restock.contract.test.js src/__tests__/rlsEmbedAudit.test.js",
+    "test:contract": "vitest run src/__tests__/migrationGate.unit.test.js src/__tests__/api.contract.test.js src/__tests__/api.anonContract.test.js src/__tests__/cod.contract.test.js src/__tests__/membership.contract.test.js src/__tests__/discountCodes.contract.test.js src/__tests__/eventReservations.contract.test.js src/__tests__/newsletter.contract.test.js src/__tests__/restock.contract.test.js src/__tests__/rlsEmbedAudit.test.js",
     "test:e2e": "playwright test",
     "audit:rls": "node scripts/audit-embed-rls.mjs",
-    "predeploy": "vitest run src/__tests__/api.contract.test.js src/__tests__/api.anonContract.test.js src/__tests__/cod.contract.test.js src/__tests__/membership.contract.test.js src/__tests__/discountCodes.contract.test.js src/__tests__/eventReservations.contract.test.js src/__tests__/newsletter.contract.test.js src/__tests__/restock.contract.test.js src/__tests__/rlsEmbedAudit.test.js && vite build"
+    "predeploy": "vitest run src/__tests__/migrationGate.unit.test.js src/__tests__/api.contract.test.js src/__tests__/api.anonContract.test.js src/__tests__/cod.contract.test.js src/__tests__/membership.contract.test.js src/__tests__/discountCodes.contract.test.js src/__tests__/eventReservations.contract.test.js src/__tests__/newsletter.contract.test.js src/__tests__/restock.contract.test.js src/__tests__/rlsEmbedAudit.test.js && vite build"
   },
   "dependencies": {
     "@paystack/inline-js": "^2.22.8",

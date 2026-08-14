@@ -11,7 +11,7 @@
  *   - admin_update_order_status — admin-only; non-admins must be rejected.
  *
  * This spec exercises the real RPCs against the live DB as the roles real
- * users hold: a throwaway CONFIRMED customer account (created/destroyed with
+ * users hold: a run-tagged CONFIRMED customer account (created/destroyed with
  * the service-role admin API) plus the plain ANON key. Key controls:
  *   NEGATIVE — anon can NO LONGER place an order (account requirement).
  *   POSITIVE — a signed-in customer places an order; the row carries their
@@ -21,9 +21,16 @@
  *   NEGATIVE — tracking with the WRONG email returns null (no enumeration).
  *   NEGATIVE — an authenticated NON-admin cannot update order status.
  *
- * Because it MUTATES (creates a user + an order, decrements stock), afterAll
- * cleans up with the service-role client: deletes the test order(s) and user,
- * and adds the consumed stock back. Idempotent — leftovers are purged first.
+ * ISOLATION: every fixture this suite creates — the account, the product it
+ * orders, the resulting order — carries RUN_TAG, so a concurrent or orphaned
+ * vitest run cannot see or delete them. It also buys its OWN throwaway product
+ * rather than a seeded one, so no real inventory moves and there is no
+ * read-modify-write stock restore to get wrong. See the header of
+ * `helpers/liveFixtures.js` for why this matters.
+ *
+ * afterAll deletes everything it made. Test orders in particular must not
+ * survive: admin/Dashboard.jsx counts orders and sums their totals for the
+ * revenue tiles, so a leftover would read as a real sale.
  *
  * Auto-skips unless BOTH VITE_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY
  * are set (service role is required for safe cleanup, so we don't mutate the
@@ -33,103 +40,61 @@
  *   npx vitest run src/__tests__/cod.contract.test.js
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { createClient } from '@supabase/supabase-js'
+import {
+  KEYS_MISSING, anonClient, serviceClient,
+  testEmail, testSlug, createTestUser, signInAs, deleteTestUsers, mustSucceed,
+} from './helpers/liveFixtures.js'
 
-const URL =
-  process.env.SUPABASE_URL ||
-  process.env.VITE_SUPABASE_URL ||
-  'https://aogdkqczvlffgydgxsmz.supabase.co'
-const ANON = process.env.VITE_SUPABASE_ANON_KEY
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
-const SKIP = !ANON || !SERVICE
-
-// Clearly-marked test identity so cleanup can target exactly our rows.
-const TEST_EMAIL = 'vitest+cod@example.com'
-const TEST_PASSWORD = 'vitest-cod-3x9!Local'
+const SKIP = KEYS_MISSING
 const TEST_QTY = 1
+const PRODUCT_SLUG = testSlug('cod-product')
+const PRODUCT_PRICE = 12000
+const START_STOCK = 5
 
-const anon = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
-const admin = SKIP
-  ? null
-  : createClient(URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+const anon = SKIP ? null : anonClient()
+const admin = SKIP ? null : serviceClient()
 // Signed in as the test customer in beforeAll — the role real buyers hold.
-const userClient = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
+const userClient = SKIP ? null : anonClient()
 
 // Shared state across the ordered tests.
-let product = null      // the product we ordered (for stock restore)
-let testUserId = null   // auth.users id of the throwaway customer
-let orderNumber = null  // returned by place_cod_order
+let productId = null
+let testUserId = null
+let testUserEmail = null
+let orderNumber = null
 let placedTotal = 0
-
-// Remove any leftover orders from a prior crashed run for our test email.
-async function purgeTestOrders() {
-  await admin.from('orders').delete().eq('customer_email', TEST_EMAIL)
-}
-
-// Remove any leftover auth user from a prior crashed run.
-async function purgeTestUser() {
-  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-  const leftover = data?.users?.find((u) => u.email === TEST_EMAIL)
-  if (leftover) await admin.auth.admin.deleteUser(leftover.id)
-}
 
 describe.skipIf(SKIP)('COD contract — account-required ordering + tracking RPCs', () => {
   beforeAll(async () => {
-    await purgeTestOrders()
-    await purgeTestUser()
-
-    // A confirmed customer account (email confirmation is ON in this project,
-    // so bypass it with the admin API rather than clicking a link).
-    const { data: created, error: createErr } = await admin.auth.admin.createUser({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-    })
-    expect(createErr).toBeNull()
-    testUserId = created.user.id
-
-    const { error: signInErr } = await userClient.auth.signInWithPassword({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-    })
-    expect(signInErr).toBeNull()
-
-    // Fetch one real, available product via the ANON client (what a visitor sees).
-    const { data, error } = await anon
+    // Our own product, so the order under test cannot collide with another run
+    // and no seeded stock is disturbed.
+    const prod = mustSucceed('create test product', await admin
       .from('products')
-      .select('id, name, price, stock_quantity, is_available')
-      .eq('is_available', true)
-      .gte('stock_quantity', TEST_QTY)
-      .limit(1)
-    expect(error).toBeNull()
-    expect(Array.isArray(data) && data.length === 1).toBe(true)
-    product = data[0]
+      .insert({
+        name: `Vitest COD Product ${PRODUCT_SLUG}`,
+        slug: PRODUCT_SLUG,
+        price: PRODUCT_PRICE,
+        category: 'accessories',
+        stock_quantity: START_STOCK,
+        is_available: true,
+        is_member_only: false,
+      })
+      .select('id')
+      .single())
+    productId = prod.id
+
+    const user = await createTestUser(admin, 'cod')
+    testUserId = user.id
+    testUserEmail = user.email
+    await signInAs(userClient, testUserEmail)
   })
 
   afterAll(async () => {
     if (!admin) return
-    // Delete the order(s) we created.
-    await purgeTestOrders()
-    // Restore the stock we consumed so seeded data is unchanged.
-    if (product) {
-      const { data: cur } = await admin
-        .from('products')
-        .select('stock_quantity')
-        .eq('id', product.id)
-        .single()
-      if (cur) {
-        await admin
-          .from('products')
-          .update({ stock_quantity: cur.stock_quantity + TEST_QTY })
-          .eq('id', product.id)
-      }
-    }
-    // Delete the throwaway customer.
-    if (testUserId) await admin.auth.admin.deleteUser(testUserId)
+    // Orders first — a stray test order would show up in the admin dashboard's
+    // order count and revenue tiles as a real sale.
+    await admin.from('orders').delete().eq('customer_email', testUserEmail ?? testEmail('cod'))
+    await admin.from('products').delete().eq('slug', PRODUCT_SLUG)
+    await deleteTestUsers(admin, testUserId)
   })
 
   const orderPayload = () => ({
@@ -145,8 +110,19 @@ describe.skipIf(SKIP)('COD contract — account-required ordering + tracking RPC
       province: 'Gauteng',
       postalCode: '1459',
     },
-    p_items: [{ id: product.id, quantity: TEST_QTY }],
+    p_items: [{ id: productId, quantity: TEST_QTY }],
     p_payment_method: 'cash_on_delivery',
+  })
+
+  it('POSITIVE: anon sees the product on the storefront (public products SELECT)', async () => {
+    const { data, error } = await anon
+      .from('products')
+      .select('id, name, price, stock_quantity, is_available')
+      .eq('id', productId)
+      .single()
+    expect(error).toBeNull()
+    expect(data.is_available).toBe(true)
+    expect(data.price).toBe(PRODUCT_PRICE)
   })
 
   it('NEGATIVE: anon can no longer place_cod_order (account required)', async () => {
@@ -175,7 +151,15 @@ describe.skipIf(SKIP)('COD contract — account-required ordering + tracking RPC
       .eq('order_number', orderNumber)
       .single()
     expect(row?.user_id).toBe(testUserId)
-    expect(row?.customer_email).toBe(TEST_EMAIL)
+    expect(row?.customer_email).toBe(testUserEmail)
+
+    // The units really left inventory.
+    const { data: prod } = await admin
+      .from('products')
+      .select('stock_quantity')
+      .eq('id', productId)
+      .single()
+    expect(prod?.stock_quantity).toBe(START_STOCK - TEST_QTY)
   })
 
   it('POSITIVE: the customer reads their own order via RLS (orders_owner_select)', async () => {
@@ -193,7 +177,7 @@ describe.skipIf(SKIP)('COD contract — account-required ordering + tracking RPC
     expect(orderNumber).toBeTruthy()
     const { data, error } = await anon.rpc('get_order_tracking', {
       p_order_number: orderNumber,
-      p_email: TEST_EMAIL,
+      p_email: testUserEmail,
     })
     expect(error).toBeNull()
     expect(data).not.toBeNull()

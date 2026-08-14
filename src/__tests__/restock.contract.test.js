@@ -15,16 +15,17 @@
  *              building; a phantom unit would oversell). The cancellation still
  *              succeeds and says so in the history note.
  *
- * REQUIRES migration 20260814101000 to be applied. The fix lives inside an
- * existing function signature, so — same reasoning as membership.contract —
- * the suite probes the migration's marker RPC `order_cancel_restocks()` at
- * module load and auto-skips if it isn't there yet, rather than failing
- * against the old (stock-destroying) behaviour.
+ * REQUIRES migration 20260814101000. The fix lives inside an existing function
+ * signature, so the suite probes the migration's marker RPC
+ * `order_cancel_restocks()` at module load. `probeMigration` separates "RPC
+ * genuinely absent" (a clean skip) from "the probe broke" (a LOUD failure) —
+ * the old `MIGRATED = !err && data === true` form silently skipped the suite on
+ * any transient error, leaving the run green while the stock-destroying
+ * behaviour went untested.
  *
- * Because it MUTATES (creates a product, a customer, an ADMIN user, orders and
- * moves stock), afterAll cleans up with the service-role client: the product is
- * ours and is deleted outright, so no seeded stock is touched. Idempotent —
- * leftovers are purged first.
+ * ISOLATION: the buyer account, the ADMIN account and the product all carry
+ * RUN_TAG, so a concurrent or orphaned vitest run cannot delete them mid-test.
+ * The product is ours and is deleted outright, so no seeded stock is touched.
  *
  * Auto-skips unless BOTH VITE_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY
  * are set (service role is required for safe cleanup, so we don't mutate the
@@ -34,79 +35,48 @@
  *   npx vitest run src/__tests__/restock.contract.test.js
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { createClient } from '@supabase/supabase-js'
+import {
+  anonClient, serviceClient, probeMigration, describeGate,
+  testSlug, createTestUser, signInAs, deleteTestUsers, mustSucceed,
+} from './helpers/liveFixtures.js'
 
-const URL =
-  process.env.SUPABASE_URL ||
-  process.env.VITE_SUPABASE_URL ||
-  'https://aogdkqczvlffgydgxsmz.supabase.co'
-const ANON = process.env.VITE_SUPABASE_ANON_KEY
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
-const KEYS_MISSING = !ANON || !SERVICE
-
-// Migration probe: order_cancel_restocks() exists only once 20260814101000 is
-// applied (a missing RPC is a PostgREST PGRST202 error). Top-level await is
-// fine here — vitest test modules are ESM and the env setup file has already
-// populated process.env.
-let MIGRATED = false
-if (!KEYS_MISSING) {
-  const probe = createClient(URL, ANON, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-  const { data, error } = await probe.rpc('order_cancel_restocks')
-  MIGRATED = !error && data === true
-}
-const SKIP = KEYS_MISSING || !MIGRATED
-
-// Clearly-marked test identities so cleanup can target exactly our rows.
-const TEST_EMAIL = 'vitest+restock@example.com'
-const ADMIN_EMAIL = 'vitest+restock-admin@example.com'
-const TEST_PASSWORD = 'vitest-restock-5q8!Local'
+// A marker RPC that returns true only once the migration is applied. A missing
+// function is PGRST202, which probeMigration classifies as "not applied".
+const gate = await probeMigration({
+  migration: '20260814101000_restock_on_cancel',
+  label: 'order_cancel_restocks()',
+  probe: async () => {
+    const res = await anonClient().rpc('order_cancel_restocks')
+    if (res.error) return res
+    // The RPC resolved but reported the old behaviour — a real "not applied".
+    return res.data === true
+      ? res
+      : { data: null, error: { code: 'PGRST202', message: 'order_cancel_restocks() returned false' } }
+  },
+})
+const SKIP = !gate.applied
 
 // Our own throwaway product — deleted in afterAll, so no seeded stock moves.
-const TEST_PRODUCT_SLUG = 'vitest-restock-product'
+const TEST_PRODUCT_SLUG = testSlug('restock-product')
 const START_STOCK = 7
 const ORDER_QTY = 2
 const SECOND_QTY = 1
 
-const admin = SKIP
-  ? null
-  : createClient(URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+const admin = SKIP ? null : serviceClient()
 // Signed in as the buyer — the role real customers hold.
-const userClient = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
+const userClient = SKIP ? null : anonClient()
 // Signed in as a REAL admin (a row in admin_users), so is_admin() passes and
 // admin_update_order_status runs the way it does in the admin UI.
-const adminClient = SKIP
-  ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
+const adminClient = SKIP ? null : anonClient()
 
 // Shared state across the ordered tests.
 let productId = null
 let testUserId = null
+let testUserEmail = null
 let adminUserId = null
+let adminUserEmail = null
 let orderId = null
 let secondOrderId = null
-
-async function purgeTestOrders() {
-  await admin.from('orders').delete().in('customer_email', [TEST_EMAIL, ADMIN_EMAIL])
-}
-
-async function purgeTestProduct() {
-  await admin.from('products').delete().eq('slug', TEST_PRODUCT_SLUG)
-}
-
-async function purgeTestUsers() {
-  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-  for (const u of data?.users ?? []) {
-    if (u.email === TEST_EMAIL || u.email === ADMIN_EMAIL) {
-      // admin_users.id references auth.users on delete cascade, so removing
-      // the user also removes any admin grant we made.
-      await admin.auth.admin.deleteUser(u.id)
-    }
-  }
-}
 
 async function stockNow() {
   const { data, error } = await admin
@@ -136,7 +106,7 @@ const lastNote = (row) => {
 const orderPayload = (quantity) => ({
   p_customer: {
     name: 'Vitest Restock',
-    email: TEST_EMAIL,
+    email: testUserEmail,
     phone: '0000000000',
     street: '1 Test St',
     apartment: '',
@@ -150,14 +120,10 @@ const orderPayload = (quantity) => ({
 
 describe.skipIf(SKIP)('Restock contract — cancelling an order returns its stock', () => {
   beforeAll(async () => {
-    await purgeTestOrders()
-    await purgeTestUsers()
-    await purgeTestProduct()
-
-    const { data: prod, error: ep } = await admin
+    const prod = mustSucceed('create test product', await admin
       .from('products')
       .insert({
-        name: 'Vitest Restock Product',
+        name: `Vitest Restock Product ${TEST_PRODUCT_SLUG}`,
         slug: TEST_PRODUCT_SLUG,
         price: 10000,
         category: 'accessories',
@@ -165,52 +131,36 @@ describe.skipIf(SKIP)('Restock contract — cancelling an order returns its stoc
         is_available: true,
       })
       .select('id')
-      .single()
-    expect(ep).toBeNull()
+      .single())
     productId = prod.id
 
-    // Confirmed accounts (email confirmation is ON in this project, so bypass
-    // it with the admin API rather than clicking a link).
-    const { data: buyer, error: e1 } = await admin.auth.admin.createUser({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-    })
-    expect(e1).toBeNull()
-    testUserId = buyer.user.id
+    const buyer = await createTestUser(admin, 'restock')
+    testUserId = buyer.id
+    testUserEmail = buyer.email
 
-    const { data: adm, error: e2 } = await admin.auth.admin.createUser({
-      email: ADMIN_EMAIL,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-    })
-    expect(e2).toBeNull()
-    adminUserId = adm.user.id
+    const adm = await createTestUser(admin, 'restock-admin')
+    adminUserId = adm.id
+    adminUserEmail = adm.email
 
     // admin_users has no write policies — only the service role can grant.
-    const { error: eGrant } = await admin
+    mustSucceed('grant admin to the test admin account', await admin
       .from('admin_users')
-      .insert({ id: adminUserId, email: ADMIN_EMAIL })
-    expect(eGrant).toBeNull()
+      .insert({ id: adminUserId, email: adminUserEmail }))
 
-    const { error: s1 } = await userClient.auth.signInWithPassword({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-    })
-    expect(s1).toBeNull()
-    const { error: s2 } = await adminClient.auth.signInWithPassword({
-      email: ADMIN_EMAIL,
-      password: TEST_PASSWORD,
-    })
-    expect(s2).toBeNull()
+    await signInAs(userClient, testUserEmail)
+    await signInAs(adminClient, adminUserEmail)
   })
 
   afterAll(async () => {
     if (!admin) return
-    await purgeTestOrders()
-    await purgeTestProduct()
-    if (testUserId) await admin.auth.admin.deleteUser(testUserId)
-    if (adminUserId) await admin.auth.admin.deleteUser(adminUserId)
+    const emails = [testUserEmail, adminUserEmail].filter(Boolean)
+    // Orders first — a stray test order would show up in the admin dashboard's
+    // order count and revenue tiles as a real sale.
+    if (emails.length) await admin.from('orders').delete().in('customer_email', emails)
+    await admin.from('products').delete().eq('slug', TEST_PRODUCT_SLUG)
+    // admin_users.id references auth.users on delete cascade, so removing the
+    // user also removes the admin grant made above.
+    await deleteTestUsers(admin, testUserId, adminUserId)
   })
 
   it('POSITIVE: placing an order decrements stock (the units the bug used to eat)', async () => {
@@ -302,8 +252,4 @@ describe.skipIf(SKIP)('Restock contract — cancelling an order returns its stoc
   })
 })
 
-describe.skipIf(!SKIP)('Restock contract skipped', () => {
-  it('reminds devs why (missing keys, or migration 20260814101000 not pushed yet)', () => {
-    expect(true).toBe(true)
-  })
-})
+describeGate('Restock contract', gate)
