@@ -91,6 +91,10 @@ function OrderDetailBody({ order }) {
     subtotal,
     shipping_fee,
     total,
+    // subtotal is the PRE-discount goods total; total = subtotal - discount + shipping.
+    // Orders placed before discount codes existed default to 0 / null.
+    discount_cents = 0,
+    discount_code = null,
     items = [],
     shipping_address: addr = {},
   } = order
@@ -258,6 +262,15 @@ function OrderDetailBody({ order }) {
             <span className="text-muted">Subtotal</span>
             <span className="text-white">{formatZAR(subtotal)}</span>
           </div>
+          {discount_cents > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted">
+                Discount
+                {discount_code ? <span className="text-gold"> ({discount_code})</span> : null}
+              </span>
+              <span className="text-gold font-medium">−{formatZAR(discount_cents)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-muted">Shipping</span>
             <span className={shipping_fee === 0 ? 'text-green-400' : 'text-white'}>

@@ -96,6 +96,18 @@ export default function OrderConfirmation() {
               <span className="text-muted">Subtotal</span>
               <span className="text-white">{formatZAR(order.subtotal)}</span>
             </div>
+            {/* place_cod_order returns discount_code/discount_cents alongside the
+                totals, and writes total = subtotal - discount + shipping. Without
+                this row the three numbers visibly don't add up. */}
+            {order.discount_cents > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted">
+                  Discount
+                  {order.discount_code ? <span className="text-gold"> ({order.discount_code})</span> : null}
+                </span>
+                <span className="text-gold font-medium">−{formatZAR(order.discount_cents)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted">Shipping</span>
               <span className={order.shipping_fee === 0 ? 'text-green-400' : 'text-white'}>

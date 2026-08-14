@@ -25,6 +25,8 @@ const Account = lazy(() => import('./pages/Account'))
 const OrderDetail = lazy(() => import('./pages/OrderDetail'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const Events = lazy(() => import('./pages/Events'))
+const EventDetail = lazy(() => import('./pages/EventDetail'))
+const Unsubscribe = lazy(() => import('./pages/Unsubscribe'))
 const Membership = lazy(() => import('./pages/Membership'))
 const About = lazy(() => import('./pages/About'))
 const Contact = lazy(() => import('./pages/Contact'))
@@ -39,6 +41,7 @@ const AdminEvents = lazy(() => import('./pages/admin/Events'))
 const AdminMemberships = lazy(() => import('./pages/admin/Memberships'))
 const AdminMessages = lazy(() => import('./pages/admin/Messages'))
 const AdminNewsletter = lazy(() => import('./pages/admin/Newsletter'))
+const AdminDiscounts = lazy(() => import('./pages/admin/Discounts'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -111,6 +114,9 @@ export default function App() {
                 {/* Password-recovery landing page — the emailed reset link points here. */}
                 <Route path="/reset-password" element={<PublicLayout><ResetPassword /></PublicLayout>} />
                 <Route path="/events" element={<PublicLayout><Events /></PublicLayout>} />
+                <Route path="/events/:id" element={<PublicLayout><EventDetail /></PublicLayout>} />
+                {/* Public on purpose: unsubscribe links are opened from an email client. */}
+                <Route path="/unsubscribe" element={<PublicLayout><Unsubscribe /></PublicLayout>} />
                 <Route path="/membership" element={<PublicLayout><Membership /></PublicLayout>} />
                 <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
                 <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
@@ -127,6 +133,7 @@ export default function App() {
                 <Route path="/admin/memberships" element={<ProtectedRoute><AdminMemberships /></ProtectedRoute>} />
                 <Route path="/admin/messages" element={<ProtectedRoute><AdminMessages /></ProtectedRoute>} />
                 <Route path="/admin/newsletter" element={<ProtectedRoute><AdminNewsletter /></ProtectedRoute>} />
+                <Route path="/admin/discounts" element={<ProtectedRoute><AdminDiscounts /></ProtectedRoute>} />
 
                 {/* Fallback */}
                 <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />

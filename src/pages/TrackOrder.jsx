@@ -260,6 +260,12 @@ function OrderTracking({ order }) {
     subtotal,
     shipping_fee,
     total,
+    // get_order_tracking builds its own jsonb, so these two arrive only once the
+    // RPC has been re-created to include them. Until that migration is applied
+    // they're simply absent and the discount row is omitted — never a crash, and
+    // never a wrong number: pre-discount orders have discount_cents = 0 anyway.
+    discount_cents = 0,
+    discount_code = null,
     items = [],
   } = order
 
@@ -376,6 +382,15 @@ function OrderTracking({ order }) {
             <span className="text-muted">Subtotal</span>
             <span className="text-white">{formatZAR(subtotal)}</span>
           </div>
+          {discount_cents > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted">
+                Discount
+                {discount_code ? <span className="text-gold"> ({discount_code})</span> : null}
+              </span>
+              <span className="text-gold font-medium">−{formatZAR(discount_cents)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-muted">Shipping</span>
             <span className={shipping_fee === 0 ? 'text-green-400' : 'text-white'}>

@@ -5,9 +5,28 @@ const SHIPPING_FEE = 8000 // R80 in cents
 
 export { SHIPPING_THRESHOLD, SHIPPING_FEE }
 
-export default function OrderSummary({ items, subtotal }) {
+/**
+ * @param items          cart lines
+ * @param subtotal       PRE-discount goods total, in cents
+ * @param discountCents  amount taken off the goods, in cents (0 = none)
+ * @param discountCode   the applied code, shown next to the discount row
+ * @param children       optional slot between the items and the totals —
+ *                       checkout puts the discount-code form here so the
+ *                       input sits with the money it changes.
+ */
+export default function OrderSummary({
+  items,
+  subtotal,
+  discountCents = 0,
+  discountCode = null,
+  children,
+}) {
+  // Free shipping is decided on the PRE-discount subtotal, matching
+  // place_cod_order: a discount must never be able to remove free shipping
+  // and leave the customer worse off for using it.
   const shippingFee = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
-  const total = subtotal + shippingFee
+  const discount = Math.min(Math.max(discountCents, 0), subtotal)
+  const total = subtotal - discount + shippingFee
 
   return (
     <div className="bg-surface border border-border rounded-xl p-6">
@@ -37,12 +56,23 @@ export default function OrderSummary({ items, subtotal }) {
         ))}
       </div>
 
+      {/* Discount code form (slot) */}
+      {children && <div className="border-t border-border pt-4 mb-4">{children}</div>}
+
       {/* Totals */}
       <div className="border-t border-border pt-4 space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-muted">Subtotal</span>
           <span className="text-white">{formatZAR(subtotal)}</span>
         </div>
+        {discount > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-muted">
+              Discount{discountCode ? <span className="text-gold"> ({discountCode})</span> : null}
+            </span>
+            <span className="text-gold font-medium">−{formatZAR(discount)}</span>
+          </div>
+        )}
         <div className="flex justify-between text-sm">
           <span className="text-muted">Shipping</span>
           <span className={shippingFee === 0 ? 'text-green-400 font-medium' : 'text-white'}>

@@ -1,10 +1,22 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Calendar, AlertTriangle } from 'lucide-react'
 import { useEvents } from '../hooks/useEvents'
+import { useMyEventReservations, isLiveReservation } from '../hooks/useEventReservations'
 import EventCard from '../components/events/EventCard'
 
 export default function Events() {
   const { data: events, isLoading, isError, refetch } = useEvents()
+  // One query for the whole grid — the cards read their own state out of it.
+  // Signed out this never runs (enabled: !!user), so the map is simply empty.
+  const { data: reservations } = useMyEventReservations()
+
+  const reservationByEvent = useMemo(() => {
+    const map = new Map()
+    for (const r of reservations ?? []) {
+      if (isLiveReservation(r) && !map.has(r.event_id)) map.set(r.event_id, r)
+    }
+    return map
+  }, [reservations])
 
   useEffect(() => {
     document.title = 'Events | 224 Clubhouse'
@@ -54,7 +66,7 @@ export default function Events() {
                 key={event.id}
                 className="animate-fadeIn"
               >
-                <EventCard event={event} />
+                <EventCard event={event} reservation={reservationByEvent.get(event.id) ?? null} />
               </div>
             ))}
           </div>

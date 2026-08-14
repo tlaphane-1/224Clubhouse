@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Lock } from 'lucide-react'
+import { Lock, Tag, X } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { useLastOrder } from '../hooks/useMyOrders'
 import { useMyMembership } from '../hooks/useMyMembership'
+import { useDiscountCode } from '../hooks/useDiscountCode'
 import { memberPurchaseGate } from '../utils/memberGate'
 import { supabase } from '../lib/supabase'
 import CheckoutForm from '../components/checkout/CheckoutForm'
@@ -46,8 +47,17 @@ export default function Checkout() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
+  // Discount codes: the client only ever holds a CODE. place_cod_order
+  // re-derives the amount from its own DB-priced subtotal, so everything
+  // below is display-only (see useDiscountCode).
+  const [codeInput, setCodeInput] = useState('')
+  const discount = useDiscountCode(cartSubtotal)
+
+  // Free shipping is decided on the PRE-discount subtotal, exactly as the RPC
+  // does — otherwise applying a code could push a cart back under R500 and
+  // silently add R80 of shipping, leaving the customer worse off.
   const shippingFee = cartSubtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
-  const total = cartSubtotal + shippingFee
+  const total = cartSubtotal - discount.discountCents + shippingFee
 
   // place_cod_order rejects the WHOLE order if any line is member-only and the
   // buyer isn't an active member. Catch it here instead, so the last step of
@@ -130,10 +140,25 @@ export default function Checkout() {
       },
       p_items: items.map(i => ({ id: i.id, quantity: i.quantity })),
       p_payment_method: method,
+      // Code only — never an amount. The server recomputes what it's worth.
+      p_discount_code: discount.applied?.code ?? null,
     })
 
     if (error || !data?.order_number) {
-      toast.error(error?.message || 'Could not place your order. Please try again.')
+      // The RPC prefixes discount rejections so a code that expired, ran out,
+      // or stopped being this account's first order between Apply and Place
+      // Order reads as a sentence about the code — and gets cleared — instead
+      // of a raw Postgres error on a cart the customer can still check out.
+      const discountReason = /^Discount code:\s*/i.test(error?.message ?? '')
+        ? error.message.replace(/^Discount code:\s*/i, '')
+        : null
+      if (discountReason) {
+        discount.reject(discountReason)
+        setCodeInput('')
+        toast.error(`${discountReason}. The code has been removed — please place your order again.`)
+      } else {
+        toast.error(error?.message || 'Could not place your order. Please try again.')
+      }
       setProcessing(false)
       return
     }
@@ -282,7 +307,65 @@ export default function Checkout() {
           {/* Summary */}
           <div className="lg:col-span-2">
             <div className="sticky top-28">
-              <OrderSummary items={items} subtotal={cartSubtotal} />
+              <OrderSummary
+                items={items}
+                subtotal={cartSubtotal}
+                discountCents={discount.discountCents}
+                discountCode={discount.applied?.code ?? null}
+              >
+                {/* Discount code — signed-in only: validate_discount_code is
+                    granted to `authenticated`, and checkout requires an
+                    account anyway. */}
+                {user && (
+                  <div>
+                    <label htmlFor="discount-code" className="block text-muted text-xs uppercase tracking-widest mb-2">
+                      Discount code
+                    </label>
+                    {discount.applied ? (
+                      <div className="flex items-center gap-3 border border-gold/40 bg-gold/5 rounded-lg px-3 py-2.5">
+                        <Tag size={15} className="text-gold shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm font-semibold truncate">{discount.applied.code}</p>
+                          <p className="text-gold text-xs">−{formatZAR(discount.discountCents)} applied</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { discount.remove(); setCodeInput('') }}
+                          className="text-muted hover:text-red-400 transition-colors p-1 shrink-0"
+                          aria-label="Remove discount code"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <form
+                        onSubmit={(e) => { e.preventDefault(); discount.apply(codeInput) }}
+                        className="flex gap-2"
+                      >
+                        <input
+                          id="discount-code"
+                          value={codeInput}
+                          onChange={e => setCodeInput(e.target.value.toUpperCase())}
+                          placeholder="WELCOME10"
+                          autoComplete="off"
+                          maxLength={40}
+                          className="input-base text-sm py-2.5 uppercase tracking-widest"
+                        />
+                        <button
+                          type="submit"
+                          disabled={discount.checking || !codeInput.trim()}
+                          className="btn-outline text-sm px-5 py-2.5 shrink-0"
+                        >
+                          {discount.checking ? 'Checking...' : 'Apply'}
+                        </button>
+                      </form>
+                    )}
+                    {discount.error && (
+                      <p className="text-red-400 text-xs mt-2">{discount.error}</p>
+                    )}
+                  </div>
+                )}
+              </OrderSummary>
             </div>
           </div>
         </div>

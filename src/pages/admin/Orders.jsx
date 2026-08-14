@@ -17,7 +17,24 @@ export default function Orders() {
     document.title = 'Orders | 224 Admin'
   }, [])
 
-  const handleStatusChange = async (order, status) => {
+  // `selectEl` is the <select> that fired the change: a controlled select whose
+  // state never changes (confirm declined) does not re-render, so the DOM would
+  // keep showing the abandoned choice — put it back by hand.
+  const handleStatusChange = async (order, status, selectEl) => {
+    if (status === 'cancelled' && order.status !== 'cancelled') {
+      const label = order.order_number || order.id.slice(0, 8)
+      // Cancelling returns the order's units to stock — except from
+      // "Delivered", where the goods have already left (see migration
+      // 20260814101000_restock_on_cancel.sql).
+      const stockLine =
+        order.status === 'delivered'
+          ? 'It is already marked Delivered, so stock will NOT be returned — adjust it by hand if the goods came back.'
+          : 'The items will be returned to stock.'
+      if (!window.confirm(`Cancel order ${label}? ${stockLine}`)) {
+        if (selectEl) selectEl.value = order.status
+        return
+      }
+    }
     try {
       await updateStatus.mutateAsync({
         orderId: order.id,
@@ -108,7 +125,7 @@ export default function Orders() {
                   <div className="flex items-center gap-2 mt-3">
                     <select
                       value={order.status}
-                      onChange={e => handleStatusChange(order, e.target.value)}
+                      onChange={e => handleStatusChange(order, e.target.value, e.target)}
                       className="flex-1 bg-background border border-border text-white text-xs rounded px-2 py-2 cursor-pointer"
                     >
                       {ALL_STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
@@ -139,7 +156,7 @@ export default function Orders() {
                   <div className="text-center">
                     <select
                       value={order.status}
-                      onChange={e => handleStatusChange(order, e.target.value)}
+                      onChange={e => handleStatusChange(order, e.target.value, e.target)}
                       className="bg-background border border-border text-white text-xs rounded px-2 py-1.5 cursor-pointer w-full"
                     >
                       {ALL_STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}

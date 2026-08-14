@@ -43,16 +43,26 @@ export default function Home() {
   const handleSubscribe = async (e) => {
     e.preventDefault()
     setSubLoading(true)
+    // Normalised once, here, and used for BOTH calls. The subscribers table
+    // stores emails lowercased, so "Sam@Example.com " subscribed fine and then
+    // send-welcome-email looked the row up by the raw typed string and found
+    // nothing — a silent no-welcome-email. Trim + lowercase keeps the two halves
+    // talking about the same row.
+    const email = newsletter.email.trim().toLowerCase()
     try {
-      const { error } = await supabase.from('newsletter_subscribers').insert({
-        email: newsletter.email,
-        first_name: newsletter.firstName,
-        last_name: newsletter.lastName,
+      // Goes through the RPC rather than a direct insert so that someone who
+      // previously unsubscribed can opt back in — a plain insert hit the
+      // unique-email constraint and left them off the list permanently.
+      const { error } = await supabase.rpc('subscribe_newsletter', {
+        p_email: email,
+        p_first_name: newsletter.firstName,
+        p_last_name: newsletter.lastName,
       })
       if (error) throw error
 
+      // The function reads the name and unsubscribe token from the row itself.
       await supabase.functions.invoke('send-welcome-email', {
-        body: { firstName: newsletter.firstName, email: newsletter.email },
+        body: { email },
       })
 
       toast.success('Welcome to the 224 family! Check your email for your discount code.', {
@@ -61,6 +71,8 @@ export default function Home() {
       })
       setNewsletter({ firstName: '', lastName: '', email: '' })
     } catch (err) {
+      // 23505 is no longer reachable (the RPC upserts), but a stale cached
+      // bundle could still hit the old path before it reloads.
       if (err.code === '23505') {
         toast.error('You\'re already subscribed!')
       } else {
