@@ -133,6 +133,7 @@ export default function ProductForm({ product, onClose }) {
         <select required className={inputCls} value={form.category} onChange={e => set('category', e.target.value)}>
           <option value="flower">Flower</option>
           <option value="edibles">Edibles</option>
+          <option value="joints">Joints</option>
           <option value="accessories">Accessories</option>
           <option value="merchandise">Merchandise</option>
         </select>

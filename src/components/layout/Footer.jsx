@@ -97,13 +97,13 @@ export default function Footer() {
           {/* Hours & Address */}
           <div>
             <h4 className="text-white font-semibold uppercase tracking-widest text-xs mb-6">
-              Visit Us
+              Delivery Only
             </h4>
             <div className="space-y-4">
               <div>
-                <p className="text-gold text-xs uppercase tracking-widest mb-1.5">Hours</p>
-                <p className="text-white text-sm">Monday – Sunday</p>
-                <p className="text-muted text-sm">09:00 – 19:00 (Including Holidays)</p>
+                <p className="text-gold text-xs uppercase tracking-widest mb-1.5">Store</p>
+                <p className="text-white text-sm">Closed until further notice</p>
+                <p className="text-muted text-sm">Delivering Monday – Sunday, 09:00 – 19:00</p>
               </div>
               <div>
                 <p className="text-gold text-xs uppercase tracking-widest mb-1.5">Address</p>

@@ -4,6 +4,7 @@ import { CheckCircle, Package, Truck } from 'lucide-react'
 import { formatZAR } from '../utils/formatCurrency'
 import { paymentLabel } from '../utils/orderStatus'
 import { getLastOrder } from '../utils/recentOrders'
+import EftDetails from '../components/checkout/EftDetails'
 
 export default function OrderConfirmation() {
   const { state } = useLocation()
@@ -120,16 +121,23 @@ export default function OrderConfirmation() {
             </div>
           </div>
 
-          {/* Cash/Card on Delivery callout */}
-          <div className="p-6 border-b border-border bg-gold/5 flex items-start gap-3">
-            <Package size={20} className="text-gold flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-white text-sm font-medium">
-                Pay {formatZAR(order.total)} by {paymentLabel(paymentMethod)} when your order is delivered.
-              </p>
-              <p className="text-muted text-xs mt-1">No payment needed now.</p>
+          {/* Payment callout — EFT pays up front; cash/card pays the driver */}
+          {paymentMethod === 'eft' ? (
+            <div className="p-6 border-b border-border">
+              <EftDetails reference={order.order_number} amountLabel={formatZAR(order.total)} />
+              <p className="text-muted text-xs mt-3">We dispatch your order once the payment reflects.</p>
             </div>
-          </div>
+          ) : (
+            <div className="p-6 border-b border-border bg-gold/5 flex items-start gap-3">
+              <Package size={20} className="text-gold flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-white text-sm font-medium">
+                  Pay {formatZAR(order.total)} by {paymentLabel(paymentMethod)} when your order is delivered.
+                </p>
+                <p className="text-muted text-xs mt-1">No payment needed now.</p>
+              </div>
+            </div>
+          )}
 
           {/* Estimated delivery */}
           <div className="p-6 flex items-center gap-3">

@@ -1,6 +1,7 @@
 const variants = {
   flower: 'bg-green-900/50 text-green-400 border border-green-800',
   edibles: 'bg-orange-900/50 text-orange-400 border border-orange-800',
+  joints: 'bg-emerald-900/50 text-emerald-400 border border-emerald-800',
   accessories: 'bg-blue-900/50 text-blue-400 border border-blue-800',
   merchandise: 'bg-yellow-900/50 text-yellow-400 border border-yellow-800',
   indica: 'bg-purple-900/50 text-purple-300 border border-purple-800',

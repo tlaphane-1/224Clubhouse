@@ -8,6 +8,7 @@ import { useMyMembership } from '../hooks/useMyMembership'
 import CustomerAuth from '../components/auth/CustomerAuth'
 import { formatZAR } from '../utils/formatCurrency'
 import toast from 'react-hot-toast'
+import EftDetails from '../components/checkout/EftDetails'
 
 // Tiers are data now (membership_tiers table) — only the presentation layer
 // stays client-side. Unknown future slugs fall back to the Star icon.
@@ -15,8 +16,8 @@ const TIER_ICONS = { daily: Zap, weekly: Star, monthly: Crown }
 const FEATURED_SLUG = 'weekly'
 
 // No Paystack account yet, so there is no online payment to take: members
-// apply here and settle at the club, which is also how the lounge already
-// works. Setting VITE_PAYSTACK_PUBLIC_KEY switches the online flow back on —
+// apply here and settle by EFT or with their next delivery (the club is closed
+// until further notice). Setting VITE_PAYSTACK_PUBLIC_KEY switches the online flow back on —
 // nothing else needs to change.
 const PAY_ONLINE = Boolean(import.meta.env.VITE_PAYSTACK_PUBLIC_KEY)
 
@@ -106,7 +107,7 @@ export default function Membership() {
   // paid online, or null when the member settles at the club.
   async function submitApplication(reference) {
     try {
-      const { error } = await supabase.rpc('place_membership', {
+      const { data, error } = await supabase.rpc('place_membership', {
         p_customer: {
           full_name: form.full_name,
           phone: form.phone,
@@ -117,6 +118,13 @@ export default function Membership() {
         p_reference: reference,
       })
       if (error) throw error
+      // Tell the club there's an application to approve — fire and forget;
+      // the application stands with or without the alert.
+      if (data?.id) {
+        supabase.functions
+          .invoke('send-membership-application-alert', { body: { membershipId: data.id } })
+          .catch(() => {})
+      }
       queryClient.invalidateQueries({ queryKey: ['my-membership'] })
       setStep('success')
     } catch (err) {
@@ -235,12 +243,16 @@ export default function Membership() {
           <p className="text-muted text-sm leading-relaxed mb-8">
             {PAY_ONLINE
               ? 'Your membership starts the moment we confirm it — you can check its status right here any time.'
-              : `Pay ${tier ? displayPrice(tier.price_cents) : ''} at the club and we'll activate it on the spot. Your membership starts the moment we confirm it — check its status here any time.`}
+              : `Pay ${tier ? displayPrice(tier.price_cents) : ''} by EFT, or pay the driver with your next delivery. We'll activate your membership as soon as payment is received — check its status here any time.`}
           </p>
-          <div className="bg-gold/5 border border-gold/20 rounded-xl p-4 mb-8">
-            <p className="text-gold text-xs uppercase tracking-widest mb-2">Address</p>
-            <p className="text-white text-sm">224 Rondebult Ave, Libradene, Boksburg, 1459</p>
-          </div>
+          {!PAY_ONLINE && (
+            <div className="mb-8">
+              <EftDetails
+                reference={form.full_name || 'your full name'}
+                amountLabel={tier ? displayPrice(tier.price_cents) : null}
+              />
+            </div>
+          )}
           <a href="/" className="btn-gold w-full py-3 text-sm uppercase tracking-widest inline-block">
             Back to Home
           </a>
@@ -387,7 +399,7 @@ export default function Membership() {
                 {effectiveStatus === 'pending' &&
                   'We’ll confirm your application shortly — your membership clock only starts once it’s approved.'}
                 {effectiveStatus === 'active' &&
-                  'Present your membership at the door on arrival. Contact us if anything looks wrong.'}
+                  'You get free delivery on every order while your membership is active. Contact us if anything looks wrong.'}
                 {effectiveStatus === 'expired' &&
                   'Your access has ended. Pick a tier above to renew — you keep the same account.'}
               </p>
@@ -406,7 +418,7 @@ export default function Membership() {
               </button>
               {!PAY_ONLINE && (
                 <p className="text-muted text-xs mt-3">
-                  Apply online — pay at the club when you collect your membership.
+                  Apply online — pay by EFT or with your next delivery.
                 </p>
               )}
             </div>
@@ -547,7 +559,7 @@ export default function Membership() {
                         ? (PAY_ONLINE ? 'Processing...' : 'Submitting...')
                         : PAY_ONLINE
                           ? `Pay ${displayPrice(tier.price_cents)}`
-                          : `Submit application — ${displayPrice(tier.price_cents)} at the club`}
+                          : `Submit application — ${displayPrice(tier.price_cents)}`}
                     </button>
                   </div>
                 </div>

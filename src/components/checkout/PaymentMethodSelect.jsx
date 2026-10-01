@@ -3,11 +3,12 @@ import { PAYMENT_METHODS, PAYMENT_LABELS } from '../../utils/orderStatus'
 const HELPER_TEXT = {
   cash_on_delivery: 'Pay with cash when your order arrives.',
   card_on_delivery: 'Pay by card machine at your door.',
+  eft: 'Pay by bank transfer. Use your order number as the reference — we dispatch once it reflects.',
 }
 
 export default function PaymentMethodSelect({ value, onChange }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" role="radiogroup" aria-label="Payment method">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" role="radiogroup" aria-label="Payment method">
       {PAYMENT_METHODS.map((m) => {
         const selected = value === m
         return (

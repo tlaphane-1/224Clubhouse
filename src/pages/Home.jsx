@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, Leaf, Candy, Wrench, ShoppingBag, Star, Mail } from 'lucide-react'
+import { ArrowRight, Leaf, Candy, Cigarette, Wrench, ShoppingBag, Star, Mail } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import { supabase } from '../lib/supabase'
 import ProductGrid from '../components/store/ProductGrid'
@@ -10,6 +10,7 @@ import { BRAND_IMAGES } from '../hooks/useStorageImages'
 const categories = [
   { value: 'flower', label: 'Flower Selections', icon: Leaf, desc: 'Premium cannabis flower, handpicked' },
   { value: 'edibles', label: 'Edibles', icon: Candy, desc: 'Infused treats & beverages' },
+  { value: 'joints', label: 'Joints', icon: Cigarette, desc: 'Pre-rolled and ready to go' },
   { value: 'accessories', label: 'Accessories', icon: Wrench, desc: 'Gear for the discerning smoker' },
   { value: 'merchandise', label: 'Merchandise', icon: ShoppingBag, desc: 'Represent the culture' },
 ]
@@ -145,7 +146,7 @@ export default function Home() {
           <h2 className="section-heading text-white">The Collection</h2>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {categories.map(({ value, label, icon: Icon, desc }) => (
             <div
               key={value}

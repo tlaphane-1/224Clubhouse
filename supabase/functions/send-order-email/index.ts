@@ -36,6 +36,9 @@ interface OrderEmailPayload {
 }
 
 const SITE_URL = 'https://224clubhouse.web.app'
+// Banking details for EFT orders (use "\n" for new lines). Unset = the customer
+// is told the details will follow.
+const EFT_BANK_DETAILS = (Deno.env.get('EFT_BANK_DETAILS') ?? '').replace(/\\n/g, '\n').trim()
 
 // The values the orders_payment_method_check constraint actually allows are
 // 'cash_on_delivery' / 'card_on_delivery' / 'online'; the short forms are kept
@@ -43,6 +46,7 @@ const SITE_URL = 'https://224clubhouse.web.app'
 function paymentLabel(method?: string): string {
   if (method === 'card' || method === 'card_on_delivery') return 'Card on delivery'
   if (method === 'cash' || method === 'cash_on_delivery') return 'Cash on delivery'
+  if (method === 'eft') return 'EFT (bank transfer)'
   return 'On delivery'
 }
 
@@ -333,11 +337,13 @@ serve(async (req) => {
       <div style="margin-top:20px; padding-top:16px; border-top:1px solid #333333;">
         <table style="width:100%;">${breakdownRows}
           <tr>
-            <td style="color:#ffffff; font-weight:600; font-size:15px;">Amount due on delivery</td>
+            <td style="color:#ffffff; font-weight:600; font-size:15px;">${paymentMethod === 'eft' ? 'Amount due by EFT' : 'Amount due on delivery'}</td>
             <td style="color:#C9A84C; font-weight:700; font-size:18px; text-align:right;">${formatZAR(total)}</td>
           </tr>
         </table>
-        <div style="color:#888888; font-size:12px; margin-top:6px;">${paymentLabel(paymentMethod)} — no payment is needed now.</div>
+        ${paymentMethod === 'eft'
+          ? `<div style="color:#888888; font-size:12px; margin-top:6px; white-space:pre-line;">${EFT_BANK_DETAILS ? escapeHtml(EFT_BANK_DETAILS) : 'We will send you our banking details shortly.'}<br>Use your order number as the payment reference. We dispatch once the payment reflects.</div>`
+          : `<div style="color:#888888; font-size:12px; margin-top:6px;">${paymentLabel(paymentMethod)} — no payment is needed now.</div>`}
       </div>
     </div>
 

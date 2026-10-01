@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Lock, Tag, X } from 'lucide-react'
+import { Crown, Lock, Tag, X } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
-import { useLastOrder } from '../hooks/useMyOrders'
+import { useLastOrder, useMyOrders } from '../hooks/useMyOrders'
 import { useMyMembership } from '../hooks/useMyMembership'
 import { useDiscountCode } from '../hooks/useDiscountCode'
 import { memberPurchaseGate } from '../utils/memberGate'
 import { supabase } from '../lib/supabase'
 import CheckoutForm from '../components/checkout/CheckoutForm'
 import CustomerAuth from '../components/auth/CustomerAuth'
-import OrderSummary, { SHIPPING_FEE, SHIPPING_THRESHOLD } from '../components/checkout/OrderSummary'
+import OrderSummary from '../components/checkout/OrderSummary'
+import Modal from '../components/ui/Modal'
+import { shippingFeeFor } from '../utils/shipping'
 import PaymentMethodSelect from '../components/checkout/PaymentMethodSelect'
 // Paystack is disabled while the online paygate is being confirmed (PaystackButton.jsx retained for re-enable).
 import { paymentLabel } from '../utils/orderStatus'
@@ -53,12 +55,6 @@ export default function Checkout() {
   const [codeInput, setCodeInput] = useState('')
   const discount = useDiscountCode(cartSubtotal)
 
-  // Free shipping is decided on the PRE-discount subtotal, exactly as the RPC
-  // does — otherwise applying a code could push a cart back under R500 and
-  // silently add R80 of shipping, leaving the customer worse off.
-  const shippingFee = cartSubtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
-  const total = cartSubtotal - discount.discountCents + shippingFee
-
   // place_cod_order rejects the WHOLE order if any line is member-only and the
   // buyer isn't an active member. Catch it here instead, so the last step of
   // checkout can't end in a raw RPC error. Cart.jsx blocks the same case first;
@@ -67,6 +63,23 @@ export default function Checkout() {
   const membership = useMyMembership()
   const gate = memberPurchaseGate(user, membership)
   const lockedItems = items.filter(item => gate.isLocked(item))
+
+  // Free delivery for active members; otherwise free at R500+ judged on the
+  // PRE-discount subtotal, exactly as the RPC does — so applying a code can
+  // never push a cart back under R500 and add delivery back on.
+  const shippingFee = shippingFeeFor(cartSubtotal, gate.isActiveMember)
+  const total = cartSubtotal - discount.discountCents + shippingFee
+
+  // After a first (non-cancelled) order, place_cod_order requires a membership
+  // application (pending or active). Mirror it so the customer gets the
+  // become-a-member prompt instead of a raw RPC error. Only decided once both
+  // queries have settled — never blocks on loading.
+  const myOrders = useMyOrders()
+  const needsMembership =
+    Boolean(myOrders.data?.some(o => o.status !== 'cancelled')) &&
+    membership.isSuccess &&
+    !membership.current
+  const [showJoinPrompt, setShowJoinPrompt] = useState(false)
 
   useEffect(() => {
     document.title = 'Checkout | 224 Clubhouse'
@@ -110,6 +123,10 @@ export default function Checkout() {
     if (processing) return // guard against double-submit -> duplicate orders
     if (!user) return // render gate should prevent this; server enforces regardless
     if (lockedItems.length > 0) return // button is disabled; the RPC would reject the whole order
+    if (needsMembership) {
+      setShowJoinPrompt(true)
+      return
+    }
     const validationErrors = validate(checkoutForm)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
@@ -152,7 +169,9 @@ export default function Checkout() {
       const discountReason = /^Discount code:\s*/i.test(error?.message ?? '')
         ? error.message.replace(/^Discount code:\s*/i, '')
         : null
-      if (discountReason) {
+      if (/^Membership required:/i.test(error?.message ?? '')) {
+        setShowJoinPrompt(true)
+      } else if (discountReason) {
         discount.reject(discountReason)
         setCodeInput('')
         toast.error(`${discountReason}. The code has been removed — please place your order again.`)
@@ -296,7 +315,9 @@ export default function Checkout() {
                     Place Order — {formatZAR(total)}
                   </button>
                   <p className="text-muted text-xs text-center mt-3">
-                    No payment now — you'll pay by {method ? paymentLabel(method) : 'cash/card'} when your order is delivered.
+                    {method === 'eft'
+                      ? "No payment now — we'll show our banking details after you place your order."
+                      : `No payment now — you'll pay by ${method ? paymentLabel(method) : 'cash/card'} when your order is delivered.`}
                   </p>
                 </>
               )}
@@ -312,6 +333,7 @@ export default function Checkout() {
                 subtotal={cartSubtotal}
                 discountCents={discount.discountCents}
                 discountCode={discount.applied?.code ?? null}
+                isMember={gate.isActiveMember}
               >
                 {/* Discount code — signed-in only: validate_discount_code is
                     granted to `authenticated`, and checkout requires an
@@ -370,6 +392,28 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      <Modal isOpen={showJoinPrompt} onClose={() => setShowJoinPrompt(false)} title="Become a member to order again" size="sm">
+        <div className="text-center">
+          <Crown size={36} className="text-gold mx-auto mb-4" />
+          <p className="text-muted text-sm leading-relaxed mb-2">
+            Thanks for your first order! 224 Clubhouse is a private members' club, so
+            from your second order onwards you need a membership.
+          </p>
+          <p className="text-muted text-sm leading-relaxed mb-6">
+            Apply in a minute — pay by EFT or with your next delivery. Members also get{' '}
+            <span className="text-white font-semibold">free delivery</span>. Your cart is saved.
+          </p>
+          <Link to="/membership" className="btn-gold w-full py-3 block">Become a member</Link>
+          <button
+            type="button"
+            onClick={() => setShowJoinPrompt(false)}
+            className="text-muted hover:text-white text-sm mt-4 transition-colors"
+          >
+            Not now
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

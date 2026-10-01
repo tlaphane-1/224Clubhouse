@@ -9,7 +9,7 @@ import { memberPurchaseGate } from '../utils/memberGate'
 import Badge from '../components/ui/Badge'
 import ProductCard from '../components/store/ProductCard'
 import { formatZAR } from '../utils/formatCurrency'
-import toast from 'react-hot-toast'
+import { toastAddedToCart } from '../utils/cartToast'
 
 export default function ProductDetail() {
   const { slug } = useParams()
@@ -56,10 +56,7 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     addItem(product, quantity)
-    toast.success(`${product.name} added to cart`, {
-      style: { background: '#111111', color: '#fff', border: '1px solid #222222' },
-      iconTheme: { primary: '#C9A84C', secondary: '#000' },
-    })
+    toastAddedToCart(product.name, membership.effectiveStatus === 'active')
   }
 
   return (

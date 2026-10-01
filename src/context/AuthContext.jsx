@@ -53,17 +53,25 @@ export function AuthProvider({ children }) {
     }
     init()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Token refreshes keep the same identity — no need to re-check admin.
-      if (event === 'TOKEN_REFRESHED') {
-        if (active) setSession(session)
-        return
-      }
-      const admin = await resolveAdmin(session)
+    // This callback must NOT await Supabase calls. supabase-js runs some
+    // callbacks (e.g. USER_UPDATED from updateUser) while holding its auth
+    // lock, and any REST call needs that lock to read the token — awaiting
+    // is_admin here deadlocked "set new password" forever. So: update the
+    // session synchronously, and resolve admin status on the next tick.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return
       setSession(session)
+      // Token refreshes keep the same identity — no need to re-check admin.
+      if (event === 'TOKEN_REFRESHED') return
       setUser(session?.user ?? null)
-      setIsAdmin(admin)
+      if (!session?.user) {
+        setIsAdmin(false)
+        return
+      }
+      setTimeout(async () => {
+        const admin = await resolveAdmin(session)
+        if (active) setIsAdmin(admin)
+      }, 0)
     })
 
     return () => {

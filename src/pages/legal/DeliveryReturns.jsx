@@ -3,7 +3,7 @@ import LegalPage, { LegalSection, ReviewNote } from './LegalPage'
 
 /**
  * Delivery & returns policy. The fee/threshold numbers here mirror
- * OrderSummary.jsx (R80 fee, free at R500+) and the place_cod_order RPC —
+ * utils/shipping.js (R30 fee, free for members and at R500+) and the place_cod_order RPC —
  * if those change, change this page too.
  */
 export default function DeliveryReturns() {
@@ -28,11 +28,12 @@ export default function DeliveryReturns() {
       <LegalSection title="2. Delivery times and fees">
         <ul className="list-disc pl-5 space-y-2">
           <li>Orders are typically delivered within <span className="text-white">2–5 business days</span> of confirmation.</li>
-          <li>The delivery fee is <span className="text-white">R80</span>.</li>
-          <li>Delivery is <span className="text-white">free for orders of R500 or more</span>.</li>
+          <li>The delivery fee is <span className="text-white">R30</span>.</li>
+          <li>Delivery is <span className="text-white">free for active members</span>, and for orders of R500 or more.</li>
           <li>
             Payment is <span className="text-white">cash or card on delivery</span> — have your
-            payment ready for the driver.
+            payment ready for the driver — or <span className="text-white">EFT</span>, in which case we
+            dispatch once the payment reflects.
           </li>
         </ul>
       </LegalSection>

@@ -260,6 +260,28 @@ export async function createTestUser(admin, label) {
 }
 
 /** Sign a client in as a previously-created test account. */
+/**
+ * Give a test account a PENDING membership application. Since 20261001120000,
+ * place_cod_order refuses a second (non-cancelled) order from an account that
+ * hasn't applied for membership — suites that place several orders with one
+ * buyer need this. Pending (not active) on purpose: an ACTIVE member gets free
+ * delivery, which would change the totals those suites assert. Callers delete
+ * memberships by email in afterAll (user_id is ON DELETE SET NULL).
+ */
+export async function grantPendingMembership(admin, user) {
+  mustSucceed(`pending membership for ${user.email}`, await admin.from('memberships').insert({
+    user_id: user.id,
+    full_name: 'Vitest Member',
+    email: user.email,
+    phone: '0000000000',
+    date_of_birth: '1990-01-01',
+    tier: 'daily',
+    amount: 1000,
+    status: 'pending',
+    starts_at: null,
+  }))
+}
+
 export async function signInAs(client, email) {
   const result = await withRetry(`signIn ${email}`, () =>
     client.auth.signInWithPassword({ email, password: TEST_PASSWORD }),

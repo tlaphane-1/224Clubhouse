@@ -39,11 +39,12 @@ export const STATUS_BADGE = {
   shipped: 'bg-gold/10 text-gold border border-gold/20',
 }
 
-export const PAYMENT_METHODS = ['cash_on_delivery', 'card_on_delivery']
+export const PAYMENT_METHODS = ['cash_on_delivery', 'card_on_delivery', 'eft']
 
 export const PAYMENT_LABELS = {
   cash_on_delivery: 'Cash on Delivery',
   card_on_delivery: 'Card on Delivery',
+  eft: 'EFT (Bank Transfer)',
   online: 'Paid Online',
 }
 

@@ -1,12 +1,12 @@
 import { ShoppingCart, Lock } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
 import Badge from '../ui/Badge'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { useMyMembership } from '../../hooks/useMyMembership'
 import { memberPurchaseGate } from '../../utils/memberGate'
 import { formatZAR } from '../../utils/formatCurrency'
+import { toastAddedToCart } from '../../utils/cartToast'
 
 const IMAGE_PLACEHOLDER = null
 
@@ -29,10 +29,7 @@ export default function ProductCard({ product }) {
     e.stopPropagation()
     if (isOutOfStock) return
     addItem(product, 1)
-    toast.success(`${product.name} added to cart`, {
-      style: { background: '#111111', color: '#fff', border: '1px solid #222222' },
-      iconTheme: { primary: '#C9A84C', secondary: '#000' },
-    })
+    toastAddedToCart(product.name, membership.effectiveStatus === 'active')
   }
 
   // The card is wrapped in a <Link>, so a nested anchor is invalid HTML —

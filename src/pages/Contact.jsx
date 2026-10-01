@@ -43,7 +43,7 @@ const INFO = [
   {
     icon: Clock,
     label: 'Hours',
-    lines: ['Monday – Sunday', '09:00 – 19:00', 'Including public holidays'],
+    lines: ['Store closed until further notice', 'Delivering Monday – Sunday', '09:00 – 19:00'],
   },
 ]
 

@@ -36,7 +36,8 @@ const SEND_CLASSES =
 export default function WhatsAppOrderPanel() {
   const { items } = useCart()
   const addressRef = useRef(null)
-  const [mode, setMode] = useState('collection')
+  // Store closed until further notice — delivery only (2026-10-01).
+  const mode = 'delivery'
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [note, setNote] = useState('')
@@ -57,36 +58,12 @@ export default function WhatsAppOrderPanel() {
     note: note.trim(),
   })
 
-  const modeButton = (active) =>
-    active
-      ? 'flex-1 py-2 rounded-lg border border-gold bg-gold/10 text-gold text-sm font-semibold transition-colors'
-      : 'flex-1 py-2 rounded-lg border border-border text-muted hover:text-white text-sm transition-colors'
-
   return (
     <div className="bg-surface border border-border rounded-xl p-6">
       <h3 className="font-heading text-lg font-semibold text-white mb-1">Or order on WhatsApp</h3>
       <p className="text-muted text-xs mb-5">
         We take orders on WhatsApp every day — send your cart straight to the store.
       </p>
-
-      <div className="flex gap-2 mb-4" role="group" aria-label="Collection or delivery">
-        <button
-          type="button"
-          className={modeButton(mode === 'collection')}
-          aria-pressed={mode === 'collection'}
-          onClick={() => setMode('collection')}
-        >
-          Collection
-        </button>
-        <button
-          type="button"
-          className={modeButton(mode === 'delivery')}
-          aria-pressed={mode === 'delivery'}
-          onClick={() => setMode('delivery')}
-        >
-          Delivery
-        </button>
-      </div>
 
       <div className="space-y-3 mb-5">
         <div>

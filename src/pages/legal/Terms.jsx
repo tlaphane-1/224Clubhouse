@@ -46,9 +46,9 @@ export default function Terms() {
           paid for, you will be refunded in full.
         </p>
         <p>
-          Payment is currently <span className="text-white">cash or card on delivery</span> — no
-          payment is taken online. The total shown at checkout (including any delivery fee) is
-          what you pay the driver.
+          Payment is currently <span className="text-white">cash or card on delivery</span>, or{' '}
+          <span className="text-white">EFT</span> (bank transfer) — no payment is taken online. The
+          total shown at checkout (including any delivery fee) is what you pay.
         </p>
       </LegalSection>
 
@@ -73,8 +73,8 @@ export default function Terms() {
       <LegalSection title="6. Delivery">
         <p>
           Orders are typically delivered within <span className="text-white">2–5 business days</span>.
-          The delivery fee is <span className="text-white">R80</span>, and delivery is{' '}
-          <span className="text-white">free for orders of R500 or more</span>. The recipient must
+          The delivery fee is <span className="text-white">R30</span>, and delivery is{' '}
+          <span className="text-white">free for active members</span> and for orders of R500 or more. The recipient must
           be 21 or older and may be asked to show ID on delivery. Full details, including what
           happens if you are not home, are in our{' '}
           <Link to="/delivery-returns" className="text-gold hover:text-gold-light transition-colors">

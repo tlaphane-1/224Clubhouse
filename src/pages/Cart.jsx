@@ -6,15 +6,13 @@ import { useAuth } from '../context/AuthContext'
 import { useMyMembership } from '../hooks/useMyMembership'
 import { memberPurchaseGate } from '../utils/memberGate'
 import { formatZAR } from '../utils/formatCurrency'
-import { SHIPPING_FEE, SHIPPING_THRESHOLD } from '../components/checkout/OrderSummary'
+import { SHIPPING_THRESHOLD, shippingFeeFor } from '../utils/shipping'
 import WhatsAppOrderPanel from '../components/store/WhatsAppOrderPanel'
 
 export default function Cart() {
   const { items, removeItem, updateQuantity, cartSubtotal } = useCart()
   const { user } = useAuth()
   const membership = useMyMembership()
-  const shippingFee = cartSubtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
-  const total = cartSubtotal + shippingFee
 
   // Member-only lines the current viewer can't buy — the cart is persisted in
   // localStorage, so an item added while a membership was live can outlive it.
@@ -24,6 +22,9 @@ export default function Cart() {
   const gate = memberPurchaseGate(user, membership)
   const lockedItems = items.filter(item => gate.isLocked(item))
   const hasLockedItems = lockedItems.length > 0
+
+  const shippingFee = shippingFeeFor(cartSubtotal, gate.isActiveMember)
+  const total = cartSubtotal + shippingFee
 
   useEffect(() => {
     document.title = 'Cart | 224 Clubhouse'
@@ -155,15 +156,24 @@ export default function Cart() {
                   <span className="text-white">{formatZAR(cartSubtotal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted">Shipping</span>
+                  <span className="text-muted">Delivery</span>
                   <span className={shippingFee === 0 ? 'text-green-400 font-medium' : 'text-white'}>
                     {shippingFee === 0 ? 'FREE' : formatZAR(shippingFee)}
                   </span>
                 </div>
-                {cartSubtotal < SHIPPING_THRESHOLD && (
-                  <p className="text-muted text-xs bg-border/50 rounded p-2">
-                    Add {formatZAR(SHIPPING_THRESHOLD - cartSubtotal)} more for free shipping
-                  </p>
+                {gate.isActiveMember ? (
+                  <p className="text-green-400 text-xs">Free delivery — member benefit.</p>
+                ) : (
+                  <div className="text-xs bg-gold/5 border border-gold/30 rounded p-3 leading-relaxed">
+                    <p className="text-white font-semibold mb-1">Members get free delivery</p>
+                    <p className="text-muted">
+                      <Link to="/membership" className="text-gold underline hover:text-gold-light transition-colors">
+                        Become a member
+                      </Link>{' '}
+                      from {formatZAR(1000)} a day
+                      {shippingFee > 0 && <> — or add {formatZAR(SHIPPING_THRESHOLD - cartSubtotal)} more for free delivery</>}.
+                    </p>
+                  </div>
                 )}
               </div>
 

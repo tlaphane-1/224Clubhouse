@@ -48,6 +48,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import {
   anonClient, serviceClient, probeMigration, describeGate,
   testSlug, testCode, createTestUser, signInAs, deleteTestUsers, mustSucceed,
+  grantPendingMembership,
 } from './helpers/liveFixtures.js'
 
 const gate = await probeMigration({
@@ -75,7 +76,7 @@ const START_STOCK = 5
 
 // Constants the RPC hardcodes (and OrderSummary.jsx mirrors).
 const SHIPPING_THRESHOLD = 50000
-const SHIPPING_FEE = 8000
+const SHIPPING_FEE = 3000
 
 const anon = SKIP ? null : anonClient()
 const admin = SKIP ? null : serviceClient()
@@ -112,6 +113,9 @@ describe.skipIf(SKIP)('Discount codes contract — server-computed discounts', (
     const user = await createTestUser(admin, 'discount')
     testUserId = user.id
     testUserEmail = user.email
+    // Several orders are placed below; from the second one on the account
+    // must have applied for membership.
+    await grantPendingMembership(admin, user)
     await signInAs(userClient, testUserEmail)
 
     // Our own available, NON member-only product (the member-only gate would
@@ -147,6 +151,7 @@ describe.skipIf(SKIP)('Discount codes contract — server-computed discounts', (
   afterAll(async () => {
     if (!admin) return
     if (testUserEmail) await admin.from('orders').delete().eq('customer_email', testUserEmail)
+    if (testUserEmail) await admin.from('memberships').delete().eq('email', testUserEmail)
     await admin.from('discount_codes').delete().eq('code', TEST_CODE)
     await admin.from('products').delete().eq('slug', PRODUCT_SLUG)
     await deleteTestUsers(admin, testUserId)

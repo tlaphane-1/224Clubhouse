@@ -38,6 +38,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import {
   anonClient, serviceClient, probeMigration, describeGate,
   testSlug, createTestUser, signInAs, deleteTestUsers, mustSucceed,
+  grantPendingMembership,
 } from './helpers/liveFixtures.js'
 
 // A marker RPC that returns true only once the migration is applied. A missing
@@ -137,6 +138,8 @@ describe.skipIf(SKIP)('Restock contract — cancelling an order returns its stoc
     const buyer = await createTestUser(admin, 'restock')
     testUserId = buyer.id
     testUserEmail = buyer.email
+    // This buyer places several orders; see grantPendingMembership.
+    await grantPendingMembership(admin, buyer)
 
     const adm = await createTestUser(admin, 'restock-admin')
     adminUserId = adm.id
@@ -157,6 +160,7 @@ describe.skipIf(SKIP)('Restock contract — cancelling an order returns its stoc
     // Orders first — a stray test order would show up in the admin dashboard's
     // order count and revenue tiles as a real sale.
     if (emails.length) await admin.from('orders').delete().in('customer_email', emails)
+    if (emails.length) await admin.from('memberships').delete().in('email', emails)
     await admin.from('products').delete().eq('slug', TEST_PRODUCT_SLUG)
     // admin_users.id references auth.users on delete cascade, so removing the
     // user also removes the admin grant made above.
