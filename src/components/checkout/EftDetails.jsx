@@ -3,7 +3,7 @@
 // (use "\n" for new lines). Keep in step with the EFT_BANK_DETAILS function
 // secret used by send-order-email.
 const DEFAULT_BANK_DETAILS =
-  'Bank: FNB\nAccount type: Gold Business Account\nAccount number: 63228491138\nBranch code: 250655'
+  'Bank: FNB\nAccount holder: 224 Clubhouse\nAccount type: Gold Business Account\nAccount number: 63228491138\nBranch code: 250655'
 const BANK_DETAILS = (import.meta.env.VITE_EFT_BANK_DETAILS || DEFAULT_BANK_DETAILS).replace(/\\n/g, '\n').trim()
 
 export default function EftDetails({ reference, amountLabel }) {
