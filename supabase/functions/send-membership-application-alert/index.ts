@@ -31,7 +31,10 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization') ?? ''
     if (!authHeader) return jsonResponse({ error: 'Not authenticated' }, 401)
-    const { data: { user } } = await callerClient(authHeader).auth.getUser()
+    // getUser() needs the JWT explicitly — an edge function has no persisted
+    // session, so the no-argument form always comes back empty.
+    const jwt = authHeader.replace(/^Bearer\s+/i, '')
+    const { data: { user } } = await callerClient(authHeader).auth.getUser(jwt)
     if (!user) return jsonResponse({ error: 'Not authenticated' }, 401)
 
     const admin = serviceClient()
