@@ -7,7 +7,7 @@ import { Upload } from 'lucide-react'
 import { safeFileName } from '../../utils/safeFileName'
 import { withTimeout } from '../../utils/withTimeout'
 
-const DEFAULT_LOCATION = '224 Rondebult Ave, Libradene, Boksburg'
+const DEFAULT_LOCATION = '224 Rondebult Road, Libradene, Boksburg'
 
 const defaultForm = {
   title: '', description: '', date: '', time: '',

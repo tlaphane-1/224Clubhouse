@@ -147,7 +147,7 @@ export default function Terms() {
           We may update these terms from time to time; the version published here at the time you
           place an order applies to that order. Questions about these terms can be sent via the{' '}
           <Link to="/contact" className="text-gold hover:text-gold-light transition-colors">contact form</Link>{' '}
-          or raised in-store at 224 Rondebult Ave, Libradene, Boksburg, 1459.
+          or raised in-store at 224 Rondebult Road, Libradene, Boksburg, 1459.
         </p>
       </LegalSection>
     </LegalPage>

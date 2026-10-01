@@ -15,7 +15,7 @@ export default function DeliveryReturns() {
     >
       <LegalSection title="1. Delivery area">
         <p>
-          We deliver from our store at 224 Rondebult Ave, Libradene, Boksburg. If your address
+          We deliver from our store at 224 Rondebult Road, Libradene, Boksburg. If your address
           falls outside our delivery area, we will contact you before confirming the order —
           orders we cannot deliver are cancelled and nothing is owed.
         </p>
@@ -99,7 +99,7 @@ export default function DeliveryReturns() {
           <li>
             Message us on WhatsApp at <span className="text-white">+27 75 086 8783</span>, or
           </li>
-          <li>Bring the product and your order number to the store at 224 Rondebult Ave, Libradene, Boksburg.</li>
+          <li>Bring the product and your order number to the store at 224 Rondebult Road, Libradene, Boksburg.</li>
         </ul>
         <p>
           You can find your order number on your confirmation email, on the{' '}

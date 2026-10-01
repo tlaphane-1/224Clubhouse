@@ -108,7 +108,7 @@ export default function Footer() {
               <div>
                 <p className="text-gold text-xs uppercase tracking-widest mb-1.5">Address</p>
                 <address className="text-muted text-sm not-italic leading-relaxed">
-                  224 Rondebult Ave<br />
+                  224 Rondebult Road<br />
                   Libradene, Boksburg<br />
                   1459
                 </address>

@@ -15,7 +15,7 @@ export default function PrivacyPolicy() {
     >
       <LegalSection title="1. Who we are">
         <p>
-          224 Clubhouse is a private cannabis lifestyle lounge at 224 Rondebult Ave, Libradene,
+          224 Clubhouse is a private cannabis lifestyle lounge at 224 Rondebult Road, Libradene,
           Boksburg, 1459, South Africa. For the purposes of POPIA, 224 Clubhouse is the
           &ldquo;responsible party&rdquo; for the personal information described in this policy.
         </p>

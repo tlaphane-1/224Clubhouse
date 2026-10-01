@@ -129,7 +129,7 @@ serve(async (req) => {
     <div style="text-align:center; border-top:1px solid #222222; padding-top:28px;">
       <div style="color:#C9A84C; font-size:20px; font-family:Georgia,serif; font-weight:700; letter-spacing:4px; margin-bottom:4px;">224</div>
       <div style="color:#888888; font-size:9px; letter-spacing:4px; text-transform:uppercase; margin-bottom:16px;">Clubhouse</div>
-      <p style="color:#888888; font-size:12px; margin-bottom:4px;">224 Rondebult Ave, Libradene, Boksburg, 1459</p>
+      <p style="color:#888888; font-size:12px; margin-bottom:4px;">224 Rondebult Road, Libradene, Boksburg, 1459</p>
       <p style="color:#888888; font-size:12px; margin-bottom:16px;">Mon–Sun 09:00–19:00</p>
       <div style="display:flex; justify-content:center; gap:16px; margin-bottom:16px;">
         <a href="https://www.instagram.com/224clubhouse" style="color:#C9A84C; text-decoration:none; font-size:12px;">Instagram</a>

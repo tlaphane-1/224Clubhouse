@@ -17,7 +17,7 @@ const timeline = [
   {
     year: '2025',
     title: '224 Clubhouse',
-    description: 'April 2025. The culmination of years of experience and community building — 224 Clubhouse opens its doors as a private, members-based lifestyle lounge at 224 Rondebult Ave, Boksburg.',
+    description: 'April 2025. The culmination of years of experience and community building — 224 Clubhouse opens its doors as a private, members-based lifestyle lounge at 224 Rondebult Road, Boksburg.',
   },
 ]
 
@@ -65,7 +65,7 @@ export default function About() {
                 That experience became the foundation of everything he would build. Not just a retail space, but a community. A place where the stigma falls away and the culture is celebrated for what it truly is — healing, creativity, connection.
               </p>
               <p>
-                From Dank Monkey in 2021 to Herbally in 2022, each iteration brought him closer to the vision that would become 224 Clubhouse. In April 2025, that vision became reality at 224 Rondebult Ave, Boksburg — the address that gave the clubhouse its name.
+                From Dank Monkey in 2021 to Herbally in 2022, each iteration brought him closer to the vision that would become 224 Clubhouse. In April 2025, that vision became reality at 224 Rondebult Road, Boksburg — the address that gave the clubhouse its name.
               </p>
             </div>
           </div>

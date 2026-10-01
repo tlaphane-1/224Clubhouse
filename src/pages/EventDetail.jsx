@@ -13,7 +13,7 @@ import Badge from '../components/ui/Badge'
 import { formatZAR } from '../utils/formatCurrency'
 import toast from 'react-hot-toast'
 
-const ADDRESS = '224 Rondebult Ave, Libradene, Boksburg, 1459'
+const ADDRESS = '224 Rondebult Road, Libradene, Boksburg, 1459'
 const MAX_PER_RESERVATION = 10
 
 function formatLongDate(value) {

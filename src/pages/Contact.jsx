@@ -25,8 +25,8 @@ const INFO = [
   {
     icon: MapPin,
     label: 'Address',
-    lines: ['224 Rondebult Ave', 'Libradene, Boksburg', '1459, Gauteng'],
-    action: { label: 'Get Directions', href: 'https://maps.google.com/?q=224+Rondebult+Ave+Libradene+Boksburg' },
+    lines: ['224 Rondebult Road', 'Libradene, Boksburg', '1459, Gauteng'],
+    action: { label: 'Get Directions', href: 'https://maps.google.com/?q=224+Rondebult+Road+Libradene+Boksburg' },
   },
   {
     icon: Phone,
@@ -206,7 +206,7 @@ export default function Contact() {
             <div className="mt-6 rounded-2xl overflow-hidden border border-border h-56">
               <iframe
                 title="224 Clubhouse Location"
-                src="https://www.google.com/maps/embed/v1/place?key=AIzaSyD-9tSrke72FloqCDE9M7BkA6Q8rRZZlOo&q=224+Rondebult+Ave,+Libradene,+Boksburg"
+                src="https://www.google.com/maps/embed/v1/place?key=AIzaSyD-9tSrke72FloqCDE9M7BkA6Q8rRZZlOo&q=224+Rondebult+Road,+Libradene,+Boksburg"
                 width="100%"
                 height="100%"
                 style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }}
