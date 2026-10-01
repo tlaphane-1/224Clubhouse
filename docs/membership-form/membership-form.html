@@ -6,22 +6,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <style>
   /* Brand tokens (tailwind.config.js) */
-  :root { --bg:#0a0a0a; --gold:#C9A84C; --gold-light:#e2c074; --ink:#111111; --muted:#666666; --line:#bdbdbd; }
+  :root { --bg:#231f20; --green:#7cc242; --green-dark:#4f8a22; --ink:#111111; --muted:#666666; --line:#bdbdbd; }
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Inter, Arial, sans-serif; color: var(--ink); font-size: 10.5pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .page { width: 210mm; height: 297mm; position: relative; display: flex; flex-direction: column; }
 
-  header { background: var(--bg); padding: 9mm 16mm 7mm; display: flex; align-items: center; justify-content: space-between; }
-  header img { height: 17mm; }
-  header .contact { text-align: right; color: #d6d6d6; font-size: 8.5pt; line-height: 1.55; }
-  header .contact strong { color: var(--gold); font-weight: 600; letter-spacing: .04em; }
-  .rule { height: 1.2mm; background: linear-gradient(90deg, var(--gold), var(--gold-light), var(--gold)); }
+  /* Official 224 letterhead: black logo panel, angled into a green contact band */
+  header { margin: 10mm 16mm 0; height: 24mm; display: flex; background: var(--green); position: relative; overflow: hidden; }
+  header .brand { background: var(--bg); width: 76mm; padding: 0 14mm 0 5mm; display: flex; align-items: center;
+                  clip-path: polygon(0 0, 100% 0, calc(100% - 9mm) 100%, 0 100%); }
+  header .brand img { height: 15mm; }
+  header .contact { display: flex; gap: 9mm; align-items: flex-start; padding: 4.5mm 0 0 7mm; color: #fff; font-size: 7.5pt; line-height: 1.4; }
+  header .contact b { font-size: 10.5pt; display: block; margin-bottom: .5mm; }
+  header .contact .row { display: flex; align-items: center; gap: 1.8mm; margin-bottom: 1.5mm; font-weight: 600; }
+  header .contact svg { width: 4.2mm; height: 4.2mm; flex: none; }
+  .rule { display: none; }
 
   main { flex: 1; padding: 8mm 16mm 0; }
   h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 20pt; margin: 0 0 1.5mm; }
   .intro { color: var(--muted); margin: 0 0 5mm; line-height: 1.5; }
-  h2 { font-size: 8.5pt; text-transform: uppercase; letter-spacing: .18em; color: var(--gold); margin: 5mm 0 2.5mm; padding-bottom: 1.2mm; border-bottom: 0.3mm solid #e4d6a9; }
+  h2 { font-size: 8.5pt; text-transform: uppercase; letter-spacing: .18em; color: var(--green-dark); margin: 5mm 0 2.5mm; padding-bottom: 1.2mm; border-bottom: 0.3mm solid #cfe6bd; }
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8mm; row-gap: 4.2mm; }
   .field { display: flex; align-items: flex-end; gap: 2mm; }
@@ -45,23 +50,24 @@
 
   .sign { display: grid; grid-template-columns: 1.6fr 1fr; column-gap: 10mm; margin-top: 6mm; }
 
-  .office { margin-top: 6mm; border: 0.3mm dashed #b8a165; border-radius: 1.5mm; padding: 3mm 5mm 4mm; background: #fbf8ef; }
+  .office { margin-top: 6mm; border: 0.3mm dashed #9fcf7a; border-radius: 1.5mm; padding: 3mm 5mm 4mm; background: #f4faee; }
   .office h2 { margin-top: 0; border: 0; padding: 0; }
   .office .grid { row-gap: 3.5mm; }
 
-  footer { padding: 4mm 16mm 6mm; display: flex; justify-content: space-between; font-size: 7.5pt; color: var(--muted); border-top: 0.3mm solid #e4d6a9; margin: 0 16mm; padding-left: 0; padding-right: 0; }
+  footer { padding: 4mm 16mm 6mm; display: flex; justify-content: space-between; font-size: 7.5pt; color: var(--muted); border-top: 0.3mm solid #cfe6bd; margin: 0 16mm; padding-left: 0; padding-right: 0; }
   footer .age { color: var(--ink); font-weight: 600; }
 </style>
 </head>
 <body>
 <div class="page">
   <header>
-    <img src="logo.png" alt="224 Clubhouse">
+    <div class="brand"><img src="logo.png" alt="224 Clubhouse"></div>
     <div class="contact">
-      <strong>224 CLUBHOUSE</strong><br>
-      224 Rondebult Ave, Libradene, Boksburg, 1459<br>
-      075 086 8783 &nbsp;·&nbsp; team@224clubhouse.co.za<br>
-      224clubhouse.web.app
+      <div><b>Address</b>224 Rondabult Rd<br>Libradene<br>Boksburg</div>
+      <div>
+        <div class="row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#fff"/><path d="M6.5 8.5h11v7h-11z M6.5 8.5l5.5 4 5.5-4" fill="none" stroke="#7cc242" stroke-width="1.6" stroke-linejoin="round"/></svg>224clubhous@gmail.com</div>
+        <div class="row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#fff"/><rect x="8.5" y="5.5" width="7" height="13" rx="1.5" fill="none" stroke="#7cc242" stroke-width="1.6"/></svg>+27 78 852 8394 / +27 71 840 6484</div>
+      </div>
     </div>
   </header>
   <div class="rule"></div>
@@ -127,7 +133,7 @@
   </main>
 
   <footer>
-    <span>224 Clubhouse · Private members' club · Boksburg, Gauteng</span>
+    <span>224 Clubhouse · Private members' club · 224clubhouse.web.app</span>
     <span class="age">Not for persons under 21</span>
   </footer>
 </div>
