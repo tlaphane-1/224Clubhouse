@@ -1,65 +1,27 @@
 # 224 Clubhouse — Open Items
 
-> Consolidated status as of **2026-08-07**. Every claim here was verified against the repo or the
-> live Supabase project on that date, not carried over from older notes.
+> Consolidated status as of **2026-10-02**. Every claim here was verified against the repo (or, where
+> noted, the live services) on that date, not carried over from older notes.
 >
-> `tasks/todo.md` remains the detailed engineering backlog (Paystack workstream, admin polish).
-> This file is the shorter "what is actually open and why it matters" list. Where the two disagree,
-> trust this file — several `todo.md` entries have since been fixed (see §5).
+> `tasks/todo.md` remains the detailed engineering backlog. This file is the shorter "what is
+> actually open and why it matters" list. Where the two disagree, trust this file — several
+> `todo.md` entries have since been fixed (see §5). Resolved items are kept, dated, in §8.
 
 ---
 
-## 1. Blocked on the owner — nothing ships without these
+## 1. Blocked on the owner
 
-### 1.1 `RESEND_API_KEY` + verified sending domain ⚠️ highest impact
-Order receipt emails are **built, deployed and called** but send nothing.
+### 1.1 Supabase "Outstanding invoices" ⚠️ URGENT
+The Supabase dashboard shows **Outstanding invoices** for the account. The owner must pay them or
+the project (`aogdkqczvlffgydgxsmz` — database, auth, storage, edge functions) may be suspended,
+which takes the whole store offline. Owner action only.
 
-- `supabase/functions/send-order-email` is deployed and ACTIVE on project `aogdkqczvlffgydgxsmz`.
-- `Checkout.jsx` invokes it fire-and-forget after `place_cod_order` succeeds.
-- It returns **500** because `RESEND_API_KEY` is not set. The client swallows the error by design,
-  so there is **no customer-visible failure — and no emails**.
-
-To finish:
-```bash
-supabase secrets set RESEND_API_KEY=<key>
-```
-plus verify **orders@224clubhouse.co.za** as a sending domain in Resend. Then place a real test
-order — Resend rejects unverified domains and that failure is invisible from the app.
-
-Why it matters beyond convenience: customers currently have no record of their order number, which
-is the whole reason the email-only order lookup exists (§2.1).
-
-### 1.2 Paystack keys
-Online checkout is disabled; the app is cash/card **on delivery**. `PaystackButton.jsx` is retained
-for re-enable. The full server-side verification workstream is specified in `tasks/todo.md`
-(Workstream 2) — do not re-enable client-trusted totals; that plan recomputes totals from DB prices.
-
-### 1.3 Product decision: `is_member_only`
-Members-only products can be bought by anyone and "member pricing" does not exist. Either enforce it
-or remove the badge and claims until a member system exists. Currently the UI makes a promise the
-backend does not keep.
-
-### 1.4 Product decision: `WELCOME10`
-Promised in the welcome email, honoured nowhere. Implement the coupon or drop the promise.
-
-### 1.5 Account-required checkout — DEPLOYED 2026-08-08, two dashboard steps remain
-Checkout requires a customer account: `place_cod_order` is `authenticated`-only and stamps
-`user_id` + the account email; `/orders` lists the signed-in customer's orders
-(migration `20260808120000_customer_accounts_orders.sql`). Frontend deployed to Firebase
-Hosting and migration applied 2026-08-08; all 21 contract tests pass against the live DB
-(anon ordering blocked, user_id stamping and owner RLS verified).
-
-Still owner-manual in the Supabase Dashboard (Authentication settings):
-- **URL Configuration → Redirect URLs:** add `https://224clubhouse.web.app/**` (plus the custom
-  domain if one exists) and `http://localhost:5173/**`. Until then, signup confirmation links
-  fall back to the Site URL instead of returning to `/checkout` or `/orders` with cart intact.
-- **Custom SMTP:** the built-in auth mailer sends ~2–4 emails/hour from a supabase.io address —
-  real-volume signups will stall without it. Can reuse Resend once §1.1 lands.
-- Keep "Confirm email" **ON** (owner decision 2026-08-08 — checkout pauses on a
-  confirm-your-email step for new accounts).
-- Known gap, accepted as a fast follow: **no "Forgot password" flow**.
-- Old anonymous orders were deliberately NOT linked to new accounts (takeover risk); they stay
-  reachable via `/track`.
+### 1.2 Paystack online payments — under investigation
+The app takes cash/card **on delivery** or **EFT**; online checkout is disabled.
+`PaystackButton.jsx` is retained for re-enable. The plan is being written up in
+`docs/PAYSTACK_PLAN.md` (not yet in the repo as of 2026-10-02); `tasks/todo.md` Workstream 2 has
+the earlier server-side verification spec. Do not re-enable client-trusted totals — the server
+must recompute totals from DB prices.
 
 ---
 
@@ -67,63 +29,48 @@ Still owner-manual in the Supabase Dashboard (Authentication settings):
 
 ### 2.1 Retire the email-only order lookup?
 `get_orders_by_email` lets anyone list the orders for any email address they can guess. This was
-**accepted knowingly** on 2026-08-06 to fix customers being unable to find their own orders — the
-rationale is in the migration header `20260806120000_orders_by_email.sql`. It is narrowed to summary
-fields only (no name, phone, address or line items) and capped at 20.
+**accepted knowingly** on 2026-08-06 — rationale in the migration header
+`20260806120000_orders_by_email.sql`. It is narrowed to summary fields only and capped at 20.
 
-Once receipts are landing (§1.1), customers have their order number and this can be removed. Until
-then it is the only cross-device way to find an order. **Do not "fix" it as an oversight.**
+New orders are account-tied and listed on `/orders`, so the RPC only serves **pre-account**
+(pre-2026-08-08) orders. Receipts now deliver (§8), so the original blocker is gone: retire it once
+those old orders have aged out. **Do not "fix" it as an oversight.**
 
-Update 2026-08-08: new orders are account-tied and listed on `/orders` (§1.5), so this RPC now
-only serves **pre-account** orders. Retire it once receipts land and those orders have aged out.
-
-### 2.2 `master` is 14 commits behind the deployed branch
-Production is deployed from `feature/memberships-and-pages`. `master` still sits at "Add initial
-schema migration". Nothing is broken, but the default branch is not the truth, which will mislead
-anyone who clones the repo. Decide whether to merge or rename.
+### 2.2 `master` is 44 commits behind the deployed branch
+Production is deployed from `feature/memberships-and-pages`. `master` still sits at `3d045e5`
+"Add initial schema migration and storage buckets". A PR to merge the branch into `master` is
+about to be opened.
 
 ---
 
-## 3. Live defects
+## 3. Live defects / engineering debt
 
-### 3.1 The newsletter welcome email silently fails
-`src/pages/Home.jsx:54` invokes `send-welcome-email`. The function was deployed on 2026-08-07 and is
-ACTIVE, but like `send-order-email` it sends nothing until `RESEND_API_KEY` and domain verification
-land (§1.1). Until then subscribers still get a success toast and no email.
+### 3.1 Live contract suites occasionally time out when run together
+Each live contract suite passes on its own, but a full combined run occasionally times out. Being
+fixed. (The earlier cross-run fixture collision was fixed in `a65108d`; this is a separate issue.)
 
-### 3.2 No React error boundary
-A single render error white-screens the whole app.
+### 3.2 Pre-existing lint errors
+`npm run lint` reports **10 errors** (unused vars, `react-refresh/only-export-components`), all
+unrelated to recent work.
 
-### 3.3 Hook error states are invisible
-Failed loads look identical to empty results across the storefront.
-
-### 3.4 Oversell is possible
-Stock is not checked atomically at payment time. Two simultaneous orders can both pass the check.
-`tasks/todo.md` specifies the RPC fix.
+### 3.3 `docs/DESIGN_SYSTEM.md` does not exist
+`CLAUDE.md` says to read it before any UI work and treat it as authoritative, but the file is not
+in the repo. Either write it or drop the reference.
 
 ---
 
 ## 4. Compliance and risk
 
-### 4.1 POPIA
-No published Privacy Policy, Terms, or Returns/Delivery page. The terms link at
-`Checkout.jsx:164` is dead. This matters more than usual here: the business stores **SA ID numbers**,
-and age consent is only a localStorage boolean.
-
-### 4.2 Bundle size
-~852 kB storefront bundle; admin and Firebase are not code-split out of it.
+### 4.1 Age consent is client-side only
+Policy pages now exist (§8), but the 21+ age gate is still only a localStorage boolean, and the
+business stores **SA ID numbers** — keep POPIA in mind for any change touching member data.
 
 ---
 
 ## 5. Stale claims to correct in existing docs
 
-Verified wrong on 2026-08-07:
-
-- ~~**`CLAUDE.md:53`** says `orders` RLS is "deliberately left as `auth.role() = 'authenticated'`".~~
-  **Corrected 2026-08-13** — CLAUDE.md's auth and checkout sections now describe the
-  account-required flow and the current RLS (admin + owner select, RPC-only creation).
 - **`tasks/todo.md:66`** says the contact form calls a non-existent `send-contact-email` and fakes
-  success. It no longer does — `Contact.jsx:68` inserts into a `contact_messages` table.
+  success. It no longer does — `Contact.jsx` inserts into a `contact_messages` table.
 
 ---
 
@@ -132,23 +79,66 @@ Verified wrong on 2026-08-07:
 - **Edge Function deploys need `--use-api`.** `supabase functions deploy` bundles with Docker, and
   Docker Desktop does not start on this machine. `supabase functions deploy <name> --use-api`
   bundles server-side and works.
-- **Contract tests are dormant.** Layers 1/2 skip without `SUPABASE_SERVICE_ROLE_KEY` in
-  `.env.local`, so a green run proves less than it appears to. Set the key and run
-  `npm run test:contract` for real coverage.
-- **Pre-existing noise, not caused by recent work:** 10 lint errors (`npm run lint`), and 3 Playwright
-  specs under `e2e/` that fail when `vitest` picks them up. Both predate 2026-08-06.
+- **Email config lives in function secrets:** `MAIL_FROM_DOMAIN` (= `224clubhouse.store`),
+  `ADMIN_ALERT_EMAIL` (= `224clubhous@gmail.com` — spelled that way, it is the owner's real
+  address), `EFT_BANK_DETAILS`. Supabase Auth mail goes through custom SMTP (Resend) from
+  `noreply@224clubhouse.store` using the templates in `supabase/templates/`, generated by
+  `scripts/build-auth-email-templates.mjs`.
+- **Membership form PDF** (on letterhead) lives in `docs/membership-form/`, built by
+  `scripts/build-membership-form.mjs`.
 - **Account gates before any deploy** (see `CLAUDE.md`): `gh auth status` must be `tlaphane-1`,
   `firebase login:list` must be `tlaphane@gmail.com`, and the Supabase project ref is
   `aogdkqczvlffgydgxsmz`.
 
 ---
 
-## 7. Recently completed (2026-08-06 → 07) — do not redo
+## 7. Recently completed (2026-10-01 → 02) — do not redo
 
-- Customers can find orders three ways: remembered per-device (`src/utils/recentOrders.js`), by
-  email alone (`get_orders_by_email`), or by order number. The confirmation page recovers the order
-  number after a refresh instead of stranding the customer.
-- `send-order-email` rewritten for cash/card-on-delivery. It previously took a `paystack_reference`
-  and displayed status **"Paid"** / **"Total Paid"** — under the current model that would tell
-  customers they had already paid, inviting a dispute at the door. It now leads with the order
-  number, says "Amount due on delivery", and links to `/track?order=NNN`.
+- **Delivery-only store + membership changes** (`88114ea`, migration
+  `20261001120000_delivery_only_feedback.sql`): tiers Daily R10 / Weekly R50 / Monthly R150;
+  delivery fee R30, free for active members and at R500+; **EFT** payment method with FNB details
+  (`src/components/checkout/EftDetails.jsx`); new `joints` category; a customer with a previous
+  order must have applied for membership (pending or active) before ordering again; free-delivery
+  nudge on add-to-cart; admin email alert on membership applications
+  (`supabase/functions/send-membership-application-alert`); store-closed / delivery-only wording.
+- **Password-reset hang fixed**: `AuthContext` `onAuthStateChange` no longer awaits `is_admin`
+  inside the supabase-js auth lock.
+- **Address** corrected to 224 Rondebult Road (`b96d415`, migration
+  `20261001130000_address_rondebult_road.sql`).
+- **Custom domain** `https://224clubhouse.store` (`2ef509d`): DNS at domains.co.za, Firebase
+  Hosting custom domain, `www` redirects to it, `224clubhouse.web.app` still works. All edge
+  functions' `SITE_URL` point at `.store`. Supabase Auth Site URL is `.store` with redirect
+  allowlist `.store/**`, `.web.app/**`, `localhost:5173/**`.
+- **Email**: `224clubhouse.store` verified in Resend and set as `MAIL_FROM_DOMAIN` (previously
+  sending from another organisation's domain); branded Supabase Auth templates (`e8a9641`). Admin
+  alerts and order receipts confirmed delivered in Resend logs on 2026-10-02.
+
+---
+
+## 8. Resolved
+
+- **2026-10-02 — `RESEND_API_KEY` + verified sending domain** (was §1.1, highest impact). Receipts
+  and admin alerts deliver from `224clubhouse.store`. The newsletter welcome email (was §3.1) is
+  unblocked by the same change but was not separately checked in Resend logs.
+- **2026-10-02 — Supabase Auth redirect URLs and custom SMTP** (was §1.5). Done as described in §7.
+- **2026-10-01 — Password-reset flow** (was a known gap in §1.5): added 2026-08-13 (`249e7b1`);
+  its hang fixed 2026-10-01.
+- **2026-08-13 — `is_member_only`** (was §1.3): enforced in `place_cod_order` (migration
+  `20260813150000_membership_accounts_tiers.sql`).
+- **2026-08-14 — `WELCOME10`** (was §1.4): real first-order discount code (discount-codes
+  migrations, `src/__tests__/discountCodes.contract.test.js`).
+- **2026-08-13 — POPIA pages** (was §4.1): Privacy, Terms and Delivery/Returns pages exist under
+  `src/pages/legal/`; the checkout terms link points at `/terms`.
+- **No React error boundary** (was §3.2): `src/components/ErrorBoundary.jsx` is used in `App.jsx`.
+- **Hook error states** (was §3.3): storefront pages (e.g. `Store.jsx`, `Events.jsx`) render
+  `isError` states with retry.
+- **Oversell** (was §3.4): `place_cod_order` locks product rows and decrements stock atomically.
+- **Bundle size** (was §4.2): pages are lazy-loaded per route in `App.jsx` (size not re-measured).
+- **Contract tests dormant** (was §6): since `a65108d` the live suites fail loudly instead of
+  silently skipping.
+- **2026-08-13 — `CLAUDE.md` orders-RLS claim** (was §5): corrected.
+- **2026-08-06 → 07** — order lookup three ways (per-device memory, email, order number);
+  `send-order-email` rewritten for pay-on-delivery ("Amount due on delivery", not "Paid").
+- **2026-08-08 — Account-required checkout** deployed: `place_cod_order` is `authenticated`-only
+  and stamps `user_id` + account email; `/orders` lists the customer's orders. Old anonymous orders
+  deliberately not linked (takeover risk) and stay reachable via `/track`. "Confirm email" stays ON.
