@@ -15,7 +15,7 @@ interface StatusEmailPayload {
   orderId: string
 }
 
-const SITE_URL = 'https://224clubhouse.web.app'
+const SITE_URL = 'https://224clubhouse.store'
 
 // Per-status subject + copy. 'pending' is deliberately absent: the order-placed
 // receipt (send-order-email) already covers it, so a second email would be noise.

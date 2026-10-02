@@ -10,7 +10,7 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
 // Same secret the order alert uses. Unset = deliberate silent no-op.
 const ADMIN_ALERT_EMAIL = Deno.env.get('ADMIN_ALERT_EMAIL') ?? ''
-const SITE_URL = 'https://224clubhouse.web.app'
+const SITE_URL = 'https://224clubhouse.store'
 
 // Only alert for fresh applications, so a caller can't re-invoke this to spam
 // the club's inbox with an old row.

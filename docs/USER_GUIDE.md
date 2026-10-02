@@ -23,8 +23,8 @@ Your website has **two sides**:
 
 | What | Address |
 | --- | --- |
-| **Your live website** (give this to customers) | `https://224clubhouse.web.app` |
-| **Your staff control room** (keep this private) | `https://224clubhouse.web.app/admin/login` |
+| **Your live website** (give this to customers) | `https://224clubhouse.store` |
+| **Your staff control room** (keep this private) | `https://224clubhouse.store/admin/login` |
 
 > 💡 **Tip:** Save the admin address as a bookmark on your work computer and
 > phone. Don't share it publicly — it's your back office.
@@ -50,7 +50,7 @@ Your website has **two sides**:
 
 ## 1. Signing in to the control room
 
-1. Open your web browser and go to **`https://224clubhouse.web.app/admin/login`**.
+1. Open your web browser and go to **`https://224clubhouse.store/admin/login`**.
 2. You'll see the **224 logo** and a **Sign In** box.
 3. Type your **email address** and **password** (the ones you were given when the
    site was set up).

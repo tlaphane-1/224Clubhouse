@@ -8,7 +8,7 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 // 224clubhouse.co.za is verified there. Unset MAIL_FROM_DOMAIN to revert to the default.
 const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
 
-const SITE_URL = 'https://224clubhouse.web.app'
+const SITE_URL = 'https://224clubhouse.store'
 
 /**
  * `email` is the only field used. `firstName` is still accepted because the

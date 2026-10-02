@@ -51,6 +51,6 @@ export function composeOrderMessage({ items, mode, name, address, note }) {
   if (name) out.push(`Name: ${name}`)
   if (note) out.push(`Note: ${note}`)
 
-  out.push('', 'sent from 224clubhouse.web.app')
+  out.push('', 'sent from 224clubhouse.store')
   return out.join('\n')
 }

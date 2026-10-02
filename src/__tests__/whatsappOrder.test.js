@@ -45,7 +45,7 @@ describe('composeOrderMessage', () => {
         'Name: Thabo',
         'Note: call when you arrive',
         '',
-        'sent from 224clubhouse.web.app',
+        'sent from 224clubhouse.store',
       ].join('\n')
     )
   })
@@ -69,7 +69,7 @@ describe('composeOrderMessage', () => {
         '',
         "*Collection* — I'll come pick it up",
         '',
-        'sent from 224clubhouse.web.app',
+        'sent from 224clubhouse.store',
       ].join('\n')
     )
   })

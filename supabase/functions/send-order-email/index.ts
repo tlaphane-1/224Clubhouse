@@ -35,7 +35,7 @@ interface OrderEmailPayload {
   orderId: string
 }
 
-const SITE_URL = 'https://224clubhouse.web.app'
+const SITE_URL = 'https://224clubhouse.store'
 // Banking details for EFT orders (use "\n" for new lines). Unset = the customer
 // is told the details will follow.
 const EFT_BANK_DETAILS = (Deno.env.get('EFT_BANK_DETAILS') ?? '').replace(/\\n/g, '\n').trim()

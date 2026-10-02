@@ -16,7 +16,7 @@ interface MembershipEmailPayload {
   membershipId: string
 }
 
-const SITE_URL = 'https://224clubhouse.web.app'
+const SITE_URL = 'https://224clubhouse.store'
 
 function formatValidUntil(iso?: string): string {
   if (!iso) return '—'
