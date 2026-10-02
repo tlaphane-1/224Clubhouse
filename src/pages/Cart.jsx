@@ -1,14 +1,29 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
+import { Trash2, ShoppingBag, ArrowRight, Lock } from 'lucide-react'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
+import { useMyMembership } from '../hooks/useMyMembership'
+import { memberPurchaseGate } from '../utils/memberGate'
 import { formatZAR } from '../utils/formatCurrency'
-import { SHIPPING_FEE, SHIPPING_THRESHOLD } from '../components/checkout/OrderSummary'
+import { SHIPPING_THRESHOLD, shippingFeeFor } from '../utils/shipping'
+import WhatsAppOrderPanel from '../components/store/WhatsAppOrderPanel'
 
 export default function Cart() {
   const { items, removeItem, updateQuantity, cartSubtotal } = useCart()
-  const shippingFee = cartSubtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
+  const { user } = useAuth()
+  const membership = useMyMembership()
+
+  // Member-only lines the current viewer can't buy — the cart is persisted in
+  // localStorage, so an item added while a membership was live can outlive it.
+  // Checkout is held until they're removed; the server would reject the whole
+  // order anyway, and much later. Never blocked while the membership query is
+  // still loading (see memberGate).
+  const gate = memberPurchaseGate(user, membership)
+  const lockedItems = items.filter(item => gate.isLocked(item))
+  const hasLockedItems = lockedItems.length > 0
+
+  const shippingFee = shippingFeeFor(cartSubtotal, gate.isActiveMember)
   const total = cartSubtotal + shippingFee
 
   useEffect(() => {
@@ -18,10 +33,8 @@ export default function Cart() {
   if (items.length === 0) {
     return (
       <div className="min-h-screen pt-28 flex flex-col items-center justify-center px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
+        <div
+          className="text-center animate-fadeIn"
         >
           <ShoppingBag size={56} className="text-muted mx-auto mb-6" strokeWidth={1} />
           <h2 className="font-heading text-2xl font-semibold text-white mb-3">Your cart is empty</h2>
@@ -29,16 +42,14 @@ export default function Cart() {
           <Link to="/store" className="btn-gold px-8 py-3 flex items-center gap-2 inline-flex">
             Continue Shopping <ArrowRight size={16} />
           </Link>
-        </motion.div>
+        </div>
       </div>
     )
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen pt-28 pb-20"
+    <div
+      className="min-h-screen pt-28 pb-20 animate-fadeIn"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-10">
@@ -49,8 +60,15 @@ export default function Cart() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Items */}
           <div className="lg:col-span-2 space-y-4">
-            {items.map(item => (
-              <div key={item.id} className="flex gap-4 p-4 bg-surface border border-border rounded-xl">
+            {items.map(item => {
+              const locked = gate.isLocked(item)
+              return (
+              <div
+                key={item.id}
+                className={`flex gap-4 p-4 bg-surface border rounded-xl ${
+                  locked ? 'border-gold/40' : 'border-border'
+                }`}
+              >
                 {/* Image */}
                 <Link to={`/store/${item.slug}`} className="flex-shrink-0">
                   <div className="w-20 h-20 rounded-lg bg-background overflow-hidden">
@@ -70,6 +88,25 @@ export default function Cart() {
                     {item.name}
                   </Link>
                   <p className="text-gold font-bold mt-1">{formatZAR(item.price)}</p>
+
+                  {locked && (
+                    <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gold">
+                      <span className="flex items-center gap-1.5">
+                        <Lock size={12} className="shrink-0" />
+                        Members only —{' '}
+                        <Link to="/membership" className="underline hover:text-gold-light transition-colors">
+                          join to purchase
+                        </Link>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeItem(item.id)}
+                        className="text-muted underline hover:text-red-400 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </p>
+                  )}
 
                   <div className="flex items-center gap-3 mt-3">
                     <div className="flex items-center gap-2 border border-border rounded-lg p-1">
@@ -99,7 +136,8 @@ export default function Cart() {
                   <Trash2 size={18} />
                 </button>
               </div>
-            ))}
+              )
+            })}
 
             <Link to="/store" className="flex items-center gap-2 text-muted hover:text-gold text-sm transition-colors mt-4">
               ← Continue Shopping
@@ -108,7 +146,8 @@ export default function Cart() {
 
           {/* Order Summary */}
           <div>
-            <div className="bg-surface border border-border rounded-xl p-6 sticky top-28">
+            <div className="sticky top-28 space-y-6">
+            <div className="bg-surface border border-border rounded-xl p-6">
               <h3 className="font-heading text-lg font-semibold text-white mb-5">Order Summary</h3>
 
               <div className="space-y-3 mb-5 text-sm">
@@ -117,15 +156,24 @@ export default function Cart() {
                   <span className="text-white">{formatZAR(cartSubtotal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted">Shipping</span>
+                  <span className="text-muted">Delivery</span>
                   <span className={shippingFee === 0 ? 'text-green-400 font-medium' : 'text-white'}>
                     {shippingFee === 0 ? 'FREE' : formatZAR(shippingFee)}
                   </span>
                 </div>
-                {cartSubtotal < SHIPPING_THRESHOLD && (
-                  <p className="text-muted text-xs bg-border/50 rounded p-2">
-                    Add {formatZAR(SHIPPING_THRESHOLD - cartSubtotal)} more for free shipping
-                  </p>
+                {gate.isActiveMember ? (
+                  <p className="text-green-400 text-xs">Free delivery — member benefit.</p>
+                ) : (
+                  <div className="text-xs bg-gold/5 border border-gold/30 rounded p-3 leading-relaxed">
+                    <p className="text-white font-semibold mb-1">Members get free delivery</p>
+                    <p className="text-muted">
+                      <Link to="/membership" className="text-gold underline hover:text-gold-light transition-colors">
+                        Become a member
+                      </Link>{' '}
+                      from {formatZAR(1000)} a day
+                      {shippingFee > 0 && <> — or add {formatZAR(SHIPPING_THRESHOLD - cartSubtotal)} more for free delivery</>}.
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -134,13 +182,35 @@ export default function Cart() {
                 <span className="text-gold font-bold text-xl">{formatZAR(total)}</span>
               </div>
 
-              <Link to="/checkout" className="btn-gold w-full py-4 text-center block text-sm uppercase tracking-widest">
-                Proceed to Checkout
-              </Link>
+              {hasLockedItems ? (
+                <>
+                  <button
+                    type="button"
+                    disabled
+                    className="btn-gold w-full py-4 text-center block text-sm uppercase tracking-widest"
+                  >
+                    Proceed to Checkout
+                  </button>
+                  <p className="text-muted text-xs text-center mt-3 leading-relaxed">
+                    Remove the members-only {lockedItems.length > 1 ? 'items' : 'item'} above, or{' '}
+                    <Link to="/membership" className="text-gold underline hover:text-gold-light transition-colors">
+                      join 224
+                    </Link>{' '}
+                    to buy {lockedItems.length > 1 ? 'them' : 'it'}.
+                  </p>
+                </>
+              ) : (
+                <Link to="/checkout" className="btn-gold w-full py-4 text-center block text-sm uppercase tracking-widest">
+                  Proceed to Checkout
+                </Link>
+              )}
+            </div>
+
+            <WhatsAppOrderPanel />
             </div>
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }

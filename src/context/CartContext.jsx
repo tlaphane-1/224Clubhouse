@@ -1,36 +1,7 @@
 import { createContext, useContext, useReducer, useEffect } from 'react'
+import { cartReducer, CART_KEY, CART_CLEAR_EVENT } from './cartReducer'
 
 const CartContext = createContext(null)
-
-const CART_KEY = '224-cart'
-
-function cartReducer(state, action) {
-  switch (action.type) {
-    case 'ADD_ITEM': {
-      const existing = state.find(i => i.id === action.item.id)
-      if (existing) {
-        return state.map(i =>
-          i.id === action.item.id
-            ? { ...i, quantity: Math.min(i.quantity + action.item.quantity, i.stock_quantity) }
-            : i
-        )
-      }
-      return [...state, action.item]
-    }
-    case 'REMOVE_ITEM':
-      return state.filter(i => i.id !== action.id)
-    case 'UPDATE_QUANTITY':
-      return state.map(i =>
-        i.id === action.id ? { ...i, quantity: Math.max(1, Math.min(action.quantity, i.stock_quantity)) } : i
-      )
-    case 'CLEAR':
-      return []
-    case 'LOAD':
-      return action.items
-    default:
-      return state
-  }
-}
 
 export function CartProvider({ children }) {
   const [items, dispatch] = useReducer(cartReducer, [], () => {
@@ -45,6 +16,14 @@ export function CartProvider({ children }) {
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(items))
   }, [items])
+
+  // Sign-out privacy on shared devices: AuthContext.signOut dispatches this
+  // event (AuthProvider renders above CartProvider, so it can't call useCart).
+  useEffect(() => {
+    const clear = () => dispatch({ type: 'CLEAR' })
+    window.addEventListener(CART_CLEAR_EVENT, clear)
+    return () => window.removeEventListener(CART_CLEAR_EVENT, clear)
+  }, [])
 
   const addItem = (item, quantity = 1) => {
     dispatch({ type: 'ADD_ITEM', item: { ...item, quantity } })

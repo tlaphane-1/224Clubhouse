@@ -1,19 +1,23 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { useProduct, useProducts } from '../hooks/useProducts'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
+import { useMyMembership } from '../hooks/useMyMembership'
+import { memberPurchaseGate } from '../utils/memberGate'
 import Badge from '../components/ui/Badge'
 import ProductCard from '../components/store/ProductCard'
 import { formatZAR } from '../utils/formatCurrency'
-import toast from 'react-hot-toast'
+import { toastAddedToCart } from '../utils/cartToast'
 
 export default function ProductDetail() {
   const { slug } = useParams()
   const { data: product, isLoading, error } = useProduct(slug)
   const { data: allProducts } = useProducts(product?.category)
   const { addItem } = useCart()
+  const { user } = useAuth()
+  const membership = useMyMembership()
   const [quantity, setQuantity] = useState(1)
   const [imageIndex, setImageIndex] = useState(0)
 
@@ -43,19 +47,21 @@ export default function ProductDetail() {
   const images = product.images?.length ? product.images : null
   const related = allProducts?.filter(p => p.id !== product.id).slice(0, 4)
 
+  // Purchase gate only — the page itself always renders. Locks once the
+  // membership query settles (success OR failure — see memberGate: a failed
+  // read fails closed) so nobody is handed an Add button that the server will
+  // reject at the end of checkout. Still loading = normal control, so an active
+  // member never sees a "join" flash.
+  const memberLocked = memberPurchaseGate(user, membership).isLocked(product)
+
   const handleAddToCart = () => {
     addItem(product, quantity)
-    toast.success(`${product.name} added to cart`, {
-      style: { background: '#111111', color: '#fff', border: '1px solid #222222' },
-      iconTheme: { primary: '#C9A84C', secondary: '#000' },
-    })
+    toastAddedToCart(product.name, membership.effectiveStatus === 'active')
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen pt-28 pb-20"
+    <div
+      className="min-h-screen pt-28 pb-20 animate-fadeIn"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
@@ -79,13 +85,13 @@ export default function ProductDetail() {
                     <>
                       <button
                         onClick={() => setImageIndex(i => (i - 1 + images.length) % images.length)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-3 sm:p-2 rounded-full transition-colors"
                       >
                         <ChevronLeft size={18} />
                       </button>
                       <button
                         onClick={() => setImageIndex(i => (i + 1) % images.length)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-3 sm:p-2 rounded-full transition-colors"
                       >
                         <ChevronRight size={18} />
                       </button>
@@ -144,7 +150,23 @@ export default function ProductDetail() {
               <p className="text-muted leading-relaxed mb-8 text-sm">{product.description}</p>
             )}
 
-            {product.stock_quantity > 0 ? (
+            {memberLocked ? (
+              <div>
+                <div className="border border-gold/40 bg-gold/5 rounded-xl p-5 mb-4 flex items-start gap-3">
+                  <Lock size={18} className="text-gold mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-white font-semibold text-sm mb-1">Members only</p>
+                    <p className="text-muted text-sm leading-relaxed">
+                      This product is reserved for active 224 Clubhouse members.
+                    </p>
+                  </div>
+                </div>
+                <Link to="/membership" className="btn-gold w-full py-4 flex items-center justify-center gap-3">
+                  <Lock size={16} />
+                  Join to unlock
+                </Link>
+              </div>
+            ) : product.stock_quantity > 0 ? (
               <>
                 {/* Quantity */}
                 <div className="flex items-center gap-4 mb-6">
@@ -188,6 +210,6 @@ export default function ProductDetail() {
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   )
 }

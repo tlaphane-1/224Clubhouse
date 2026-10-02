@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Search } from 'lucide-react'
+import { Search, AlertTriangle } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import ProductGrid from '../components/store/ProductGrid'
 import CategoryFilter from '../components/store/CategoryFilter'
@@ -11,7 +10,7 @@ export default function Store() {
   const [search, setSearch] = useState('')
   const category = searchParams.get('category') || 'all'
 
-  const { data: products, isLoading } = useProducts(category === 'all' ? null : category)
+  const { data: products, isLoading, isError, refetch } = useProducts(category === 'all' ? null : category)
 
   const filtered = products?.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
@@ -34,15 +33,13 @@ export default function Store() {
     <div className="min-h-screen pt-28 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-12"
+        <div
+          className="mb-12 animate-fadeIn"
         >
           <p className="text-gold text-xs uppercase tracking-[0.4em] mb-2">Shop</p>
           <h1 className="font-heading text-4xl md:text-5xl font-bold text-white mb-2">The Store</h1>
           <p className="text-muted">Members' Selection</p>
-        </motion.div>
+        </div>
 
         {/* Search + Filter */}
         <div className="space-y-6 mb-10">
@@ -63,7 +60,19 @@ export default function Store() {
         </div>
 
         {/* Grid */}
-        <ProductGrid products={filtered} loading={isLoading} />
+        {isError ? (
+          <div className="bg-surface border border-red-500/20 rounded-2xl p-8 text-center max-w-md mx-auto animate-fadeIn">
+            <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
+            <p className="text-white text-sm mb-5">
+              Couldn't load products. Please check your connection and try again.
+            </p>
+            <button onClick={() => refetch()} className="btn-gold text-sm">
+              Retry
+            </button>
+          </div>
+        ) : (
+          <ProductGrid products={filtered} loading={isLoading} />
+        )}
       </div>
     </div>
   )

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { slugify } from '../../utils/slugify'
+import { safeFileName } from '../../utils/safeFileName'
+import { withTimeout } from '../../utils/withTimeout'
 import Button from '../ui/Button'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
@@ -24,22 +26,29 @@ export default function ProductForm({ product, onClose }) {
   const set = (key, value) => setForm(f => ({ ...f, [key]: value }))
 
   const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files)
+    const input = e.target
+    const files = Array.from(input.files)
     if (!files.length) return
     setUploading(true)
     try {
-      const urls = await Promise.all(files.map(async (file) => {
-        const path = `products/${Date.now()}-${file.name}`
-        const { error } = await supabase.storage.from('product-images').upload(path, file)
+      const urls = await Promise.all(files.map(async (file, i) => {
+        const path = `products/${Date.now()}-${i}-${safeFileName(file.name)}`
+        const { error } = await withTimeout(
+          supabase.storage.from('product-images').upload(path, file),
+          60000, // uploads carry a file, so they get far longer than a plain write
+          'image upload',
+        )
         if (error) throw error
         const { data } = supabase.storage.from('product-images').getPublicUrl(path)
         return data.publicUrl
       }))
-      set('images', [...(form.images || []), ...urls])
+      // Functional update so repeated uploads accumulate (no stale closure on form.images).
+      setForm(f => ({ ...f, images: [...(f.images || []), ...urls] }))
     } catch (err) {
-      toast.error('Image upload failed')
+      toast.error(err.message || 'Image upload failed')
     } finally {
       setUploading(false)
+      input.value = '' // reset so selecting the same file again still fires onChange
     }
   }
 
@@ -67,11 +76,15 @@ export default function ProductForm({ product, onClose }) {
       }
 
       if (product) {
-        const { error } = await supabase.from('products').update(payload).eq('id', product.id)
+        const { error } = await withTimeout(
+          supabase.from('products').update(payload).eq('id', product.id), undefined, 'save',
+        )
         if (error) throw error
         toast.success('Product updated')
       } else {
-        const { error } = await supabase.from('products').insert(payload)
+        const { error } = await withTimeout(
+          supabase.from('products').insert(payload), undefined, 'save',
+        )
         if (error) throw error
         toast.success('Product created')
       }
@@ -120,6 +133,7 @@ export default function ProductForm({ product, onClose }) {
         <select required className={inputCls} value={form.category} onChange={e => set('category', e.target.value)}>
           <option value="flower">Flower</option>
           <option value="edibles">Edibles</option>
+          <option value="joints">Joints</option>
           <option value="accessories">Accessories</option>
           <option value="merchandise">Merchandise</option>
         </select>

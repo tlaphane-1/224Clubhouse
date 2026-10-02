@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>224 Clubhouse Membership Form</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* Brand tokens (tailwind.config.js) */
+  :root { --bg:#231f20; --green:#7cc242; --green-dark:#4f8a22; --ink:#111111; --muted:#666666; --line:#bdbdbd; }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, Arial, sans-serif; color: var(--ink); font-size: 10.5pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 210mm; height: 297mm; position: relative; display: flex; flex-direction: column; }
+
+  /* Official 224 letterhead: black logo panel, angled into a green contact band */
+  header { margin: 10mm 16mm 0; height: 24mm; display: flex; background: var(--green); position: relative; overflow: hidden; }
+  header .brand { background: var(--bg); width: 76mm; padding: 0 14mm 0 5mm; display: flex; align-items: center;
+                  clip-path: polygon(0 0, 100% 0, calc(100% - 9mm) 100%, 0 100%); }
+  header .brand img { height: 15mm; }
+  header .contact { display: flex; gap: 9mm; align-items: flex-start; padding: 4.5mm 0 0 7mm; color: #fff; font-size: 7.5pt; line-height: 1.4; }
+  header .contact b { font-size: 10.5pt; display: block; margin-bottom: .5mm; }
+  header .contact .row { display: flex; align-items: center; gap: 1.8mm; margin-bottom: 1.5mm; font-weight: 600; }
+  header .contact svg { width: 4.2mm; height: 4.2mm; flex: none; }
+  .rule { display: none; }
+
+  main { flex: 1; padding: 8mm 16mm 0; }
+  h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 20pt; margin: 0 0 1.5mm; }
+  .intro { color: var(--muted); margin: 0 0 5mm; line-height: 1.5; }
+  h2 { font-size: 8.5pt; text-transform: uppercase; letter-spacing: .18em; color: var(--green-dark); margin: 5mm 0 2.5mm; padding-bottom: 1.2mm; border-bottom: 0.3mm solid #cfe6bd; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8mm; row-gap: 4.2mm; }
+  .field { display: flex; align-items: flex-end; gap: 2mm; }
+  .field.full { grid-column: 1 / -1; }
+  .field label { font-weight: 600; white-space: nowrap; font-size: 9.5pt; }
+  .field .line { flex: 1; border-bottom: 0.3mm solid var(--line); height: 5.5mm; }
+  .field .hint { color: var(--muted); font-size: 8pt; white-space: nowrap; }
+  .addr { grid-column: 1 / -1; }
+  .addr .line2 { border-bottom: 0.3mm solid var(--line); height: 7mm; }
+
+  .options { display: flex; flex-wrap: wrap; gap: 2.5mm 7mm; margin: 1mm 0 3mm; }
+  .opt { display: flex; align-items: center; gap: 2mm; }
+  .box { width: 3.8mm; height: 3.8mm; border: 0.35mm solid var(--ink); border-radius: .6mm; flex: none; }
+  .q { font-weight: 600; font-size: 9.5pt; margin: 2mm 0 1.5mm; }
+  .price { color: var(--muted); font-size: 8.5pt; }
+  .other-line { display: inline-block; width: 40mm; border-bottom: 0.3mm solid var(--line); height: 4mm; vertical-align: bottom; }
+
+  .consent { display: grid; gap: 2.2mm; }
+  .consent .opt { align-items: flex-start; line-height: 1.4; }
+  .consent .box { margin-top: .4mm; }
+
+  .sign { display: grid; grid-template-columns: 1.6fr 1fr; column-gap: 10mm; margin-top: 6mm; }
+
+  .office { margin-top: 6mm; border: 0.3mm dashed #9fcf7a; border-radius: 1.5mm; padding: 3mm 5mm 4mm; background: #f4faee; }
+  .office h2 { margin-top: 0; border: 0; padding: 0; }
+  .office .grid { row-gap: 3.5mm; }
+
+  footer { padding: 4mm 16mm 6mm; display: flex; justify-content: space-between; font-size: 7.5pt; color: var(--muted); border-top: 0.3mm solid #cfe6bd; margin: 0 16mm; padding-left: 0; padding-right: 0; }
+  footer .age { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="brand"><img src="logo.png" alt="224 Clubhouse"></div>
+    <div class="contact">
+      <div><b>Address</b>224 Rondebult Road<br>Libradene<br>Boksburg</div>
+      <div>
+        <div class="row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#fff"/><path d="M6.5 8.5h11v7h-11z M6.5 8.5l5.5 4 5.5-4" fill="none" stroke="#7cc242" stroke-width="1.6" stroke-linejoin="round"/></svg>224clubhous@gmail.com</div>
+        <div class="row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#fff"/><rect x="8.5" y="5.5" width="7" height="13" rx="1.5" fill="none" stroke="#7cc242" stroke-width="1.6"/></svg>075 086 8783</div>
+      </div>
+    </div>
+  </header>
+  <div class="rule"></div>
+
+  <main>
+    <h1>Membership Application</h1>
+    <p class="intro"><strong>Welcome to 224 Clubhouse!</strong> We're excited to have you join our community of responsible cannabis users. Please complete the form below to apply for membership.</p>
+
+    <h2>Personal Information</h2>
+    <div class="grid">
+      <div class="field full"><label>Full Name:</label><span class="line"></span></div>
+      <div class="field"><label>Date of Birth:</label><span class="line"></span><span class="hint">DD / MM / YYYY &nbsp;(21+)</span></div>
+      <div class="field"><label>ID / Passport No.:</label><span class="line"></span></div>
+      <div class="field"><label>Phone Number:</label><span class="line"></span></div>
+      <div class="field"><label>Email Address:</label><span class="line"></span></div>
+      <div class="addr">
+        <div class="field"><label>Residential Address:</label><span class="line"></span></div>
+        <div class="line2"></div>
+      </div>
+    </div>
+
+    <h2>Membership Details</h2>
+    <div class="q">Membership Type</div>
+    <div class="options">
+      <span class="opt"><span class="box"></span>Daily Pass <span class="price">— R10</span></span>
+      <span class="opt"><span class="box"></span>Weekly Pass <span class="price">— R50</span></span>
+      <span class="opt"><span class="box"></span>Monthly Membership <span class="price">— R150</span></span>
+    </div>
+    <div class="q">I consume cannabis for</div>
+    <div class="options">
+      <span class="opt"><span class="box"></span>Personal wellness</span>
+      <span class="opt"><span class="box"></span>Recreational purposes</span>
+      <span class="opt"><span class="box"></span>Medical reasons</span>
+      <span class="opt"><span class="box"></span>Other: <span class="other-line"></span></span>
+    </div>
+
+    <h2>Agreement &amp; Consent</h2>
+    <p style="margin:0 0 2.5mm;color:var(--muted)">Please read and tick each statement:</p>
+    <div class="consent">
+      <span class="opt"><span class="box"></span>I confirm that I am 21 years of age or older.</span>
+      <span class="opt"><span class="box"></span>I understand that 224 Clubhouse is a private cannabis club operating within legal guidelines.</span>
+      <span class="opt"><span class="box"></span>I will not redistribute cannabis obtained through the Club.</span>
+      <span class="opt"><span class="box"></span>I accept that any cannabis products are for personal use only.</span>
+      <span class="opt"><span class="box"></span>I understand and accept the Club's code of conduct and privacy policy.</span>
+      <span class="opt"><span class="box"></span>I release 224 Clubhouse from any liability related to personal use or effects of cannabis.</span>
+    </div>
+
+    <div class="sign">
+      <div class="field"><label>Signature:</label><span class="line"></span></div>
+      <div class="field"><label>Date:</label><span class="line"></span><span class="hint">DD / MM / YYYY</span></div>
+    </div>
+
+    <div class="office">
+      <h2>224 Clubhouse Use Only</h2>
+      <div class="grid">
+        <div class="field"><label>Membership ID:</label><span class="line"></span></div>
+        <div class="field"><label>Date Approved:</label><span class="line"></span></div>
+        <div class="field"><label>Approved By:</label><span class="line"></span></div>
+        <div class="field"><label>Payment:</label><span class="line"></span><span class="hint">EFT / Cash / Card</span></div>
+        <div class="field full"><label>Notes:</label><span class="line"></span></div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span>224 Clubhouse · Private members' club · 224clubhouse.store</span>
+    <span class="age">Not for persons under 21</span>
+  </footer>
+</div>
+</body>
+</html>

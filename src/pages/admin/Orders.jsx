@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import Badge from '../../components/ui/Badge'
 import { useOrders, useUpdateOrderStatus } from '../../hooks/useOrders'
 import { formatZAR } from '../../utils/formatCurrency'
+import { ALL_STATUSES, statusLabel, paymentLabel } from '../../utils/orderStatus'
 import toast from 'react-hot-toast'
 
-const STATUS_OPTIONS = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled']
-
 export default function Orders() {
-  const { data: orders, isLoading } = useOrders()
+  const { data: orders, isLoading, isError, refetch } = useOrders()
   const updateStatus = useUpdateOrderStatus()
   const [filter, setFilter] = useState('all')
   const [expandedId, setExpandedId] = useState(null)
@@ -18,10 +17,34 @@ export default function Orders() {
     document.title = 'Orders | 224 Admin'
   }, [])
 
-  const handleStatusChange = async (orderId, status) => {
+  // `selectEl` is the <select> that fired the change: a controlled select whose
+  // state never changes (confirm declined) does not re-render, so the DOM would
+  // keep showing the abandoned choice — put it back by hand.
+  const handleStatusChange = async (order, status, selectEl) => {
+    if (status === 'cancelled' && order.status !== 'cancelled') {
+      const label = order.order_number || order.id.slice(0, 8)
+      // Cancelling returns the order's units to stock — except from
+      // "Delivered", where the goods have already left (see migration
+      // 20260814101000_restock_on_cancel.sql).
+      const stockLine =
+        order.status === 'delivered'
+          ? 'It is already marked Delivered, so stock will NOT be returned — adjust it by hand if the goods came back.'
+          : 'The items will be returned to stock.'
+      if (!window.confirm(`Cancel order ${label}? ${stockLine}`)) {
+        if (selectEl) selectEl.value = order.status
+        return
+      }
+    }
     try {
-      await updateStatus.mutateAsync({ orderId, status })
-      toast.success(`Order status updated to "${status}"`)
+      await updateStatus.mutateAsync({
+        orderId: order.id,
+        status,
+        // Carried through so the mutation can email the customer about the change.
+        orderNumber: order.order_number,
+        customerName: order.customer_name,
+        customerEmail: order.customer_email,
+      })
+      toast.success(`Order status updated to "${statusLabel(status)}"`)
     } catch {
       toast.error('Failed to update status')
     }
@@ -38,7 +61,7 @@ export default function Orders() {
 
       {/* Filter */}
       <div className="flex gap-2 flex-wrap mb-6">
-        {['all', ...STATUS_OPTIONS].map(s => (
+        {['all', ...ALL_STATUSES].map(s => (
           <button
             key={s}
             onClick={() => setFilter(s)}
@@ -48,7 +71,7 @@ export default function Orders() {
                 : 'border-border text-muted hover:border-muted hover:text-white'
             }`}
           >
-            {s}
+            {s === 'all' ? 'all' : statusLabel(s)}
           </button>
         ))}
       </div>
@@ -56,6 +79,16 @@ export default function Orders() {
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-muted">Loading orders...</div>
+        ) : isError ? (
+          <div className="p-10 text-center">
+            <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
+            <p className="text-white text-sm mb-5">
+              Couldn't load orders. Please check your connection and try again.
+            </p>
+            <button onClick={() => refetch()} className="btn-gold text-sm">
+              Retry
+            </button>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center text-muted">No orders found.</div>
         ) : (
@@ -73,6 +106,40 @@ export default function Orders() {
             {/* Rows */}
             {filtered.map(order => (
               <div key={order.id} className="border-b border-border last:border-0">
+                {/* Mobile card */}
+                <div className="md:hidden px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-white text-sm font-medium truncate">{order.customer_name}</p>
+                      <p className="text-muted text-xs truncate">{order.customer_email}</p>
+                      <p className="font-mono text-gold text-[11px] mt-1">
+                        {order.order_number || `${order.id.slice(0, 8)}…`} · {new Date(order.created_at).toLocaleDateString('en-ZA')}
+                      </p>
+                      <p className="text-muted text-[11px] mt-0.5">{paymentLabel(order.payment_method)}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-white font-semibold text-sm">{formatZAR(order.total)}</p>
+                      <div className="mt-1"><Badge variant={order.status}>{statusLabel(order.status)}</Badge></div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <select
+                      value={order.status}
+                      onChange={e => handleStatusChange(order, e.target.value, e.target)}
+                      className="flex-1 bg-background border border-border text-white text-xs rounded px-2 py-2 cursor-pointer"
+                    >
+                      {ALL_STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
+                    </select>
+                    <button
+                      onClick={() => setExpandedId(id => id === order.id ? null : order.id)}
+                      className="text-muted hover:text-white border border-border rounded p-2 flex-shrink-0"
+                      aria-label="Toggle order details"
+                    >
+                      {expandedId === order.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    </button>
+                  </div>
+                </div>
+
                 <div className="hidden md:grid grid-cols-[2fr_2fr_1fr_1fr_1.5fr_0.5fr] gap-4 px-6 py-4 items-center hover:bg-border/20 transition-colors">
                   <div>
                     <p className="font-mono text-gold text-xs">{order.id.slice(0, 8)}...</p>
@@ -84,15 +151,15 @@ export default function Orders() {
                   </div>
                   <div className="text-right text-white font-semibold text-sm">{formatZAR(order.total)}</div>
                   <div className="text-center">
-                    <Badge variant={order.status}>{order.status}</Badge>
+                    <Badge variant={order.status}>{statusLabel(order.status)}</Badge>
                   </div>
                   <div className="text-center">
                     <select
                       value={order.status}
-                      onChange={e => handleStatusChange(order.id, e.target.value)}
+                      onChange={e => handleStatusChange(order, e.target.value, e.target)}
                       className="bg-background border border-border text-white text-xs rounded px-2 py-1.5 cursor-pointer w-full"
                     >
-                      {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                      {ALL_STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
                     </select>
                   </div>
                   <div className="text-center">
@@ -118,8 +185,12 @@ export default function Orders() {
                           {order.shipping_address?.postalCode}
                         </address>
                         <div className="mt-3 space-y-1 text-sm">
+                          <p className="text-muted">Order #: <span className="text-white">{order.order_number || order.id.slice(0, 8)}</span></p>
+                          <p className="text-muted">Payment: <span className="text-white">{paymentLabel(order.payment_method)}</span></p>
                           <p className="text-muted">Phone: <span className="text-white">{order.customer_phone}</span></p>
-                          <p className="text-muted">Ref: <span className="font-mono text-gold text-xs">{order.paystack_reference}</span></p>
+                          {order.paystack_reference && (
+                            <p className="text-muted">Ref: <span className="font-mono text-gold text-xs">{order.paystack_reference}</span></p>
+                          )}
                         </div>
                       </div>
                       <div>

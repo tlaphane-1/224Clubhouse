@@ -1,5 +1,6 @@
 import Badge from '../ui/Badge'
 import { formatZAR } from '../../utils/formatCurrency'
+import { ALL_STATUSES, statusLabel } from '../../utils/orderStatus'
 
 export default function OrdersTable({ orders, onStatusChange, mini = false }) {
   if (!orders || orders.length === 0) {
@@ -23,7 +24,7 @@ export default function OrdersTable({ orders, onStatusChange, mini = false }) {
           {orders.map(order => (
             <tr key={order.id} className="hover:bg-border/30 transition-colors">
               <td className="py-4 pr-4">
-                <span className="font-mono text-gold text-xs">{order.id.slice(0, 8)}...</span>
+                <span className="font-mono text-gold text-xs">{order.order_number || `${order.id.slice(0, 8)}...`}</span>
               </td>
               <td className="py-4 pr-4">
                 <span className="text-white">{order.customer_name}</span>
@@ -41,12 +42,12 @@ export default function OrdersTable({ orders, onStatusChange, mini = false }) {
                     onChange={e => onStatusChange(order.id, e.target.value)}
                     className="bg-background border border-border text-white text-xs rounded px-2 py-1 cursor-pointer"
                   >
-                    {['pending','paid','processing','shipped','delivered','cancelled'].map(s => (
-                      <option key={s} value={s}>{s}</option>
+                    {ALL_STATUSES.map(s => (
+                      <option key={s} value={s}>{statusLabel(s)}</option>
                     ))}
                   </select>
                 ) : (
-                  <Badge variant={order.status}>{order.status}</Badge>
+                  <Badge variant={order.status}>{statusLabel(order.status)}</Badge>
                 )}
               </td>
               <td className="py-4 text-right text-muted text-xs">

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { BRAND_IMAGES } from '../../hooks/useStorageImages'
 
 function FacebookIcon({ size = 20, className = '' }) {
   return (
@@ -20,13 +21,10 @@ export default function Footer() {
   return (
     <footer className="bg-surface border-t border-border mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Brand */}
           <div>
-            <div className="font-heading text-4xl font-bold text-gold tracking-wider">224</div>
-            <div className="text-white text-[9px] tracking-[0.5em] uppercase font-light mt-0.5 mb-4">
-              Clubhouse
-            </div>
+            <img src={BRAND_IMAGES.logoWide} alt="224 Clubhouse" className="h-10 w-auto object-contain mb-4" />
             <p className="text-muted text-sm leading-relaxed max-w-xs">
               A private cannabis lifestyle lounge where good people and great energy meet. Members only. Elevated always.
             </p>
@@ -62,26 +60,35 @@ export default function Footer() {
                 { to: '/', label: 'Home' },
                 { to: '/store', label: 'Shop' },
                 { to: '/events', label: 'Events' },
-                { href: 'https://224clubhouse.co.za/membership/', label: 'Membership' },
-              ].map(link => (
-                <li key={link.label}>
-                  {link.to ? (
-                    <Link
-                      to={link.to}
-                      className="text-muted hover:text-gold text-sm transition-colors"
-                    >
-                      {link.label}
-                    </Link>
-                  ) : (
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted hover:text-gold text-sm transition-colors"
-                    >
-                      {link.label}
-                    </a>
-                  )}
+                { to: '/membership', label: 'Membership' },
+                { to: '/about', label: 'About Us' },
+                { to: '/track', label: 'Track Order' },
+                { to: '/contact', label: 'Contact' },
+              ].map(({ to, label }) => (
+                <li key={label}>
+                  <Link to={to} className="text-muted hover:text-gold text-sm transition-colors">
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h4 className="text-white font-semibold uppercase tracking-widest text-xs mb-6">
+              Legal
+            </h4>
+            <ul className="space-y-3">
+              {[
+                { to: '/privacy', label: 'Privacy Policy' },
+                { to: '/terms', label: 'Terms of Service' },
+                { to: '/delivery-returns', label: 'Delivery & Returns' },
+              ].map(({ to, label }) => (
+                <li key={label}>
+                  <Link to={to} className="text-muted hover:text-gold text-sm transition-colors">
+                    {label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -90,18 +97,18 @@ export default function Footer() {
           {/* Hours & Address */}
           <div>
             <h4 className="text-white font-semibold uppercase tracking-widest text-xs mb-6">
-              Visit Us
+              Delivery Only
             </h4>
             <div className="space-y-4">
               <div>
-                <p className="text-gold text-xs uppercase tracking-widest mb-1.5">Hours</p>
-                <p className="text-white text-sm">Monday – Sunday</p>
-                <p className="text-muted text-sm">09:00 – 19:00 (Including Holidays)</p>
+                <p className="text-gold text-xs uppercase tracking-widest mb-1.5">Store</p>
+                <p className="text-white text-sm">Closed until further notice</p>
+                <p className="text-muted text-sm">Delivering Monday – Sunday, 09:00 – 19:00</p>
               </div>
               <div>
                 <p className="text-gold text-xs uppercase tracking-widest mb-1.5">Address</p>
                 <address className="text-muted text-sm not-italic leading-relaxed">
-                  224 Rondebult Ave<br />
+                  224 Rondebult Road<br />
                   Libradene, Boksburg<br />
                   1459
                 </address>

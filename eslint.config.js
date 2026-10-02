@@ -26,4 +26,18 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  // Node-context files: contract tests, Playwright e2e/config, and ops/test
+  // setup scripts read process.env and run under Node, not the browser.
+  {
+    files: [
+      'src/__tests__/**/*.{js,jsx}',
+      'e2e/**/*.{js,jsx}',
+      'playwright.config.js',
+      'test/**/*.{js,mjs}',
+      'scripts/**/*.{js,mjs}',
+    ],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+  },
 ])

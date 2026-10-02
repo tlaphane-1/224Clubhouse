@@ -38,6 +38,21 @@ export function useProduct(slug) {
   })
 }
 
+/**
+ * One-shot fetch of current product rows by id — used by "Reorder" to check
+ * stock/availability and today's prices before re-adding past order items to
+ * the cart. Imperative (not a hook) because it runs inside a click handler.
+ */
+export async function fetchProductsByIds(ids) {
+  if (!ids || ids.length === 0) return []
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .in('id', ids)
+  if (error) throw error
+  return data
+}
+
 export function useAllProducts() {
   return useQuery({
     queryKey: ['products', 'admin', 'all'],

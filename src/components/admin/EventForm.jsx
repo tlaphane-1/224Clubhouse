@@ -4,8 +4,10 @@ import Button from '../ui/Button'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { Upload } from 'lucide-react'
+import { safeFileName } from '../../utils/safeFileName'
+import { withTimeout } from '../../utils/withTimeout'
 
-const DEFAULT_LOCATION = '224 Rondebult Ave, Libradene, Boksburg'
+const DEFAULT_LOCATION = '224 Rondebult Road, Libradene, Boksburg'
 
 const defaultForm = {
   title: '', description: '', date: '', time: '',
@@ -25,19 +27,25 @@ export default function EventForm({ event, onClose }) {
   const set = (key, value) => setForm(f => ({ ...f, [key]: value }))
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0]
+    const input = e.target
+    const file = input.files[0]
     if (!file) return
     setUploading(true)
     try {
-      const path = `events/${Date.now()}-${file.name}`
-      const { error } = await supabase.storage.from('event-images').upload(path, file)
+      const path = `events/${Date.now()}-${safeFileName(file.name)}`
+      const { error } = await withTimeout(
+        supabase.storage.from('event-images').upload(path, file),
+        60000, // uploads carry a file, so they get far longer than a plain write
+        'image upload',
+      )
       if (error) throw error
       const { data } = supabase.storage.from('event-images').getPublicUrl(path)
       set('image_url', data.publicUrl)
-    } catch {
-      toast.error('Image upload failed')
+    } catch (err) {
+      toast.error(err.message || 'Image upload failed')
     } finally {
       setUploading(false)
+      input.value = '' // reset so selecting the same file again still fires onChange
     }
   }
 
@@ -57,11 +65,15 @@ export default function EventForm({ event, onClose }) {
       }
 
       if (event) {
-        const { error } = await supabase.from('events').update(payload).eq('id', event.id)
+        const { error } = await withTimeout(
+          supabase.from('events').update(payload).eq('id', event.id), undefined, 'save',
+        )
         if (error) throw error
         toast.success('Event updated')
       } else {
-        const { error } = await supabase.from('events').insert(payload)
+        const { error } = await withTimeout(
+          supabase.from('events').insert(payload), undefined, 'save',
+        )
         if (error) throw error
         toast.success('Event created')
       }

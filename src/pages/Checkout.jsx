@@ -1,13 +1,24 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { Link, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
+import { Crown, Lock, Tag, X } from 'lucide-react'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
+import { useLastOrder, useMyOrders } from '../hooks/useMyOrders'
+import { useMyMembership } from '../hooks/useMyMembership'
+import { useDiscountCode } from '../hooks/useDiscountCode'
+import { memberPurchaseGate } from '../utils/memberGate'
 import { supabase } from '../lib/supabase'
-import { db } from '../lib/firebase'
-import { ref, set } from 'firebase/database'
 import CheckoutForm from '../components/checkout/CheckoutForm'
-import OrderSummary, { SHIPPING_FEE, SHIPPING_THRESHOLD } from '../components/checkout/OrderSummary'
-import PaystackButton from '../components/checkout/PaystackButton'
+import CustomerAuth from '../components/auth/CustomerAuth'
+import OrderSummary from '../components/checkout/OrderSummary'
+import Modal from '../components/ui/Modal'
+import { shippingFeeFor } from '../utils/shipping'
+import PaymentMethodSelect from '../components/checkout/PaymentMethodSelect'
+// Paystack is disabled while the online paygate is being confirmed (PaystackButton.jsx retained for re-enable).
+import { paymentLabel } from '../utils/orderStatus'
+import { formatZAR } from '../utils/formatCurrency'
+import { rememberOrder } from '../utils/recentOrders'
 import toast from 'react-hot-toast'
 
 const emptyForm = {
@@ -29,108 +40,193 @@ function validate(form) {
 
 export default function Checkout() {
   const { items, cartSubtotal, clearCart } = useCart()
+  const { user, loading: authLoading } = useAuth()
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [agreed, setAgreed] = useState(false)
+  const [method, setMethod] = useState('cash_on_delivery')
   const [processing, setProcessing] = useState(false)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
-  const shippingFee = cartSubtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
-  const total = cartSubtotal + shippingFee
+  // Discount codes: the client only ever holds a CODE. place_cod_order
+  // re-derives the amount from its own DB-priced subtotal, so everything
+  // below is display-only (see useDiscountCode).
+  const [codeInput, setCodeInput] = useState('')
+  const discount = useDiscountCode(cartSubtotal)
+
+  // place_cod_order rejects the WHOLE order if any line is member-only and the
+  // buyer isn't an active member. Catch it here instead, so the last step of
+  // checkout can't end in a raw RPC error. Cart.jsx blocks the same case first;
+  // this covers a direct /checkout hit or a membership lapsing mid-session.
+  // Never blocks while the membership query is still loading (see memberGate).
+  const membership = useMyMembership()
+  const gate = memberPurchaseGate(user, membership)
+  const lockedItems = items.filter(item => gate.isLocked(item))
+
+  // Free delivery for active members; otherwise free at R500+ judged on the
+  // PRE-discount subtotal, exactly as the RPC does — so applying a code can
+  // never push a cart back under R500 and add delivery back on.
+  const shippingFee = shippingFeeFor(cartSubtotal, gate.isActiveMember)
+  const total = cartSubtotal - discount.discountCents + shippingFee
+
+  // After a first (non-cancelled) order, place_cod_order requires a membership
+  // application (pending or active). Mirror it so the customer gets the
+  // become-a-member prompt instead of a raw RPC error. Only decided once both
+  // queries have settled — never blocks on loading.
+  const myOrders = useMyOrders()
+  const needsMembership =
+    Boolean(myOrders.data?.some(o => o.status !== 'cancelled')) &&
+    membership.isSuccess &&
+    !membership.current
+  const [showJoinPrompt, setShowJoinPrompt] = useState(false)
 
   useEffect(() => {
     document.title = 'Checkout | 224 Clubhouse'
     if (items.length === 0) navigate('/cart')
   }, [items, navigate])
 
-  const handlePaystackSuccess = async (reference) => {
-    setProcessing(true)
-    try {
-      // 1. Insert order
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          customer_name: form.name,
-          customer_email: form.email,
-          customer_phone: form.phone,
-          items: items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, slug: i.slug })),
-          subtotal: cartSubtotal,
-          shipping_fee: shippingFee,
-          total,
-          status: 'paid',
-          paystack_reference: reference.reference,
-          shipping_address: {
-            street: form.street,
-            apartment: form.apartment,
-            city: form.city,
-            province: form.province,
-            postalCode: form.postalCode,
-          },
-        })
-        .select()
-        .single()
-
-      if (orderError) throw orderError
-
-      // 2. Decrement stock
-      await Promise.all(items.map(item =>
-        supabase.rpc('decrement_stock', { product_id: item.id, qty: item.quantity })
-          .catch(() => null) // fail silently if RPC not set up yet
-      ))
-
-      // 3. Write to Firebase (only if configured)
-      if (db) {
-        await set(ref(db, `orders/${order.id}`), {
-          status: 'paid',
-          updatedAt: new Date().toISOString(),
-        })
-      }
-
-      // 4. Send order confirmation email
-      await supabase.functions.invoke('send-order-email', {
-        body: {
-          orderId: order.id,
-          customerName: form.name,
-          customerEmail: form.email,
-          items: order.items,
-          total: order.total,
-          paystack_reference: reference.reference,
-        },
-      })
-
-      // 5. Clear cart and navigate
-      clearCart()
-      navigate(`/order-confirmation/${order.id}`)
-    } catch (err) {
-      toast.error('Something went wrong processing your order. Please contact us.')
-      console.error(err)
-    } finally {
-      setProcessing(false)
-    }
+  // Returning customers shouldn't retype their delivery details. Until the
+  // customer touches the form, empty fields DISPLAY values from their most
+  // recent order (derived below — no effect, no state write on data arrival).
+  // The first edit snapshots the merged form into state (CheckoutForm hands
+  // back the whole form object), so nothing typed is ever overwritten and a
+  // field the customer clears stays cleared.
+  const { data: lastOrder } = useLastOrder()
+  const [formTouched, setFormTouched] = useState(false)
+  const handleFormChange = (next) => {
+    setFormTouched(true)
+    setForm(next)
   }
+  const lastAddr = lastOrder?.shipping_address ?? {}
+  const prefill = {
+    name: lastOrder?.customer_name ?? '',
+    phone: lastOrder?.customer_phone ?? '',
+    street: lastAddr.street ?? '',
+    apartment: lastAddr.apartment ?? '',
+    city: lastAddr.city ?? '',
+    province: lastAddr.province ?? '',
+    postalCode: lastAddr.postalCode ?? '',
+  }
+  const baseForm = formTouched
+    ? form
+    : Object.fromEntries(
+        Object.entries(form).map(([k, v]) => [k, v !== '' ? v : (prefill[k] ?? '')]),
+      )
 
-  const handlePayClick = () => {
-    const validationErrors = validate(form)
+  // The server stamps the order with the ACCOUNT email (place_cod_order
+  // overrides whatever the client sends), so the form mirrors it read-only —
+  // derived here rather than synced into state.
+  const checkoutForm = { ...baseForm, email: user?.email ?? '' }
+
+  const handlePlaceOrder = async () => {
+    if (processing) return // guard against double-submit -> duplicate orders
+    if (!user) return // render gate should prevent this; server enforces regardless
+    if (lockedItems.length > 0) return // button is disabled; the RPC would reject the whole order
+    if (needsMembership) {
+      setShowJoinPrompt(true)
+      return
+    }
+    const validationErrors = validate(checkoutForm)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
       toast.error('Please fill in all required fields')
-      return false
+      return
     }
     if (!agreed) {
       toast.error('Please confirm you are 21 or older')
-      return false
+      return
+    }
+    if (!method) {
+      toast.error('Please choose a payment method')
+      return
     }
     setErrors({})
-    return true
+
+    setProcessing(true)
+    const { data, error } = await supabase.rpc('place_cod_order', {
+      p_customer: {
+        name: checkoutForm.name,
+        email: checkoutForm.email,
+        phone: checkoutForm.phone,
+        street: checkoutForm.street,
+        apartment: checkoutForm.apartment,
+        city: checkoutForm.city,
+        province: checkoutForm.province,
+        postalCode: checkoutForm.postalCode,
+      },
+      p_items: items.map(i => ({ id: i.id, quantity: i.quantity })),
+      p_payment_method: method,
+      // Code only — never an amount. The server recomputes what it's worth.
+      p_discount_code: discount.applied?.code ?? null,
+    })
+
+    if (error || !data?.order_number) {
+      // The RPC prefixes discount rejections so a code that expired, ran out,
+      // or stopped being this account's first order between Apply and Place
+      // Order reads as a sentence about the code — and gets cleared — instead
+      // of a raw Postgres error on a cart the customer can still check out.
+      const discountReason = /^Discount code:\s*/i.test(error?.message ?? '')
+        ? error.message.replace(/^Discount code:\s*/i, '')
+        : null
+      if (/^Membership required:/i.test(error?.message ?? '')) {
+        setShowJoinPrompt(true)
+      } else if (discountReason) {
+        discount.reject(discountReason)
+        setCodeInput('')
+        toast.error(`${discountReason}. The code has been removed — please place your order again.`)
+      } else {
+        toast.error(error?.message || 'Could not place your order. Please try again.')
+      }
+      setProcessing(false)
+      return
+    }
+
+    // Remember it on this device BEFORE navigating: the order number otherwise only
+    // exists in router state, so a refresh loses the one thing needed to track it.
+    rememberOrder({
+      orderNumber: data.order_number,
+      email: checkoutForm.email,
+      total: data.total,
+      itemCount: items.reduce((n, i) => n + i.quantity, 0),
+    })
+
+    // Receipt email — fire and forget. The order is already placed; if Resend is
+    // misconfigured or slow the customer must still reach their confirmation page,
+    // so this never blocks navigation and never surfaces an error to them.
+    // Only the order id goes over the wire: the function reads the recipient,
+    // name, items and total from the row itself (and checks the caller owns it),
+    // so a caller can never aim a branded email at an address of their choosing.
+    supabase.functions
+      .invoke('send-order-email', {
+        body: { orderId: data.id },
+      })
+      .catch(() => {
+        /* the order stands with or without the receipt */
+      })
+
+    // The customer's order list is cached; make the new order show up on /orders.
+    queryClient.invalidateQueries({ queryKey: ['my-orders'] })
+
+    clearCart()
+    navigate(`/order-confirmation/${data.order_number}`, {
+      state: { order: data, items, customer: checkoutForm, paymentMethod: method },
+    })
   }
 
   if (items.length === 0) return null
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen pt-28 pb-20"
+    <div
+      className="min-h-screen pt-28 pb-20 animate-fadeIn"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-10">
@@ -139,13 +235,21 @@ export default function Checkout() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Form */}
+          {/* Form — or sign-in, since orders are tied to an account */}
+          {!user ? (
+            <div className="lg:col-span-3">
+              <CustomerAuth
+                title="Sign in to check out"
+                subtitle="You need an account so your orders are saved and you can track them any time."
+              />
+            </div>
+          ) : (
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-surface border border-border rounded-xl p-6">
               <h2 className="font-semibold text-white mb-6 uppercase tracking-widest text-sm">
                 Contact & Delivery
               </h2>
-              <CheckoutForm form={form} onChange={setForm} errors={errors} />
+              <CheckoutForm form={checkoutForm} onChange={handleFormChange} errors={errors} lockEmail />
             </div>
 
             {/* Age confirmation */}
@@ -161,12 +265,21 @@ export default function Checkout() {
                 </div>
                 <span className="text-muted text-sm leading-relaxed">
                   I confirm that I am <span className="text-white font-semibold">21 years of age or older</span> and agree to the{' '}
-                  <span className="text-gold">terms of service</span>. I understand that cannabis products are intended for adults only.
+                  <Link to="/terms" className="text-gold hover:text-gold-light underline transition-colors">terms of service</Link>, including the{' '}
+                  <Link to="/privacy" className="text-gold hover:text-gold-light underline transition-colors">Privacy Policy</Link>. I understand that cannabis products are intended for adults only.
                 </span>
               </label>
             </div>
 
-            {/* Pay button */}
+            {/* Payment method */}
+            <div className="bg-surface border border-border rounded-xl p-6">
+              <h2 className="font-semibold text-white mb-6 uppercase tracking-widest text-sm">
+                Payment Method
+              </h2>
+              <PaymentMethodSelect value={method} onChange={setMethod} />
+            </div>
+
+            {/* Place order */}
             <div className="bg-surface border border-border rounded-xl p-6">
               {processing ? (
                 <div className="flex items-center justify-center gap-3 py-4 text-muted">
@@ -174,38 +287,133 @@ export default function Checkout() {
                   Processing your order...
                 </div>
               ) : (
-                <div onClick={() => { if (!handlePayClick()) return }}>
-                  {agreed && Object.keys(errors).length === 0 ? (
-                    <PaystackButton
-                      amount={total}
-                      email={form.email}
-                      name={form.name}
-                      phone={form.phone}
-                      onSuccess={handlePaystackSuccess}
-                      onClose={() => toast('Payment cancelled')}
-                      disabled={!agreed}
-                    />
-                  ) : (
-                    <button
-                      onClick={handlePayClick}
-                      className="btn-gold w-full py-4 text-base"
-                    >
-                      Review & Pay {new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(total / 100)}
-                    </button>
+                <>
+                  {lockedItems.length > 0 && (
+                    <div className="border border-gold/40 bg-gold/5 rounded-lg p-4 mb-4 flex items-start gap-3">
+                      <Lock size={16} className="text-gold mt-0.5 shrink-0" />
+                      <p className="text-muted text-sm leading-relaxed">
+                        <span className="text-white font-semibold">Members only:</span>{' '}
+                        {lockedItems.map(i => i.name).join(', ')}{' '}
+                        {lockedItems.length > 1 ? 'are' : 'is'} reserved for active members.{' '}
+                        <Link to="/cart" className="text-gold hover:text-gold-light underline transition-colors">
+                          Remove {lockedItems.length > 1 ? 'them' : 'it'} from your cart
+                        </Link>{' '}
+                        or{' '}
+                        <Link to="/membership" className="text-gold hover:text-gold-light underline transition-colors">
+                          join 224
+                        </Link>{' '}
+                        to place this order.
+                      </p>
+                    </div>
                   )}
-                </div>
+                  <button
+                    type="button"
+                    onClick={handlePlaceOrder}
+                    disabled={lockedItems.length > 0}
+                    className="btn-gold w-full py-4 text-base"
+                  >
+                    Place Order — {formatZAR(total)}
+                  </button>
+                  <p className="text-muted text-xs text-center mt-3">
+                    {method === 'eft'
+                      ? "No payment now — we'll show our banking details after you place your order."
+                      : `No payment now — you'll pay by ${method ? paymentLabel(method) : 'cash/card'} when your order is delivered.`}
+                  </p>
+                </>
               )}
             </div>
           </div>
+          )}
 
           {/* Summary */}
           <div className="lg:col-span-2">
             <div className="sticky top-28">
-              <OrderSummary items={items} subtotal={cartSubtotal} />
+              <OrderSummary
+                items={items}
+                subtotal={cartSubtotal}
+                discountCents={discount.discountCents}
+                discountCode={discount.applied?.code ?? null}
+                isMember={gate.isActiveMember}
+              >
+                {/* Discount code — signed-in only: validate_discount_code is
+                    granted to `authenticated`, and checkout requires an
+                    account anyway. */}
+                {user && (
+                  <div>
+                    <label htmlFor="discount-code" className="block text-muted text-xs uppercase tracking-widest mb-2">
+                      Discount code
+                    </label>
+                    {discount.applied ? (
+                      <div className="flex items-center gap-3 border border-gold/40 bg-gold/5 rounded-lg px-3 py-2.5">
+                        <Tag size={15} className="text-gold shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm font-semibold truncate">{discount.applied.code}</p>
+                          <p className="text-gold text-xs">−{formatZAR(discount.discountCents)} applied</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { discount.remove(); setCodeInput('') }}
+                          className="text-muted hover:text-red-400 transition-colors p-1 shrink-0"
+                          aria-label="Remove discount code"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <form
+                        onSubmit={(e) => { e.preventDefault(); discount.apply(codeInput) }}
+                        className="flex gap-2"
+                      >
+                        <input
+                          id="discount-code"
+                          value={codeInput}
+                          onChange={e => setCodeInput(e.target.value.toUpperCase())}
+                          placeholder="WELCOME10"
+                          autoComplete="off"
+                          maxLength={40}
+                          className="input-base text-sm py-2.5 uppercase tracking-widest"
+                        />
+                        <button
+                          type="submit"
+                          disabled={discount.checking || !codeInput.trim()}
+                          className="btn-outline text-sm px-5 py-2.5 shrink-0"
+                        >
+                          {discount.checking ? 'Checking...' : 'Apply'}
+                        </button>
+                      </form>
+                    )}
+                    {discount.error && (
+                      <p className="text-red-400 text-xs mt-2">{discount.error}</p>
+                    )}
+                  </div>
+                )}
+              </OrderSummary>
             </div>
           </div>
         </div>
       </div>
-    </motion.div>
+
+      <Modal isOpen={showJoinPrompt} onClose={() => setShowJoinPrompt(false)} title="Become a member to order again" size="sm">
+        <div className="text-center">
+          <Crown size={36} className="text-gold mx-auto mb-4" />
+          <p className="text-muted text-sm leading-relaxed mb-2">
+            Thanks for your first order! 224 Clubhouse is a private members' club, so
+            from your second order onwards you need a membership.
+          </p>
+          <p className="text-muted text-sm leading-relaxed mb-6">
+            Apply in a minute — pay by EFT or with your next delivery. Members also get{' '}
+            <span className="text-white font-semibold">free delivery</span>. Your cart is saved.
+          </p>
+          <Link to="/membership" className="btn-gold w-full py-3 block">Become a member</Link>
+          <button
+            type="button"
+            onClick={() => setShowJoinPrompt(false)}
+            className="text-muted hover:text-white text-sm mt-4 transition-colors"
+          >
+            Not now
+          </button>
+        </div>
+      </Modal>
+    </div>
   )
 }

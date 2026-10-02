@@ -85,17 +85,31 @@
   }
 }
 
+/* ── Animation utilities (CSS replacements for framer-motion) ───────────── */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeOnly {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out forwards;
+.animate-fadeIn      { animation: fadeIn 0.3s ease-out both; }
+.animate-fade        { animation: fadeOnly 0.3s ease-out both; }
+.animate-scaleIn     { animation: scaleIn 0.2s ease-out both; }
+.animate-slideInRight{ animation: slideInRight 0.3s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeIn, .animate-fade, .animate-scaleIn, .animate-slideInRight {
+    animation: none;
+  }
 }

@@ -1,21 +1,30 @@
-import { useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Calendar } from 'lucide-react'
+import { useEffect, useMemo } from 'react'
+import { Calendar, AlertTriangle } from 'lucide-react'
 import { useEvents } from '../hooks/useEvents'
+import { useMyEventReservations, isLiveReservation } from '../hooks/useEventReservations'
 import EventCard from '../components/events/EventCard'
 
 export default function Events() {
-  const { data: events, isLoading } = useEvents()
+  const { data: events, isLoading, isError, refetch } = useEvents()
+  // One query for the whole grid — the cards read their own state out of it.
+  // Signed out this never runs (enabled: !!user), so the map is simply empty.
+  const { data: reservations } = useMyEventReservations()
+
+  const reservationByEvent = useMemo(() => {
+    const map = new Map()
+    for (const r of reservations ?? []) {
+      if (isLiveReservation(r) && !map.has(r.event_id)) map.set(r.event_id, r)
+    }
+    return map
+  }, [reservations])
 
   useEffect(() => {
     document.title = 'Events | 224 Clubhouse'
   }, [])
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen pt-28 pb-20"
+    <div
+      className="min-h-screen pt-28 pb-20 animate-fadeIn"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -40,17 +49,25 @@ export default function Events() {
               </div>
             ))}
           </div>
+        ) : isError ? (
+          <div className="bg-surface border border-red-500/20 rounded-2xl p-8 text-center max-w-md mx-auto animate-fadeIn">
+            <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
+            <p className="text-white text-sm mb-5">
+              Couldn't load events. Please check your connection and try again.
+            </p>
+            <button onClick={() => refetch()} className="btn-gold text-sm">
+              Retry
+            </button>
+          </div>
         ) : events && events.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event, i) => (
-              <motion.div
+            {events.map((event) => (
+              <div
                 key={event.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1, duration: 0.4 }}
+                className="animate-fadeIn"
               >
-                <EventCard event={event} />
-              </motion.div>
+                <EventCard event={event} reservation={reservationByEvent.get(event.id) ?? null} />
+              </div>
             ))}
           </div>
         ) : (
@@ -61,6 +78,6 @@ export default function Events() {
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   )
 }

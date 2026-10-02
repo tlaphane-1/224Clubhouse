@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
@@ -6,20 +7,41 @@ import { CartProvider } from './context/CartContext'
 import AgeGate from './components/layout/AgeGate'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
+import ErrorBoundary from './components/ErrorBoundary'
+import NotFound from './pages/NotFound'
 
-// Pages
-import Home from './pages/Home'
-import Store from './pages/Store'
-import ProductDetail from './pages/ProductDetail'
-import Cart from './pages/Cart'
-import Checkout from './pages/Checkout'
-import OrderConfirmation from './pages/OrderConfirmation'
-import Events from './pages/Events'
-import Login from './pages/Login'
-import Dashboard from './pages/admin/Dashboard'
-import Products from './pages/admin/Products'
-import Orders from './pages/admin/Orders'
-import AdminEvents from './pages/admin/Events'
+// Pages are lazy-loaded: each becomes its own chunk fetched on demand, so the
+// storefront's initial bundle no longer ships the admin panel, checkout,
+// Firebase, or Paystack code.
+const Home = lazy(() => import('./pages/Home'))
+const Store = lazy(() => import('./pages/Store'))
+const ProductDetail = lazy(() => import('./pages/ProductDetail'))
+const Cart = lazy(() => import('./pages/Cart'))
+const Checkout = lazy(() => import('./pages/Checkout'))
+const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'))
+const TrackOrder = lazy(() => import('./pages/TrackOrder'))
+const MyOrders = lazy(() => import('./pages/MyOrders'))
+const Account = lazy(() => import('./pages/Account'))
+const OrderDetail = lazy(() => import('./pages/OrderDetail'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const Events = lazy(() => import('./pages/Events'))
+const EventDetail = lazy(() => import('./pages/EventDetail'))
+const Unsubscribe = lazy(() => import('./pages/Unsubscribe'))
+const Membership = lazy(() => import('./pages/Membership'))
+const About = lazy(() => import('./pages/About'))
+const Contact = lazy(() => import('./pages/Contact'))
+const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'))
+const Terms = lazy(() => import('./pages/legal/Terms'))
+const DeliveryReturns = lazy(() => import('./pages/legal/DeliveryReturns'))
+const Login = lazy(() => import('./pages/Login'))
+const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
+const Products = lazy(() => import('./pages/admin/Products'))
+const Orders = lazy(() => import('./pages/admin/Orders'))
+const AdminEvents = lazy(() => import('./pages/admin/Events'))
+const AdminMemberships = lazy(() => import('./pages/admin/Memberships'))
+const AdminMessages = lazy(() => import('./pages/admin/Messages'))
+const AdminNewsletter = lazy(() => import('./pages/admin/Newsletter'))
+const AdminDiscounts = lazy(() => import('./pages/admin/Discounts'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,6 +51,14 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+function PageFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
 
 function ProtectedRoute({ children }) {
   const { user, loading, isAdmin } = useAuth()
@@ -66,26 +96,50 @@ export default function App() {
           <BrowserRouter>
             <AgeGate />
             <Toaster position="top-right" />
-            <Routes>
-              {/* Public */}
-              <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
-              <Route path="/store" element={<PublicLayout><Store /></PublicLayout>} />
-              <Route path="/store/:slug" element={<PublicLayout><ProductDetail /></PublicLayout>} />
-              <Route path="/cart" element={<PublicLayout><Cart /></PublicLayout>} />
-              <Route path="/checkout" element={<PublicLayout><Checkout /></PublicLayout>} />
-              <Route path="/order-confirmation/:id" element={<PublicLayout><OrderConfirmation /></PublicLayout>} />
-              <Route path="/events" element={<PublicLayout><Events /></PublicLayout>} />
+            <ErrorBoundary>
+            <Suspense fallback={<PageFallback />}>
+              <Routes>
+                {/* Public */}
+                <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
+                <Route path="/store" element={<PublicLayout><Store /></PublicLayout>} />
+                <Route path="/store/:slug" element={<PublicLayout><ProductDetail /></PublicLayout>} />
+                <Route path="/cart" element={<PublicLayout><Cart /></PublicLayout>} />
+                <Route path="/checkout" element={<PublicLayout><Checkout /></PublicLayout>} />
+                <Route path="/order-confirmation/:id" element={<PublicLayout><OrderConfirmation /></PublicLayout>} />
+                <Route path="/track" element={<PublicLayout><TrackOrder /></PublicLayout>} />
+                {/* No ProtectedRoute: the page shows sign-in itself when logged out. */}
+                <Route path="/orders" element={<PublicLayout><MyOrders /></PublicLayout>} />
+                <Route path="/account" element={<PublicLayout><Account /></PublicLayout>} />
+                <Route path="/orders/:id" element={<PublicLayout><OrderDetail /></PublicLayout>} />
+                {/* Password-recovery landing page — the emailed reset link points here. */}
+                <Route path="/reset-password" element={<PublicLayout><ResetPassword /></PublicLayout>} />
+                <Route path="/events" element={<PublicLayout><Events /></PublicLayout>} />
+                <Route path="/events/:id" element={<PublicLayout><EventDetail /></PublicLayout>} />
+                {/* Public on purpose: unsubscribe links are opened from an email client. */}
+                <Route path="/unsubscribe" element={<PublicLayout><Unsubscribe /></PublicLayout>} />
+                <Route path="/membership" element={<PublicLayout><Membership /></PublicLayout>} />
+                <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
+                <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
+                <Route path="/privacy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
+                <Route path="/terms" element={<PublicLayout><Terms /></PublicLayout>} />
+                <Route path="/delivery-returns" element={<PublicLayout><DeliveryReturns /></PublicLayout>} />
 
-              {/* Admin */}
-              <Route path="/admin/login" element={<Login />} />
-              <Route path="/admin/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/admin/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
-              <Route path="/admin/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-              <Route path="/admin/events" element={<ProtectedRoute><AdminEvents /></ProtectedRoute>} />
+                {/* Admin */}
+                <Route path="/admin/login" element={<Login />} />
+                <Route path="/admin/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/admin/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+                <Route path="/admin/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+                <Route path="/admin/events" element={<ProtectedRoute><AdminEvents /></ProtectedRoute>} />
+                <Route path="/admin/memberships" element={<ProtectedRoute><AdminMemberships /></ProtectedRoute>} />
+                <Route path="/admin/messages" element={<ProtectedRoute><AdminMessages /></ProtectedRoute>} />
+                <Route path="/admin/newsletter" element={<ProtectedRoute><AdminNewsletter /></ProtectedRoute>} />
+                <Route path="/admin/discounts" element={<ProtectedRoute><AdminDiscounts /></ProtectedRoute>} />
 
-              {/* Fallback */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                {/* Fallback */}
+                <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
+              </Routes>
+            </Suspense>
+            </ErrorBoundary>
           </BrowserRouter>
         </CartProvider>
       </AuthProvider>

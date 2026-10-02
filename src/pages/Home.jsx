@@ -1,21 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { ArrowRight, Leaf, Candy, Wrench, ShoppingBag, Star, Mail } from 'lucide-react'
+import { ArrowRight, Leaf, Candy, Cigarette, Wrench, ShoppingBag, Star, Mail } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import { supabase } from '../lib/supabase'
 import ProductGrid from '../components/store/ProductGrid'
 import toast from 'react-hot-toast'
-
-const fadeUp = {
-  initial: { opacity: 0, y: 30 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },
-}
+import { BRAND_IMAGES } from '../hooks/useStorageImages'
 
 const categories = [
   { value: 'flower', label: 'Flower Selections', icon: Leaf, desc: 'Premium cannabis flower, handpicked' },
   { value: 'edibles', label: 'Edibles', icon: Candy, desc: 'Infused treats & beverages' },
+  { value: 'joints', label: 'Joints', icon: Cigarette, desc: 'Pre-rolled and ready to go' },
   { value: 'accessories', label: 'Accessories', icon: Wrench, desc: 'Gear for the discerning smoker' },
   { value: 'merchandise', label: 'Merchandise', icon: ShoppingBag, desc: 'Represent the culture' },
 ]
@@ -49,16 +44,26 @@ export default function Home() {
   const handleSubscribe = async (e) => {
     e.preventDefault()
     setSubLoading(true)
+    // Normalised once, here, and used for BOTH calls. The subscribers table
+    // stores emails lowercased, so "Sam@Example.com " subscribed fine and then
+    // send-welcome-email looked the row up by the raw typed string and found
+    // nothing — a silent no-welcome-email. Trim + lowercase keeps the two halves
+    // talking about the same row.
+    const email = newsletter.email.trim().toLowerCase()
     try {
-      const { error } = await supabase.from('newsletter_subscribers').insert({
-        email: newsletter.email,
-        first_name: newsletter.firstName,
-        last_name: newsletter.lastName,
+      // Goes through the RPC rather than a direct insert so that someone who
+      // previously unsubscribed can opt back in — a plain insert hit the
+      // unique-email constraint and left them off the list permanently.
+      const { error } = await supabase.rpc('subscribe_newsletter', {
+        p_email: email,
+        p_first_name: newsletter.firstName,
+        p_last_name: newsletter.lastName,
       })
       if (error) throw error
 
+      // The function reads the name and unsubscribe token from the row itself.
       await supabase.functions.invoke('send-welcome-email', {
-        body: { firstName: newsletter.firstName, email: newsletter.email },
+        body: { email },
       })
 
       toast.success('Welcome to the 224 family! Check your email for your discount code.', {
@@ -67,6 +72,8 @@ export default function Home() {
       })
       setNewsletter({ firstName: '', lastName: '', email: '' })
     } catch (err) {
+      // 23505 is no longer reachable (the RPC upserts), but a stale cached
+      // bundle could still hit the old path before it reloads.
       if (err.code === '23505') {
         toast.error('You\'re already subscribed!')
       } else {
@@ -81,21 +88,22 @@ export default function Home() {
     <div>
       {/* Hero */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 bg-background">
+        {/* Background — real header photo */}
+        <div className="absolute inset-0">
+          <img
+            src={BRAND_IMAGES.header}
+            alt=""
+            className="w-full h-full object-cover object-center"
+          />
+          {/* Dark overlay so text stays readable */}
+          <div className="absolute inset-0 bg-black/70" />
+          {/* Gold radial glow */}
           <div className="absolute inset-0"
-            style={{ background: 'radial-gradient(ellipse at center, rgba(201,168,76,0.08) 0%, transparent 70%)' }} />
-          {/* Subtle grid pattern */}
-          <div className="absolute inset-0 opacity-[0.03]"
-            style={{ backgroundImage: 'linear-gradient(rgba(201,168,76,1) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,76,1) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+            style={{ background: 'radial-gradient(ellipse at center, rgba(201,168,76,0.12) 0%, transparent 65%)' }} />
         </div>
 
         <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8 }}
-          >
+          <div className="animate-scaleIn">
             <div className="inline-block mb-6">
               <div className="font-heading text-[clamp(5rem,15vw,10rem)] font-bold text-gold leading-none tracking-wider">
                 224
@@ -118,16 +126,11 @@ export default function Home() {
               <Link to="/store" className="btn-gold px-8 py-4 text-sm uppercase tracking-widest flex items-center gap-2">
                 Shop Now <ArrowRight size={16} />
               </Link>
-              <a
-                href="https://224clubhouse.co.za/membership/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-outline px-8 py-4 text-sm uppercase tracking-widest"
-              >
+              <Link to="/membership" className="btn-outline px-8 py-4 text-sm uppercase tracking-widest">
                 Become a Member
-              </a>
+              </Link>
             </div>
-          </motion.div>
+          </div>
         </div>
 
         {/* Scroll indicator */}
@@ -138,18 +141,16 @@ export default function Home() {
 
       {/* Category Grid */}
       <section className="py-24 px-4 max-w-7xl mx-auto">
-        <motion.div {...fadeUp} className="text-center mb-14">
+        <div className="text-center mb-14 animate-fadeIn">
           <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Browse</p>
           <h2 className="section-heading text-white">The Collection</h2>
-        </motion.div>
+        </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {categories.map(({ value, label, icon: Icon, desc }, i) => (
-            <motion.div
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {categories.map(({ value, label, icon: Icon, desc }) => (
+            <div
               key={value}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1, duration: 0.4 }}
+              className="animate-fadeIn"
             >
               <Link
                 to={`/store?category=${value}`}
@@ -165,7 +166,7 @@ export default function Home() {
                   Explore <ArrowRight size={10} />
                 </div>
               </Link>
-            </motion.div>
+            </div>
           ))}
         </div>
       </section>
@@ -193,13 +194,10 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {reviews.map((review, i) => (
-              <motion.div
+            {reviews.map((review) => (
+              <div
                 key={review.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.15, duration: 0.4 }}
-                className="bg-background border border-border rounded-xl p-8"
+                className="bg-background border border-border rounded-xl p-8 animate-fadeIn"
               >
                 <div className="flex gap-1 mb-4">
                   {Array.from({ length: review.rating }).map((_, j) => (
@@ -216,9 +214,31 @@ export default function Home() {
                     <span className="text-gold font-heading font-bold text-xs">{review.name[0]}</span>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Gallery */}
+      <section className="py-24 px-4 max-w-7xl mx-auto">
+        <div className="text-center mb-14">
+          <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">The Experience</p>
+          <h2 className="section-heading text-white">Life at 224</h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {BRAND_IMAGES.gallery.slice(0, 8).map((url, i) => (
+            <div
+              key={url}
+              className={`overflow-hidden rounded-xl animate-fade ${i === 0 ? 'col-span-2 row-span-2' : ''}`}
+            >
+              <img
+                src={url}
+                alt={`224 Clubhouse gallery ${i + 1}`}
+                className="w-full h-full object-cover aspect-square hover:scale-105 transition-transform duration-500"
+              />
+            </div>
+          ))}
         </div>
       </section>
 

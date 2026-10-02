@@ -2,6 +2,7 @@ const categories = [
   { value: 'all', label: 'All' },
   { value: 'flower', label: 'Flower' },
   { value: 'edibles', label: 'Edibles' },
+  { value: 'joints', label: 'Joints' },
   { value: 'accessories', label: 'Accessories' },
   { value: 'merchandise', label: 'Merchandise' },
 ]
