@@ -63,7 +63,7 @@ async function setupBuckets() {
       continue
     }
 
-    const { data, error } = await supabase.storage.createBucket(bucket.id, {
+    const { error } = await supabase.storage.createBucket(bucket.id, {
       public: bucket.public,
       fileSizeLimit: bucket.fileSizeLimit,
       allowedMimeTypes: bucket.allowedMimeTypes,

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { LogOut, Package, AlertTriangle } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 import { useMyOrders } from '../hooks/useMyOrders'
 import CustomerAuth from '../components/auth/CustomerAuth'
 import { formatZAR } from '../utils/formatCurrency'

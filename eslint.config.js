@@ -23,7 +23,11 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Core no-unused-vars does not see JSX references (no eslint-plugin-react
+      // jsx-uses-vars here), so a component used only as <Icon /> reads as
+      // unused. The ^[A-Z_] pattern exempts those; argsIgnorePattern extends it
+      // to destructured params like `({ icon: Icon }) => <Icon />`.
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
     },
   },
   // Node-context files: contract tests, Playwright e2e/config, and ops/test

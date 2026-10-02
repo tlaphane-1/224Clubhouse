@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { ShoppingBag, Menu, X, User, LogOut, Package, LayoutDashboard, ChevronDown } from 'lucide-react'
-import { useCart } from '../../context/CartContext'
-import { useAuth } from '../../context/AuthContext'
+import { useCart } from '../../context/useCart'
+import { useAuth } from '../../context/useAuth'
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
 
 const baseLinks = [

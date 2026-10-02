@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Check, Search, AlertTriangle, X } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 import { useOrderTracking } from '../hooks/useOrderTracking'
 import { useOrdersByEmail } from '../hooks/useOrdersByEmail'
 import { formatZAR } from '../utils/formatCurrency'

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { ArrowRight, Leaf, Candy, Cigarette, Wrench, ShoppingBag, Star, Mail } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import { supabase } from '../lib/supabase'
@@ -35,7 +35,6 @@ export default function Home() {
   const featuredProducts = products?.slice(0, 4)
   const [newsletter, setNewsletter] = useState({ firstName: '', lastName: '', email: '' })
   const [subLoading, setSubLoading] = useState(false)
-  const navigate = useNavigate()
 
   useEffect(() => {
     document.title = '224 Clubhouse | Private Cannabis Lifestyle Lounge'

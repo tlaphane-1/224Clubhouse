@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Mail } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../context/useAuth'
 import { validateNewPassword } from '../../utils/passwordValidation'
 import ForgotPasswordForm from './ForgotPasswordForm'
 import toast from 'react-hot-toast'

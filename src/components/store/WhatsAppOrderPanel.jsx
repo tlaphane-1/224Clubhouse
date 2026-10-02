@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useCart } from '../../context/CartContext'
+import { useCart } from '../../context/useCart'
 import { buildWhatsAppLink, composeOrderMessage } from '../../utils/whatsappOrder'
 
 // Digits only, international format without + (e.g. 27821234567).
