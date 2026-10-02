@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import { configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
@@ -23,6 +24,9 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    // e2e/*.spec.js are Playwright tests (run by `npm run test:e2e`); vitest's
+    // default include would otherwise pick them up and fail on their imports.
+    exclude: [...configDefaults.exclude, 'e2e/**'],
     setupFiles: ['./test/loadEnv.mjs'],
     // Reaps live-DB fixtures left behind by crashed runs, once per run, before
     // any test file. Replaces the per-suite prefix purges that used to delete a

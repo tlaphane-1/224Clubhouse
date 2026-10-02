@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { HIGHLIGHT_TOAST_STYLE } from '../utils/toastTheme'
 import { supabase } from '../lib/supabase'
 
 function FacebookIcon({ size = 20, className = '' }) {
@@ -77,7 +78,7 @@ export default function Contact() {
       } else {
         toast.success('Message sent! We\'ll get back to you within 1–2 business days.', {
           duration: 5000,
-          style: { background: '#111111', color: '#fff', border: '1px solid #C9A84C' },
+          style: HIGHLIGHT_TOAST_STYLE,
         })
         setForm({ name: '', email: '', subject: '', message: '' })
       }

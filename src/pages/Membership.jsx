@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { BadgeCheck, Check, Clock, Crown, Star, Zap } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 import { useMembershipTiers } from '../hooks/useMembershipTiers'
 import { useMyMembership } from '../hooks/useMyMembership'
 import CustomerAuth from '../components/auth/CustomerAuth'
@@ -537,7 +537,7 @@ export default function Membership() {
                         name="agreed"
                         checked={form.agreed}
                         onChange={handleFormChange}
-                        className="mt-0.5 accent-[#C9A84C]"
+                        className="mt-0.5 accent-gold"
                       />
                       <span className="text-white text-sm">I have read and agree to the 12 Club Commandments and the terms of membership.</span>
                     </label>

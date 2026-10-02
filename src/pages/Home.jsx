@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { ArrowRight, Leaf, Candy, Cigarette, Wrench, ShoppingBag, Star, Mail } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import { supabase } from '../lib/supabase'
 import ProductGrid from '../components/store/ProductGrid'
 import toast from 'react-hot-toast'
+import { HIGHLIGHT_TOAST_STYLE } from '../utils/toastTheme'
 import { BRAND_IMAGES } from '../hooks/useStorageImages'
 
 const categories = [
@@ -35,7 +36,6 @@ export default function Home() {
   const featuredProducts = products?.slice(0, 4)
   const [newsletter, setNewsletter] = useState({ firstName: '', lastName: '', email: '' })
   const [subLoading, setSubLoading] = useState(false)
-  const navigate = useNavigate()
 
   useEffect(() => {
     document.title = '224 Clubhouse | Private Cannabis Lifestyle Lounge'
@@ -68,7 +68,7 @@ export default function Home() {
 
       toast.success('Welcome to the 224 family! Check your email for your discount code.', {
         duration: 5000,
-        style: { background: '#111111', color: '#fff', border: '1px solid #C9A84C' },
+        style: HIGHLIGHT_TOAST_STYLE,
       })
       setNewsletter({ firstName: '', lastName: '', email: '' })
     } catch (err) {

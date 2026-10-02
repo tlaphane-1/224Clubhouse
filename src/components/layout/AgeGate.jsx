@@ -1,14 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { isAgeVerified, setAgeVerified } from '../../utils/ageGate'
 
 export default function AgeGate() {
-  const [show, setShow] = useState(false)
-
-  useEffect(() => {
-    if (!isAgeVerified()) {
-      setShow(true)
-    }
-  }, [])
+  // localStorage is read synchronously, so the initial value can come straight
+  // from it — no effect needed, and no render pass with the gate hidden.
+  const [show, setShow] = useState(() => !isAgeVerified())
 
   const handleYes = () => {
     setAgeVerified()

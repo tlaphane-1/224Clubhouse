@@ -2,7 +2,9 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
-import { AuthProvider, useAuth } from './context/AuthContext'
+import { TOAST_OPTIONS } from './utils/toastTheme'
+import { AuthProvider } from './context/AuthContext'
+import { useAuth } from './context/useAuth'
 import { CartProvider } from './context/CartContext'
 import AgeGate from './components/layout/AgeGate'
 import Navbar from './components/layout/Navbar'
@@ -95,7 +97,7 @@ export default function App() {
         <CartProvider>
           <BrowserRouter>
             <AgeGate />
-            <Toaster position="top-right" />
+            <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
             <ErrorBoundary>
             <Suspense fallback={<PageFallback />}>
               <Routes>

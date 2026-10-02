@@ -32,6 +32,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
           <h3 className="font-heading text-xl font-semibold text-white">{title}</h3>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="text-muted hover:text-white transition-colors p-1 rounded-lg hover:bg-border"
           >
             <X size={20} />

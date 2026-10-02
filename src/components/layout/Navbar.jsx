@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { ShoppingBag, Menu, X, User, LogOut, Package, LayoutDashboard, ChevronDown } from 'lucide-react'
-import { useCart } from '../../context/CartContext'
-import { useAuth } from '../../context/AuthContext'
+import { useCart } from '../../context/useCart'
+import { useAuth } from '../../context/useAuth'
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
 
 const baseLinks = [
@@ -173,6 +173,7 @@ export default function Navbar() {
               <button
                 className="md:hidden text-muted hover:text-white transition-colors"
                 onClick={() => setMobileOpen(true)}
+                aria-label="Open menu"
               >
                 <Menu size={24} />
               </button>
@@ -193,7 +194,7 @@ export default function Navbar() {
             >
               <div className="flex items-center justify-between p-6 border-b border-border">
                 <img src={BRAND_IMAGES.logoWide} alt="224 Clubhouse" className="h-8 w-auto object-contain" />
-                <button onClick={() => setMobileOpen(false)} className="text-muted hover:text-white">
+                <button onClick={() => setMobileOpen(false)} aria-label="Close menu" className="text-muted hover:text-white">
                   <X size={24} />
                 </button>
               </div>

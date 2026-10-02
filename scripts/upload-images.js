@@ -12,7 +12,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { readFileSync, readdirSync, writeFileSync, statSync } from 'fs'
+import { readFileSync, readdirSync, writeFileSync } from 'fs'
 import { resolve, extname, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
