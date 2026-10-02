@@ -24,9 +24,7 @@ export default function Login() {
       await signIn(email, password)
       navigate('/admin/dashboard')
     } catch {
-      toast.error('Invalid credentials', {
-        style: { background: '#111111', color: '#fff', border: '1px solid #222222' },
-      })
+      toast.error('Invalid credentials')
     } finally {
       setLoading(false)
     }

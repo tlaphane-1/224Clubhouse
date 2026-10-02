@@ -537,7 +537,7 @@ export default function Membership() {
                         name="agreed"
                         checked={form.agreed}
                         onChange={handleFormChange}
-                        className="mt-0.5 accent-[#C9A84C]"
+                        className="mt-0.5 accent-gold"
                       />
                       <span className="text-white text-sm">I have read and agree to the 12 Club Commandments and the terms of membership.</span>
                     </label>
