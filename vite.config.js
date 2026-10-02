@@ -41,7 +41,13 @@ export default defineConfig({
     // response failed the run. These budgets absorb two tail responses per hook
     // while still failing fast on a genuine hang (a blocked row lock used to
     // stall for minutes, not seconds).
-    testTimeout: 20000,
-    hookTimeout: 30000,
+    // Raised 2026-10-02: periodic network-path freezes hold every in-flight
+    // request, usually for 63-74s but sometimes longer (measured; see the stalled-request
+    // guard in src/__tests__/helpers/liveFixtures.js). Reads are retried after
+    // 8s, but a write must not be retried, so it waits the freeze out under a
+    // 90s per-request cap. These budgets fit one such wait plus the remaining
+    // calls. A genuine hang still fails, with a TimeoutError naming the call.
+    testTimeout: 120000,
+    hookTimeout: 120000,
   },
 })

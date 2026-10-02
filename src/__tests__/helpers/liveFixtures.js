@@ -77,9 +77,102 @@ export const testSlug = (label) => `${SLUG_PREFIX}${label}-${RUN_TAG}`
 export const testEventTitle = (name) => `${EVENT_TITLE_PREFIX}${RUN_TAG} — ${name}`
 export const testCode = (label) => `${CODE_PREFIX}${label}-${RUN_TAG}`.toUpperCase()
 
-const clientOpts = { auth: { autoRefreshToken: false, persistSession: false } }
-export const anonClient = () => createClient(URL, ANON, clientOpts)
-export const serviceClient = () => createClient(URL, SERVICE, clientOpts)
+// ---------------------------------------------------------------------------
+// Stalled-request guard
+// ---------------------------------------------------------------------------
+
+/**
+ * WHY: the remaining contract-run flake was not load. Files already run
+ * serially (vite.config.js `fileParallelism: false`). Measured 2026-10-02 with
+ * ~5,000 anon calls to get_order_tracking (a one-row indexed lookup): p50
+ * ~200ms, p99 <0.9s. Every few minutes, though, a network-path event freezes
+ * EVERY in-flight request from this machine at once. Four independent probe
+ * processes all stalled at the same moment. The frozen requests still reach the
+ * server and complete, but only after 70-74s (seven samples, all successful).
+ * The next request then opens a new connection and is fast again.
+ * supabase-js sets no request timeout, so a frozen call sat there until vitest
+ * killed the test (20s) or hook (30s). A 50-70s run usually overlaps one event,
+ * which is the "one or two random timeouts" failure.
+ *
+ * Handling, per request:
+ *   - Safe to repeat -> abandon after READ_TIMEOUT_MS and retry on a fresh
+ *     request, which recovers in ~8s. READ_TIMEOUT_MS is 2x the slowest healthy
+ *     response observed (3.9s, see vite.config.js), so real answers are never
+ *     cut off. "Safe" means:
+ *       * GET/HEAD/PUT/PATCH/DELETE: idempotent by HTTP semantics. PostgREST's
+ *         filtered PATCH/DELETE converge on the same end state.
+ *       * POST /auth/v1/token: a second sign-in mints a second session, no
+ *         state the tests assert on.
+ *       * POST /rest/v1/rpc/<fn> for functions declared STABLE/IMMUTABLE in
+ *         the migrations (they cannot write).
+ *   - Anything else (inserts, write RPCs like place_cod_order, admin
+ *     createUser) is NEVER retried. A frozen write HAS reached the server:
+ *     abandoning a frozen createUser and re-sending it returned email_exists.
+ *     A retry would either fail spuriously or, in a NEGATIVE test, hand back a
+ *     duplicate-key error that could pass for the denial the test expects and
+ *     hide a regression. So writes wait the freeze out, capped at
+ *     WRITE_TIMEOUT_MS so a true hang still fails with a legible TimeoutError.
+ *     Most PostgREST freezes measured 63-74s, under the cap, but one write
+ *     (reserve_event_seats) exceeded 90s. Auth freezes run longer (116s, and
+ *     one >200s). A frozen createUser that hits the cap is made safe in
+ *     createTestUser, which adopts its own account instead of failing on
+ *     email_exists. Other writes that outlast the cap still fail: a KNOWN
+ *     residual flake, rarer than before, now named by a [stall-guard] warning.
+ *     vite.config.js sizes testTimeout/hookTimeout to fit one capped wait.
+ * Retries only ever replace an attempt that got no response. They never touch
+ * a response that arrived, so no assertion is weakened.
+ */
+const READ_TIMEOUT_MS = 8000
+const WRITE_TIMEOUT_MS = 90000
+const READ_ATTEMPTS = 3
+const READ_ONLY_RPCS = new Set(['get_order_tracking', 'discount_newsletter_fixes_applied'])
+const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'PUT', 'PATCH', 'DELETE'])
+
+const safeToRepeat = (url, method) => {
+  if (IDEMPOTENT_METHODS.has(method)) return true
+  // globalThis: this module exports its own `URL` (the project URL string).
+  const { pathname } = new globalThis.URL(url)
+  if (pathname === '/auth/v1/token') return true
+  const rpc = pathname.match(/^\/rest\/v1\/rpc\/([^/]+)$/)
+  return Boolean(rpc && READ_ONLY_RPCS.has(rpc[1]))
+}
+
+async function stallGuardedFetch(input, init = {}) {
+  const url = typeof input === 'string' ? input : input.url
+  const method = (init.method ?? input.method ?? 'GET').toUpperCase()
+  const repeatable = safeToRepeat(url, method)
+  const attempts = repeatable ? READ_ATTEMPTS : 1
+  const timeoutMs = repeatable ? READ_TIMEOUT_MS : WRITE_TIMEOUT_MS
+  for (let i = 1; ; i++) {
+    const timeout = AbortSignal.timeout(timeoutMs)
+    const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout
+    const started = Date.now()
+    const logIfSlow = (outcome) => {
+      const ms = Date.now() - started
+      if (ms >= READ_TIMEOUT_MS) {
+        console.warn(`[stall-guard] ${method} ${new globalThis.URL(url).pathname} attempt ${i}: ${outcome} after ${(ms / 1000).toFixed(1)}s`)
+      }
+    }
+    try {
+      const res = await fetch(input, { ...init, signal })
+      logIfSlow(`HTTP ${res.status}`)
+      return res
+    } catch (err) {
+      logIfSlow(err.name)
+      // Only OUR timeout is retried. A caller's abort or a real network error
+      // goes straight back to supabase-js, unchanged.
+      if (!timeout.aborted || init.signal?.aborted || i >= attempts) throw err
+    }
+  }
+}
+
+/** Client options for every live-DB suite: no session persistence, stall guard. */
+export const liveClientOptions = {
+  auth: { autoRefreshToken: false, persistSession: false },
+  global: { fetch: stallGuardedFetch },
+}
+export const anonClient = () => createClient(URL, ANON, liveClientOptions)
+export const serviceClient = () => createClient(URL, SERVICE, liveClientOptions)
 
 // ---------------------------------------------------------------------------
 // Error classification
@@ -249,14 +342,38 @@ export function describeGate(suiteName, gate) {
  * Backs off on 429 via `withRetry`. Measurement says this project does not rate
  * limit at the volume these suites generate, but the backoff costs nothing and
  * covers a busier project later.
+ *
+ * A retried createUser can come back `email_exists`. During a network freeze
+ * (see the stalled-request guard) the first attempt reaches the server and
+ * creates the account, but its response is lost. This was seen in 2 of 5
+ * runs on 2026-10-02. The address carries this process's RUN_TAG, so after a
+ * retry an existing account with exactly this email can only be our own first
+ * attempt: adopt it. On a FIRST attempt, email_exists is still a hard failure.
  */
 export async function createTestUser(admin, label) {
   const email = testEmail(label)
-  const result = await withRetry(`createUser ${email}`, () =>
-    admin.auth.admin.createUser({ email, password: TEST_PASSWORD, email_confirm: true }),
-  )
+  let attempts = 0
+  const result = await withRetry(`createUser ${email}`, () => {
+    attempts++
+    return admin.auth.admin.createUser({ email, password: TEST_PASSWORD, email_confirm: true })
+  })
+  if (attempts > 1 && result.error?.code === 'email_exists') {
+    const id = await findUserIdByEmail(admin, email)
+    if (id) return { id, email }
+  }
   const data = mustSucceed(`create test account ${email}`, result)
   return { id: data.user.id, email }
+}
+
+async function findUserIdByEmail(admin, email) {
+  for (let page = 1; ; page++) {
+    const data = mustSucceed(`look up ${email}`, await withRetry(`listUsers ${page}`, () =>
+      admin.auth.admin.listUsers({ page, perPage: 1000 }),
+    ))
+    const users = data?.users ?? []
+    const hit = users.find((u) => u.email === email)
+    if (hit || users.length < 1000) return hit?.id ?? null
+  }
 }
 
 /** Sign a client in as a previously-created test account. */

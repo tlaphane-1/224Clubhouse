@@ -34,6 +34,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
+import { liveClientOptions } from './helpers/liveFixtures.js'
 
 const URL =
   process.env.SUPABASE_URL ||
@@ -44,7 +45,7 @@ const SKIP = !ANON
 
 const supabase = SKIP
   ? null
-  : createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
+  : createClient(URL, ANON, liveClientOptions)
 
 describe.skipIf(SKIP)('Anon-role contract — public storefront reads work', () => {
   it('POSITIVE: anon can read products (public SELECT)', async () => {

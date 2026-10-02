@@ -26,6 +26,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
+import { liveClientOptions } from './helpers/liveFixtures.js'
 
 const URL =
   process.env.SUPABASE_URL ||
@@ -42,7 +43,7 @@ const TODAY = new Date().toISOString().split('T')[0]
 // missing — createClient throws "supabaseKey is required" otherwise.
 describe.skipIf(SKIP)('API contract — read queries resolve against live DB', () => {
   const supabase = KEY
-    ? createClient(URL, KEY, { auth: { autoRefreshToken: false, persistSession: false } })
+    ? createClient(URL, KEY, liveClientOptions)
     : null
 
   // One probe per read path in src/hooks/*.js. .limit(0) means we don't
