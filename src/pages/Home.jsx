@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Leaf, Candy, Cigarette, Wrench, ShoppingBag, Star, Mail } from 'lucide-react'
+import { ArrowRight, Star, Mail, Truck, Sparkles, Crown, AlertTriangle } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
+import { useMembershipTiers } from '../hooks/useMembershipTiers'
+import { CATEGORIES } from '../components/store/categories'
+import { formatZAR } from '../utils/formatCurrency'
 import { supabase } from '../lib/supabase'
 import ProductGrid from '../components/store/ProductGrid'
 import toast from 'react-hot-toast'
 import { HIGHLIGHT_TOAST_STYLE } from '../utils/toastTheme'
 import { BRAND_IMAGES } from '../hooks/useStorageImages'
 
-const categories = [
-  { value: 'flower', label: 'Flower Selections', icon: Leaf, desc: 'Premium cannabis flower, handpicked' },
-  { value: 'edibles', label: 'Edibles', icon: Candy, desc: 'Infused treats & beverages' },
-  { value: 'joints', label: 'Joints', icon: Cigarette, desc: 'Pre-rolled and ready to go' },
-  { value: 'accessories', label: 'Accessories', icon: Wrench, desc: 'Gear for the discerning smoker' },
-  { value: 'merchandise', label: 'Merchandise', icon: ShoppingBag, desc: 'Represent the culture' },
-]
+// Whole-rand prices read as "R10", matching the membership page.
+function tierPrice(cents) {
+  return cents % 100 === 0 ? `R${cents / 100}` : formatZAR(cents)
+}
 
 const reviews = [
   {
@@ -32,8 +32,15 @@ const reviews = [
 ]
 
 export default function Home() {
-  const { data: products, isLoading } = useProducts()
+  const { data: products, isLoading, isError, refetch } = useProducts()
   const featuredProducts = products?.slice(0, 4)
+  // Cheapest active tier for the membership band. While loading (or if the
+  // read fails) the button simply says "Become a Member" — no price is shown
+  // rather than a stale hardcoded one.
+  const { data: tiers } = useMembershipTiers()
+  const cheapestTier = tiers?.length
+    ? tiers.reduce((min, t) => (t.price_cents < min.price_cents ? t : min))
+    : null
   const [newsletter, setNewsletter] = useState({ firstName: '', lastName: '', email: '' })
   const [subLoading, setSubLoading] = useState(false)
 
@@ -86,118 +93,166 @@ export default function Home() {
 
   return (
     <div>
-      {/* Hero */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background — real header photo */}
-        <div className="absolute inset-0">
+      {/* Hero — one phone screen tall (svh, so mobile browser bars don't crop it) */}
+      <section className="relative min-h-svh flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0" aria-hidden="true">
           <img
             src={BRAND_IMAGES.header}
             alt=""
+            fetchPriority="high"
             className="w-full h-full object-cover object-center"
           />
-          {/* Dark overlay so text stays readable */}
-          <div className="absolute inset-0 bg-black/70" />
-          {/* Gold radial glow */}
-          <div className="absolute inset-0"
-            style={{ background: 'radial-gradient(ellipse at center, rgba(201,168,76,0.12) 0%, transparent 65%)' }} />
+          {/* Dark wash so text stays readable, fading into the page below */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/65 to-background" />
+          {/* Slow-drifting gold + leaf light */}
+          <div className="absolute inset-0 hero-aura animate-drift" />
         </div>
 
-        <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
+        <div className="relative z-10 w-full max-w-4xl mx-auto px-5 pt-20 pb-16 text-center">
           <div className="animate-scaleIn">
-            <div className="inline-block mb-6">
-              <div className="font-heading text-[clamp(5rem,15vw,10rem)] font-bold text-gold leading-none tracking-wider">
+            <div className="inline-flex flex-col items-center mb-6">
+              <span className="font-heading text-7xl sm:text-8xl md:text-9xl font-bold text-gold leading-none tracking-wider">
                 224
-              </div>
-              <div className="text-white text-[clamp(0.6rem,1.5vw,0.85rem)] tracking-[0.6em] uppercase font-light -mt-2">
+              </span>
+              <span className="text-white text-xs md:text-sm tracking-[0.6em] uppercase font-light mt-2">
                 Clubhouse
-              </div>
+              </span>
             </div>
 
-            <div className="w-24 h-px bg-gold mx-auto mb-8" />
+            <div className="w-24 h-px bg-gold mx-auto mb-6 md:mb-8" />
 
-            <h1 className="font-heading text-[clamp(1.5rem,4vw,2.5rem)] font-semibold text-white mb-4 tracking-wide">
-              Private Lifestyle Lounge
+            <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-semibold text-white mb-3 md:mb-4 tracking-wide">
+              Premium. Private. Delivered.
             </h1>
-            <p className="text-muted text-lg max-w-xl mx-auto mb-10 leading-relaxed">
-              Where good people & great energy meet.
+            <p className="text-muted text-base md:text-lg max-w-xl mx-auto mb-8 md:mb-10 leading-relaxed">
+              Order online and pay on delivery. We bring it to your door.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/store" className="btn-gold px-8 py-4 text-sm uppercase tracking-widest flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+              <Link to="/store" className="btn-gold w-full sm:w-auto px-8 py-4 text-sm uppercase tracking-widest">
                 Shop Now <ArrowRight size={16} />
               </Link>
-              <Link to="/membership" className="btn-outline px-8 py-4 text-sm uppercase tracking-widest">
-                Become a Member
+              <Link to="/membership" className="btn-outline w-full sm:w-auto px-8 py-4 text-sm uppercase tracking-widest">
+                Join the Club
               </Link>
             </div>
+
+            <p
+              className="mt-6 inline-flex items-center gap-2 h-11 px-4 rounded-full border border-leaf/30 bg-leaf/10
+                         text-white text-xs uppercase tracking-widest animate-glow-leaf"
+            >
+              <Truck size={14} className="text-leaf" />
+              Free delivery for members
+            </p>
           </div>
         </div>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-          <div className="w-px h-12 bg-gradient-to-b from-gold/50 to-transparent animate-pulse" />
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2" aria-hidden="true">
+          <div className="w-px h-10 bg-gradient-to-b from-gold/50 to-transparent motion-safe:animate-pulse" />
         </div>
       </section>
 
-      {/* Category Grid */}
-      <section className="py-24 px-4 max-w-7xl mx-auto">
-        <div className="text-center mb-14 animate-fadeIn">
+      {/* Category tiles — a swipeable row on phones, a 5-up grid on desktop */}
+      <section className="py-14 md:py-24 max-w-7xl mx-auto">
+        <div className="px-4 text-center mb-8 md:mb-14 reveal">
           <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Browse</p>
           <h2 className="section-heading text-white">The Collection</h2>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          {categories.map(({ value, label, icon: Icon, desc }) => (
-            <div
+        <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-px-4 px-4 pb-2
+                        lg:grid lg:grid-cols-5 lg:gap-4 lg:overflow-visible">
+          {CATEGORIES.map(({ value, title, icon: Icon, desc }) => (
+            <Link
               key={value}
-              className="animate-fadeIn"
+              to={`/store?category=${value}`}
+              className="focus-ring group snap-start flex-shrink-0 w-40 lg:w-auto flex flex-col items-center text-center p-5
+                         bg-surface border border-border rounded-xl transition-all duration-300
+                         active:scale-95 hover:border-gold hover:shadow-glow"
             >
-              <Link
-                to={`/store?category=${value}`}
-                className="group flex flex-col items-center text-center p-6 bg-surface border border-border
-                           rounded-xl transition-all duration-300 hover:border-gold hover:shadow-xl hover:shadow-gold/10"
-              >
-                <div className="bg-gold/10 group-hover:bg-gold/20 p-4 rounded-full mb-4 transition-colors">
-                  <Icon size={24} className="text-gold" />
-                </div>
-                <h3 className="text-white font-semibold text-sm mb-1.5">{label}</h3>
-                <p className="text-muted text-xs leading-relaxed">{desc}</p>
-                <div className="mt-4 text-gold text-xs uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                  Explore <ArrowRight size={10} />
-                </div>
-              </Link>
-            </div>
+              <div className="bg-gold/10 group-hover:bg-leaf/15 p-4 rounded-full mb-3 transition-colors">
+                <Icon size={24} className="text-gold group-hover:text-leaf transition-colors" />
+              </div>
+              <h3 className="text-white font-semibold text-sm mb-1">{title}</h3>
+              <p className="text-muted text-xs leading-relaxed">{desc}</p>
+            </Link>
           ))}
         </div>
       </section>
 
       {/* Featured Products */}
-      <section className="py-12 px-4 max-w-7xl mx-auto">
-        <div className="flex items-end justify-between mb-10">
+      <section className="py-6 md:py-12 px-4 max-w-7xl mx-auto">
+        <div className="flex items-end justify-between gap-4 mb-6 md:mb-10 reveal">
           <div>
             <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Fresh Drop</p>
             <h2 className="section-heading text-white">From The Store</h2>
           </div>
-          <Link to="/store" className="text-gold text-sm hover:text-gold-light transition-colors flex items-center gap-1.5 uppercase tracking-widest">
+          <Link
+            to="/store"
+            className="focus-ring rounded-lg flex-shrink-0 inline-flex items-center gap-1.5 h-11 text-gold text-xs sm:text-sm hover:text-gold-light transition-colors uppercase tracking-widest"
+          >
             View All <ArrowRight size={14} />
           </Link>
         </div>
-        <ProductGrid products={featuredProducts} loading={isLoading} />
+        {isError ? (
+          <div className="bg-surface border border-red-500/20 rounded-2xl p-8 text-center max-w-md mx-auto">
+            <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
+            <p className="text-white text-sm mb-5">
+              Couldn't load products. Please check your connection and try again.
+            </p>
+            <button onClick={() => refetch()} className="btn-gold text-sm">
+              Retry
+            </button>
+          </div>
+        ) : (
+          <ProductGrid products={featuredProducts} loading={isLoading} skeletonCount={4} />
+        )}
+      </section>
+
+      {/* Membership band — the free-delivery pitch, with the live cheapest tier */}
+      <section className="px-4 py-14 md:py-20">
+        <div className="reveal relative overflow-hidden max-w-5xl mx-auto rounded-2xl border border-gold/20 bg-surface p-6 md:p-12">
+          <div className="absolute inset-0 hero-aura animate-drift opacity-70" aria-hidden="true" />
+          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div>
+              <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Membership</p>
+              <h2 className="font-heading text-2xl md:text-3xl font-bold text-white mb-4">Join the club</h2>
+              <ul className="space-y-2.5 text-sm text-white/90">
+                <li className="flex items-center gap-3">
+                  <Truck size={16} className="text-leaf shrink-0" /> Free delivery on every order
+                </li>
+                <li className="flex items-center gap-3">
+                  <Sparkles size={16} className="text-leaf shrink-0" /> Members-only products
+                </li>
+                <li className="flex items-center gap-3">
+                  <Crown size={16} className="text-leaf shrink-0" /> Pay by EFT or with your next delivery
+                </li>
+              </ul>
+            </div>
+            <Link
+              to="/membership"
+              className="btn-gold w-full md:w-auto flex-shrink-0 px-8 py-4 text-sm uppercase tracking-widest"
+            >
+              {cheapestTier ? `Join from ${tierPrice(cheapestTier.price_cents)}` : 'Become a Member'}
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
       </section>
 
       {/* Reviews */}
-      <section className="py-24 px-4 bg-surface border-y border-border">
+      <section className="py-14 md:py-24 px-4 bg-surface border-y border-border">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-8 md:mb-14 reveal">
             <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Community</p>
             <h2 className="section-heading text-white">What Members Say</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {reviews.map((review) => (
               <div
                 key={review.name}
-                className="bg-background border border-border rounded-xl p-8 animate-fadeIn"
+                className="bg-background border border-border rounded-xl p-6 md:p-8 reveal"
               >
                 <div className="flex gap-1 mb-4">
                   {Array.from({ length: review.rating }).map((_, j) => (
@@ -221,8 +276,8 @@ export default function Home() {
       </section>
 
       {/* Gallery */}
-      <section className="py-24 px-4 max-w-7xl mx-auto">
-        <div className="text-center mb-14">
+      <section className="py-14 md:py-24 px-4 max-w-7xl mx-auto">
+        <div className="text-center mb-8 md:mb-14 reveal">
           <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">The Experience</p>
           <h2 className="section-heading text-white">Life at 224</h2>
         </div>
@@ -230,11 +285,13 @@ export default function Home() {
           {BRAND_IMAGES.gallery.slice(0, 8).map((url, i) => (
             <div
               key={url}
-              className={`overflow-hidden rounded-xl animate-fade ${i === 0 ? 'col-span-2 row-span-2' : ''}`}
+              className={`overflow-hidden rounded-xl reveal ${i === 0 ? 'col-span-2 row-span-2' : ''}`}
             >
               <img
                 src={url}
                 alt={`224 Clubhouse gallery ${i + 1}`}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover aspect-square hover:scale-105 transition-transform duration-500"
               />
             </div>
@@ -243,14 +300,14 @@ export default function Home() {
       </section>
 
       {/* Newsletter */}
-      <section className="py-24 px-4">
+      <section className="py-14 md:py-24 px-4">
         <div className="max-w-2xl mx-auto text-center">
-          <div className="bg-surface border border-border rounded-2xl p-10 md:p-14">
+          <div className="reveal bg-surface border border-border rounded-2xl p-6 sm:p-10 md:p-14">
             <div className="bg-gold/10 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-6">
               <Mail size={24} className="text-gold" />
             </div>
             <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Join The Fam</p>
-            <h2 className="font-heading text-3xl font-bold text-white mb-3">Never Miss a Beat</h2>
+            <h2 className="font-heading text-2xl md:text-3xl font-bold text-white mb-3">Never Miss a Beat</h2>
             <p className="text-muted text-sm mb-8 leading-relaxed">
               Subscribe for stock drops, events & updates.<br />
               <span className="text-gold font-semibold">Get 10% OFF</span> your first purchase.
@@ -261,6 +318,7 @@ export default function Home() {
                 <input
                   className="input-base text-sm"
                   placeholder="First name"
+                  autoComplete="given-name"
                   value={newsletter.firstName}
                   onChange={e => setNewsletter(n => ({ ...n, firstName: e.target.value }))}
                   required
@@ -268,6 +326,7 @@ export default function Home() {
                 <input
                   className="input-base text-sm"
                   placeholder="Last name"
+                  autoComplete="family-name"
                   value={newsletter.lastName}
                   onChange={e => setNewsletter(n => ({ ...n, lastName: e.target.value }))}
                 />
@@ -276,6 +335,7 @@ export default function Home() {
                 type="email"
                 className="input-base text-sm"
                 placeholder="your@email.com"
+                autoComplete="email"
                 value={newsletter.email}
                 onChange={e => setNewsletter(n => ({ ...n, email: e.target.value }))}
                 required

@@ -4,6 +4,8 @@ This file is the authoritative UI reference for the site (see `CLAUDE.md`). It r
 
 If you need something this file doesn't cover, add it to `tailwind.config.js` or `src/index.css` first and document it here. Don't hardcode it in a component.
 
+**2026-10-03 — "Warm lounge" refresh.** Added the `leaf` accent, glow shadows, `aspect-portrait`, chips, the hero aura, skeleton shimmer and scroll reveal, and made the storefront (Home, Store, product card, product page, navbar) mobile-first. Those additions are marked **(new)** below.
+
 ---
 
 ## 1. Principles
@@ -11,14 +13,22 @@ If you need something this file doesn't cover, add it to `tailwind.config.js` or
 - **Dark and premium.** Every page sits on near-black `background`, with content on `surface` panels that have a 1px `border`. There is no light mode.
 - **Use gold sparingly.** Use `gold` for primary actions, eyebrow labels, prices, active states and focus. Don't use it for body text or large fills. Translucent gold (`bg-gold/10`, `border-gold/20`) marks highlighted panels.
 - **Serif headings, sans body.** Headings use Playfair Display and running text uses Inter.
-- **Mobile-first.** Write the base classes for phones, then add `sm:` / `md:` / `lg:` / `xl:` overrides. The navbar collapses to a slide-in drawer below `md`.
+- **Mobile-first.** Most customers shop on a phone. Write the base classes for phones, then add `sm:` / `md:` / `lg:` / `xl:` overrides. The navbar collapses to a slide-in drawer below `md`. **(new)** Rules for every storefront change:
+  - **Tap targets are at least 44×44px** (`h-11` / `w-11`). Icon-only controls get a 44px box even when the icon is 16–24px. Inline text links inside a sentence are the only exception.
+  - **The primary action is reachable without scrolling.** On the product page it lives in a sticky bottom bar on phones (see §7).
+  - **No horizontal page scroll** at 360px or 390px wide. Swipeable rows scroll *inside* their own container (`overflow-x-auto`).
+  - **Hover is a desktop enhancement only.** `tailwind.config.js` sets `future.hoverOnlyWhenSupported`, so `hover:` styles never fire on touch. Give touch feedback with `active:` (`active:scale-95` on buttons and tiles, `active:scale-[0.98]` on cards). Never hide a control behind hover.
+  - **Form text is 16px on phones.** A global rule in `index.css` forces this below `sm`, because iOS zooms the page into any smaller field. Don't fight it.
+  - **Check with the phone screenshots** (390×844 and 360×740) before calling UI done.
 - **Accessibility basics that are in place today:**
   - `.input-base` shows a gold focus border and ring.
   - `PaymentMethodSelect.jsx` uses `focus-visible:ring-2 focus-visible:ring-gold` and `role="radiogroup"`.
   - Icon-only buttons have `aria-label` [16], for example Footer social links, the AdminLayout menu, and the EventDetail quantity steppers.
-  - All `animate-*` utilities are switched off under `prefers-reduced-motion`.
+  - The custom `animate-*` classes, `.reveal`, `.skeleton` and the leaf glow are switched off under `prefers-reduced-motion` (see `index.css`). Tailwind's `animate-spin` is not, deliberately, because a loading spinner should keep spinning. Decorative built-ins must use `motion-safe:` (e.g. the hero scroll indicator's `motion-safe:animate-pulse`).
   - Product and brand images have `alt` text.
-  - New icon-only controls **must** have an `aria-label`. New custom interactive elements **must** have a visible `focus-visible` ring.
+  - New icon-only controls **must** have an `aria-label`. New custom interactive elements **must** have a visible `focus-visible` ring: add the `.focus-ring` class **(new)** (gold ring for keyboard focus, nothing for mouse/touch).
+  - **Never nest interactive elements** (a button inside a link). Put the action beside the link and position it over the card (see the product card pattern in §7).
+  - Links inside running text need a **permanent underline** (`underline underline-offset-2`). Colour alone isn't enough, and `hover:underline` never shows on phones.
 
 ---
 
@@ -34,6 +44,8 @@ Defined in `tailwind.config.js` → `theme.extend.colors`.
 | `gold-light` | `#e2c074` | `hover:bg-gold-light`, `hover:text-gold-light` [21] | Hover state of gold elements only |
 | `muted` | `#888888` | `text-muted` [382], `placeholder-muted` | Secondary text, labels, captions, inactive icons |
 | `border` | `#222222` | `border-border` [161], `bg-border` | All 1px borders, dividers (`h-px bg-border`), skeleton blocks |
+| `leaf` **(new)** | `#7CC242` | `text-leaf`, `bg-leaf/10`, `border-leaf/30`, `shadow-glow-leaf` | Botanical accent from the letterhead. **Accent only:** chip/tile hover icons, the free-delivery pill, member-benefit icons and links. Never a CTA background and never long text. Gold stays the action colour. |
+| `leaf-deep` **(new)** | `#1B2E12` | (inside `.hero-aura`) | Dark green used only in background gradients. |
 | *(Tailwind)* `white` / `black` | — | `text-white`, `text-black` | Primary text is white. Text on a gold button is black. |
 
 **Opacity modifiers in use:** `bg-gold/10`, `bg-gold/20`, `border-gold/20`, `border-gold/40` [~60 combined], `text-gold/20`, `text-gold/30` (the "224" placeholder watermark), `bg-muted/10`, `shadow-gold/10`, `shadow-gold/30`. Overlays use `bg-black/60` (drawers) and `bg-black/70` (modals) with `backdrop-blur-sm`.
@@ -55,9 +67,8 @@ Defined in `tailwind.config.js` → `theme.extend.colors`.
 
 Use the tokens above. Known exceptions that exist today:
 
-- `src/utils/cartToast.js` and toast `style` objects in `Home.jsx`, `Contact.jsx` and `Login.jsx` use `#111111`, `#222222`, `#C9A84C`, `#fff` and `#000`. react-hot-toast takes inline style objects, so these are acceptable but should mirror the tokens exactly.
-- `src/pages/Membership.jsx` uses `accent-[#C9A84C]` on a checkbox. It should be `accent-gold`.
-- `src/index.css` `@layer base` hardcodes `#0a0a0a`, `#ffffff`, `#111111`, `#333333` and `#C9A84C` for `body` and the scrollbar.
+- Toasts are styled in one place, `src/utils/toastTheme.js`, which **reads the colours from `tailwind.config.js`**. The only literal left is `#fff` for toast text. (The old per-page toast styles and `accent-[#C9A84C]` are gone, and `index.css` now uses `theme()` instead of hex.)
+- Box-shadow and gradient colours are defined once in `tailwind.config.js` (`shadow-glow`) and `index.css` (`.hero-aura`, `.skeleton`) via `theme()`. Use the classes, not new rgba values.
 - **Email HTML** (`supabase/functions/*`, `supabase/templates/*`) is exempt, because email clients need inline hex. See §10.
 
 ---
@@ -75,10 +86,10 @@ Use the tokens above. Known exceptions that exist today:
 | Role | Classes | Reference |
 |---|---|---|
 | Hero display | `font-heading text-5xl md:text-6xl font-bold` (up to `text-7xl`) | `Home.jsx`, `About.jsx` |
-| Listing page h1 | `font-heading text-4xl md:text-5xl font-bold text-white` | `Store.jsx`, `Events.jsx` |
+| Listing page h1 | `font-heading text-4xl md:text-5xl font-bold text-white`. **(new)** The Store uses `text-3xl sm:text-4xl md:text-5xl` so the header doesn't push the products below the fold on a phone. | `Store.jsx`, `Events.jsx` |
 | Narrow page h1 (account/order pages) | `font-heading text-3xl md:text-4xl font-bold text-white` | `MyOrders.jsx`, `TrackOrder.jsx` |
 | Admin page h1 | `font-heading text-3xl font-bold text-white` | `pages/admin/*` |
-| Section heading | `.section-heading text-white` (3xl→md:4xl, bold, uppercase, `tracking-wider`) | `Home.jsx`, `About.jsx` |
+| Section heading | `.section-heading text-white` (**2xl** on phones **(new)** → sm:3xl → md:4xl, bold, uppercase, `tracking-wider`) | `Home.jsx`, `About.jsx` |
 | Panel / card title | `font-heading text-2xl font-bold` [21] or `text-xl font-semibold` | `Modal.jsx` title, cards |
 | Small block heading | `text-white font-semibold text-sm uppercase tracking-widest` [34] | `MyOrders.jsx`, `CheckoutForm.jsx` |
 
@@ -96,18 +107,20 @@ Use the tokens above. Known exceptions that exist today:
 
 | Thing | Convention | Reference |
 |---|---|---|
-| Page wrapper | `min-h-screen pt-28 pb-20 animate-fadeIn` [pt-28: 19, pb-20: 16]. `pt-28` clears the fixed navbar. Hero/marketing sections use `pt-32`. | `Store.jsx`, `Events.jsx` |
+| Page wrapper | `min-h-screen pt-28 pb-20 animate-fadeIn` [pt-28: 19, pb-20: 16]. `pt-28` clears the fixed navbar. Hero/marketing sections use `pt-32`. **(new)** Store and product pages use `pt-24 md:pt-28` because the navbar is shorter on phones. | `Store.jsx`, `Events.jsx` |
+| Navbar **(new)** | `h-16 md:h-20`, fixed, `z-50`. Anything pinned below it uses `top-16 md:top-20`. | `Navbar.jsx` |
 | Wide container | `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8` (store, events, product, navbar, footer) | `Store.jsx` |
 | Cart / checkout container | `max-w-6xl mx-auto px-4 sm:px-6 lg:px-8` | `Cart.jsx`, `Checkout.jsx` |
 | Narrow container | `max-w-2xl mx-auto px-4` (account, orders, tracking, confirmation) | `MyOrders.jsx` |
 | Form-only page | `max-w-md mx-auto px-4` | `ResetPassword.jsx` |
 | Prose / legal | `max-w-3xl mx-auto` | `legal/LegalPage.jsx` |
 | Page header spacing | header block `mb-10`–`mb-14`; eyebrow `mb-2`/`mb-3` | |
-| Marketing sections | `py-20` / `py-24`, `px-4` | `Home.jsx`, `About.jsx` |
-| Card padding | `p-6` [54] default; `p-4` [55] compact rows and list items; `p-8` [23] for empty/error/feature panels; `p-5` for payment options and event card bodies | |
+| Marketing sections | `py-20` / `py-24`, `px-4`. **(new)** On Home they are `py-14 md:py-24` (phones get less dead scroll). | `Home.jsx`, `About.jsx` |
+| Card padding | `p-6` [54] default; `p-4` [55] compact rows and list items; `p-8` [23] for empty/error/feature panels; `p-5` for payment options and event card bodies. **(new)** Product card bodies are `p-3 sm:p-4` (half-width on phones). | |
 | Stacks | `space-y-4` / `space-y-5` (forms), `space-y-2` (lists) | `CheckoutForm.jsx` |
 | Grid gaps | `gap-6` for card grids, `gap-4` [53] for form rows, `gap-2`/`gap-3` for inline icon + text, `gap-12` for two-column page layouts | |
-| Product grid | `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6` | `ProductGrid.jsx` |
+| Product grid **(new)** | `grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6`. Two columns on phones, so a screen shows four products instead of one. | `ProductGrid.jsx` |
+| Swipe row **(new)** | `flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-px-4 px-4`, children `snap-start flex-shrink-0 w-40`. Switch to a grid at `lg:` (`lg:grid lg:grid-cols-5 lg:overflow-visible`). | Home category tiles, `CategoryFilter.jsx` |
 | Event grid | `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6` | `Events.jsx` |
 
 **Breakpoints:** Tailwind defaults only (`sm` 640, `md` 768, `lg` 1024, `xl` 1280). `md` is the main switch, used for the navbar drawer and for 2-col forms.
@@ -138,7 +151,8 @@ Use the tokens above. Known exceptions that exist today:
 Don't use `rounded-md`, `rounded-sm` or `rounded-3xl`. None of them are used anywhere.
 
 - **Borders:** always 1px, either `border border-border` or a semantic tint (`border-gold/20`, `border-red-500/20`). Highlighted or hovered borders use `border-gold`.
-- **Shadows:** rare. Use `hover:shadow-lg hover:shadow-gold/10` (cards) or `hover:shadow-gold/30` (gold button), and `shadow-2xl` only on modals. Resting elements have no shadow.
+- **Shadows:** rare. Use `hover:shadow-lg hover:shadow-gold/10` (cards) or `hover:shadow-gold/30` (gold button), and `shadow-2xl` only on modals. Resting elements have no shadow. **(new)** `shadow-glow` (gold) and `shadow-glow-leaf` are the warm glows: use them on hover (product cards, category tiles), on the active chip, and on the product-page photo. Nowhere else.
+- **Aspect ratios (new):** product photos in cards are `aspect-portrait` (4:5). The product-page main photo stays `aspect-square`.
 
 ---
 
@@ -154,6 +168,12 @@ Don't use `rounded-md`, `rounded-sm` or `rounded-3xl`. None of them are used any
 | `.section-heading` | Uppercase serif h2 that opens a marketing section | 9 |
 | `.card-hover` | Hover lift for clickable cards (used only through `Card hover`) | 1 |
 | `.text-gold-gradient` | Gold gradient text. It is defined but **currently unused**. | 0 |
+| `.chip` + `.chip-active` / `.chip-idle` **(new)** | 44px pill filter button with a focus ring. Pair with `aria-pressed`. | `CategoryFilter.jsx` |
+| `.hero-aura` **(new)** | Soft gold + leaf radial light. Place on an `absolute inset-0` layer behind content; add `animate-drift` for slow movement. | Home hero, membership band, product photo |
+| `.skeleton` **(new)** | Loading block with a gold shimmer (replaces `bg-border animate-pulse`). | `ProductGrid.jsx`, `ProductDetail.jsx` |
+| `.reveal` **(new)** | Fades a section up as it scrolls into view (CSS scroll-driven, no JS). | Home sections, product grid items |
+| `.focus-ring` **(new)** | Gold `focus-visible` ring (with background offset) for any custom control. `.chip` already includes it. | Cards, tiles, icon buttons, steppers |
+| `.scrollbar-hide` **(new)** | Hides the scrollbar on swipe rows (utility layer). | Swipe rows |
 
 ```jsx
 <button className="btn-gold">Place Order</button>
@@ -192,7 +212,13 @@ Don't use `rounded-md`, `rounded-sm` or `rounded-3xl`. None of them are used any
 </div>
 ```
 
-**Panel / card.** Use `bg-surface border border-border rounded-2xl p-6` for page panels and `rounded-xl` for repeated items. Clickable cards use the `group` pattern in `src/components/store/ProductCard.jsx`: `group-hover:border-gold group-hover:shadow-lg group-hover:shadow-gold/10`, with the image at `group-hover:scale-105`. An image placeholder is the "224" watermark: `font-heading text-4xl font-bold text-gold/30`.
+**Panel / card.** Use `bg-surface border border-border rounded-2xl p-6` for page panels and `rounded-xl` for repeated items. An image placeholder is the "224" watermark: `font-heading text-4xl font-bold text-gold/30`.
+
+**Product card (new).** Reference: `src/components/store/ProductCard.jsx`.
+- The wrapper is `group relative h-full active:scale-[0.98]`, so pressing anywhere gives feedback.
+- The `<Link>` is the card itself (`focus-ring … hover:border-gold hover:shadow-glow`), with `aria-label="Name, R price"`.
+- The add/join action is a **sibling** of the link, `absolute bottom-3 right-3`: a 44px round icon button on phones, icon + label from `sm:`. The link's price row reserves room for it with `pr-12 sm:pr-24`.
+- Badges over the photo stack top-left (`flex flex-col items-start gap-1`), each on a `rounded-full bg-black/70` backing so they read on light photos. No `backdrop-blur`; it costs a GPU layer per card.
 
 **Forms.** Reference: `src/components/checkout/CheckoutForm.jsx`.
 ```jsx
@@ -204,7 +230,7 @@ Helper text uses `text-muted text-xs mt-1`. Locked fields add `opacity-60 cursor
 
 **Loading.** There are two kinds:
 - Spinner [16 identical uses]: `<div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />`. Centre it in `flex justify-center py-12`, or use full-screen `min-h-screen flex items-center justify-center`. Inline spinners use `w-5 h-5` or `w-6 h-6`.
-- Skeleton grids for lists: `bg-surface border border-border rounded-xl animate-pulse` with `bg-border rounded` bars. Reference: `ProductGrid.jsx` `SkeletonCard`.
+- Skeletons for lists and pages: `.skeleton` blocks shaped like the content they replace (photo, title, price), inside the normal card/panel frame. References: `ProductGrid.jsx` `SkeletonCard`, and the `ProductDetail.jsx` loading state. Older pages still use `bg-border animate-pulse`; new code uses `.skeleton`.
 
 **Empty state.** Reference: `src/pages/MyOrders.jsx`.
 ```jsx
@@ -219,7 +245,11 @@ Full-page empty (`Cart.jsx`) uses a `size={56} strokeWidth={1}` lucide icon, a `
 
 **Error state.** Reference: `src/pages/Store.jsx`. Use `bg-surface border border-red-500/20 rounded-2xl p-8 text-center max-w-md mx-auto`, an `AlertTriangle size={28} className="text-red-400"`, a `text-white text-sm` message, and a Retry `.btn-gold text-sm`. Inline alerts inside a page use `bg-red-500/10 border border-red-500/20 rounded-2xl p-6 flex items-start gap-3` (`OrderDetail.jsx`).
 
-**Toasts.** These use `react-hot-toast` (`<Toaster position="top-right" />` in `App.jsx`). The branded style is `{ background: '#111111', color: '#fff', border: '1px solid #222222' }` with a gold icon theme. Reference: `src/utils/cartToast.js`. Reuse it rather than re-declaring it.
+**Toasts.** These use `react-hot-toast`. `<Toaster>` in `App.jsx` gets `toastOptions={TOAST_OPTIONS}` from `src/utils/toastTheme.js`, so every `toast.success()` / `toast.error()` is branded automatically: don't pass a `style`. For the rare gold-edged confirmation, pass `style: HIGHLIGHT_TOAST_STYLE` (newsletter and contact form).
+
+**Sticky purchase bar (new).** On phones the product page's primary action sits in `md:hidden sticky bottom-0 z-30 px-4 pt-3 pb-4 bg-background/95 backdrop-blur-md border-t border-border`. It is a direct child of the (untransformed) page wrapper, placed **right after the product details and before "You Might Also Like"**. That keeps it in the right reading and focus order: it pins to the bottom while the product is on screen, then settles above the related products. The same control renders inline inside a `hidden md:block` wrapper for larger screens, so only one copy is ever visible or in the accessibility tree. Reference: `src/pages/ProductDetail.jsx`.
+
+**Sticky filter bar (new).** Store category chips sit in `sticky top-16 md:top-20 z-30 bg-background/90 backdrop-blur-md border-b border-border`, right under the navbar. Reference: `src/pages/Store.jsx`.
 
 **Modals.** Use `ui/Modal.jsx` (`Checkout.jsx`, `pages/admin/*`). Drawers follow `Navbar.jsx`: a `bg-black/60 backdrop-blur-sm animate-fade` overlay, then `bg-surface border-l border-border animate-slideInRight`.
 
@@ -238,8 +268,18 @@ All of these are defined in `src/index.css` and disabled under `prefers-reduced-
 | `animate-scaleIn` [9] | scale 0.95→1 + rise, 0.2s | Modal panels, popovers |
 | `animate-slideInRight` [1] | slide from right, 0.3s | Mobile nav drawer |
 | `animate-spin` / `animate-pulse` | Tailwind built-ins | Spinners / skeletons |
+| `animate-drift` **(new)** | the layer slowly translates (scaled to 1.2 so edges never show), 18s, alternating | `.hero-aura` layers inside an `overflow-hidden` parent |
+| `animate-glow-leaf` **(new)** | a static `shadow-glow-leaf` on a pseudo-element whose opacity breathes, 3s | The single "free delivery for members" pill (a statically positioned element; the class adds `position: relative`). Keep it to one element per screen. |
+| `.reveal` **(new)** | rise + fade as the element scrolls into view | Section headers, cards, panels |
+| `.skeleton` **(new)** | a gold sheen pseudo-element sliding across, 1.6s | Loading placeholders |
 
-Transitions use `transition-colors` or `transition-all duration-200` for controls and `duration-300` for cards. Press feedback on buttons is `active:scale-95`. Card hover lift is `hover:scale-[1.02]`.
+Transitions use `transition-colors` or `transition-all duration-200` for controls and `duration-300` for cards. Press feedback on buttons is `active:scale-95` (`active:scale-90` on round icon buttons, `active:scale-[0.98]` on whole cards). Card hover is `hover:border-gold hover:shadow-glow`.
+
+**Motion rules (new):**
+- **Continuous animations animate only `transform` and `opacity`.** Those are composited by the GPU. `background-position`, `box-shadow`, `filter` and colour animations repaint every frame. Measured on the hero at 4× CPU throttle, the first version of the drift and glow (background-position and box-shadow) cost 720 paints and ~1.5s of raster work per 3 idle seconds; the transform/opacity rewrite costs 0. To pulse a shadow, put a static shadow on a pseudo-element and animate its opacity (`.animate-glow-leaf`).
+- `.reveal` needs no JavaScript and fails safe. Browsers without scroll-driven animations, and anyone with reduced motion on, just see the content.
+- **Never put `.reveal` (or any transform) on an element that contains a `sticky` or `fixed` child.** Wrap the child instead (`ProductGrid.jsx` puts `.reveal` on a wrapper div, not on the card).
+- Every new keyframe must be listed in the `prefers-reduced-motion` block in `index.css`.
 
 ---
 
@@ -253,7 +293,10 @@ Transitions use `transition-colors` or `transition-all duration-200` for control
 - [ ] Use `rounded-xl` / `rounded-2xl` / `rounded-lg` / `rounded-full` according to §5.
 - [ ] Give icon-only buttons an `aria-label` and custom controls a `focus-visible:ring-gold`.
 - [ ] Use `STATUS_BADGE` / `Badge` for status colors.
-- [ ] Check that layout works at 375px wide before adding `sm:`+ overrides.
+- [ ] Check that layout works at 360px and 390px wide before adding `sm:`+ overrides, with no horizontal page scroll.
+- [ ] Make every tap target at least 44×44px, including icon-only buttons, chips, steppers and the cart icon.
+- [ ] Make sure the page's primary action is visible on a phone without scrolling, or sits in a sticky bar.
+- [ ] Use `leaf` only as an accent (icons, the delivery pill, member links), never as a button fill.
 
 **Don't**
 - [ ] Don't use hex literals, `[#...]` arbitrary colors, or `text-gray-*` / `bg-zinc-*`. None are used today, so keep it that way.

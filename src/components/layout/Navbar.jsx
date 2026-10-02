@@ -66,13 +66,13 @@ export default function Navbar() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
+          <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center group">
+            <Link to="/" className="focus-ring rounded-lg flex items-center h-11 group">
               <img
                 src={BRAND_IMAGES.logoWide}
                 alt="224 Clubhouse"
-                className="h-10 w-auto object-contain brightness-100 group-hover:brightness-110 transition-all"
+                className="h-9 md:h-10 w-auto object-contain brightness-100 group-hover:brightness-110 transition-all"
               />
             </Link>
 
@@ -95,7 +95,7 @@ export default function Navbar() {
             </div>
 
             {/* Account + Cart + Mobile Menu */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 md:gap-4">
               {/* Account area (desktop) */}
               {user ? (
                 <div className="relative hidden md:block" ref={accountRef}>
@@ -153,7 +153,11 @@ export default function Navbar() {
                 </Link>
               )}
 
-              <Link to="/cart" className="relative group">
+              <Link
+                to="/cart"
+                aria-label={cartCount > 0 ? `Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}` : 'Cart'}
+                className="focus-ring rounded-full relative group flex-shrink-0 w-11 h-11 flex items-center justify-center active:scale-90 transition-transform"
+              >
                 <ShoppingBag
                   size={22}
                   className={`transition-colors duration-200 ${
@@ -162,7 +166,7 @@ export default function Navbar() {
                 />
                 {cartCount > 0 && (
                   <span
-                    className="absolute -top-2 -right-2 bg-gold text-black text-[10px] font-bold
+                    className="absolute top-0.5 right-0.5 bg-gold text-black text-[10px] font-bold
                                w-5 h-5 rounded-full flex items-center justify-center animate-scaleIn"
                   >
                     {cartCount > 99 ? '99+' : cartCount}
@@ -171,7 +175,8 @@ export default function Navbar() {
               </Link>
 
               <button
-                className="md:hidden text-muted hover:text-white transition-colors"
+                type="button"
+                className="focus-ring rounded-full md:hidden flex-shrink-0 w-11 h-11 -mr-2 flex items-center justify-center text-muted hover:text-white active:scale-90 transition-all"
                 onClick={() => setMobileOpen(true)}
                 aria-label="Open menu"
               >
@@ -194,7 +199,7 @@ export default function Navbar() {
             >
               <div className="flex items-center justify-between p-6 border-b border-border">
                 <img src={BRAND_IMAGES.logoWide} alt="224 Clubhouse" className="h-8 w-auto object-contain" />
-                <button onClick={() => setMobileOpen(false)} aria-label="Close menu" className="text-muted hover:text-white">
+                <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close menu" className="w-11 h-11 -mr-2 flex items-center justify-center text-muted hover:text-white">
                   <X size={24} />
                 </button>
               </div>
