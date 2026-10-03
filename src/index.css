@@ -14,8 +14,8 @@
   }
 
   body {
-    background-color: #0a0a0a;
-    color: #ffffff;
+    background-color: theme('colors.background');
+    color: theme('colors.white');
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -32,22 +32,34 @@
     font-family: 'Playfair Display', serif;
   }
 
+  /* iOS Safari zooms the whole page into any focused field smaller than 16px,
+     which shoves checkout sideways on a phone. Keep form text at 16px below
+     sm. !important is deliberate: it has to beat the text-sm utility that
+     dozens of fields carry, and it only applies at phone widths. */
+  @media (max-width: 639px) {
+    input:not([type='checkbox']):not([type='radio']),
+    select,
+    textarea {
+      font-size: 1rem !important;
+    }
+  }
+
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: #111111;
+    background: theme('colors.surface');
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #333333;
+    background: theme('colors.muted / 35%');
     border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #C9A84C;
+    background: theme('colors.gold');
   }
 }
 
@@ -74,14 +86,68 @@
   }
 
   .section-heading {
-    @apply font-heading text-3xl md:text-4xl font-bold tracking-wider uppercase;
+    @apply font-heading text-2xl sm:text-3xl md:text-4xl font-bold tracking-wider uppercase;
   }
 
   .text-gold-gradient {
-    background: linear-gradient(135deg, #C9A84C, #e2c074);
+    background: linear-gradient(135deg, theme('colors.gold'), theme('colors.gold-light'));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  /* Gold keyboard-focus ring for custom controls (mouse/touch focus shows nothing). */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2
+           focus-visible:ring-offset-background;
+  }
+
+  /* Pill filter / category chip. h-11 = 44px, the minimum comfortable tap target. */
+  .chip {
+    @apply focus-ring inline-flex items-center gap-2 flex-shrink-0 h-11 px-4 rounded-full border text-sm
+           font-medium whitespace-nowrap transition-all duration-200 active:scale-95;
+  }
+  .chip-active {
+    @apply bg-gold text-black border-gold shadow-glow;
+  }
+  .chip-idle {
+    @apply bg-surface text-muted border-border hover:text-white hover:border-gold/40;
+  }
+
+  /* Soft gold + leaf light behind the hero and feature panels. Static paint;
+     .animate-drift moves the whole layer with a transform. */
+  .hero-aura {
+    background:
+      radial-gradient(ellipse 60% 45% at 25% 30%, theme('colors.gold / 22%'), transparent 70%),
+      radial-gradient(ellipse 55% 40% at 80% 70%, theme('colors.leaf / 16%'), transparent 70%),
+      radial-gradient(ellipse 80% 60% at 50% 100%, theme('colors.leaf-deep / 60%'), transparent 75%);
+  }
+
+  /* Loading placeholder with a slow gold shimmer. The shimmer is a
+     pseudo-element moved by transform, so it never repaints the block. */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: theme('colors.border');
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 30%, theme('colors.gold / 10%') 50%, transparent 70%);
+    transform: translateX(-100%);
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+}
+
+@layer utilities {
+  /* Swipeable rows (category chips/tiles) — keep the swipe, hide the bar. */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -102,14 +168,67 @@
   from { transform: translateX(100%); }
   to   { transform: translateX(0); }
 }
+/*
+ * Continuous animations only touch transform and opacity, which the GPU
+ * composites without repainting — important on low-end phones.
+ */
+@keyframes drift {
+  from { transform: translate3d(-6%, -4%, 0) scale(1.2); }
+  to   { transform: translate3d(6%, 4%, 0) scale(1.2); }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 1; }
+}
+@keyframes shimmer {
+  to { transform: translateX(100%); }
+}
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: none; }
+}
 
 .animate-fadeIn      { animation: fadeIn 0.3s ease-out both; }
 .animate-fade        { animation: fadeOnly 0.3s ease-out both; }
 .animate-scaleIn     { animation: scaleIn 0.2s ease-out both; }
 .animate-slideInRight{ animation: slideInRight 0.3s ease-out both; }
+.animate-drift       { animation: drift 18s ease-in-out infinite alternate; will-change: transform; }
+
+/* Leaf glow that breathes: a static shadow on a pseudo-element whose opacity
+   pulses. Use on a statically positioned element (it adds position: relative). */
+.animate-glow-leaf { position: relative; }
+.animate-glow-leaf::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: theme('boxShadow.glow-leaf');
+  opacity: 0;
+  pointer-events: none;
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+/*
+ * Scroll reveal: sections rise into view as they scroll on screen. Pure CSS
+ * (scroll-driven animation), so there's no JavaScript cost on low-end phones
+ * and nothing can get stuck invisible — browsers without support, and anyone
+ * with reduced motion on, simply see the content. Never put .reveal on an
+ * element that contains a sticky/fixed child: the transform would break it.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: revealUp linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-fadeIn, .animate-fade, .animate-scaleIn, .animate-slideInRight {
+  .animate-fadeIn, .animate-fade, .animate-scaleIn, .animate-slideInRight,
+  .animate-drift, .animate-glow-leaf::after, .skeleton::after {
     animation: none;
   }
+  .skeleton::after { display: none; }
 }

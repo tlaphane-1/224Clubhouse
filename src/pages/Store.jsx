@@ -30,35 +30,40 @@ export default function Store() {
   }
 
   return (
-    <div className="min-h-screen pt-28 pb-20">
+    <div className="min-h-screen pt-24 md:pt-28 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div
-          className="mb-12 animate-fadeIn"
-        >
+        <div className="mb-5 md:mb-8 animate-fadeIn">
           <p className="text-gold text-xs uppercase tracking-[0.4em] mb-2">Shop</p>
-          <h1 className="font-heading text-4xl md:text-5xl font-bold text-white mb-2">The Store</h1>
-          <p className="text-muted">Members' Selection</p>
+          <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-1 md:mb-2">The Store</h1>
+          <p className="text-muted text-sm md:text-base">Members' selection, delivered to your door</p>
         </div>
 
-        {/* Search + Filter */}
-        <div className="space-y-6 mb-10">
-          {/* Search */}
-          <div className="relative max-w-md">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-            <input
-              className="input-base pl-11 text-sm"
-              placeholder="Search products..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
+        {/* Search */}
+        <div className="relative max-w-md">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            type="search"
+            inputMode="search"
+            enterKeyHint="search"
+            aria-label="Search products"
+            className="input-base pl-11 text-sm"
+            placeholder="Search products..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
 
-          {/* Categories */}
+      {/* Categories — pinned under the navbar (h-16 / md:h-20) while scrolling,
+          so a phone shopper can switch category without scrolling back up. */}
+      <div className="sticky top-16 md:top-20 z-30 mt-3 mb-5 md:mb-8 bg-background/90 backdrop-blur-md border-b border-border">
+        <div className="max-w-7xl mx-auto">
           <CategoryFilter active={category} onChange={handleCategoryChange} />
-          <div className="h-px bg-border" />
         </div>
+      </div>
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Grid */}
         {isError ? (
           <div className="bg-surface border border-red-500/20 rounded-2xl p-8 text-center max-w-md mx-auto animate-fadeIn">
