@@ -26,7 +26,7 @@ export default function Footer() {
           <div>
             <img src={BRAND_IMAGES.logoWide} alt="224 Clubhouse" className="h-10 w-auto object-contain mb-4" />
             <p className="text-muted text-sm leading-relaxed max-w-xs">
-              A private cannabis lifestyle lounge where good people and great energy meet. Members only. Elevated always.
+              A private cannabis members' club. Premium cannabis, delivered to your door. Members only. Elevated always.
             </p>
             <div className="flex gap-4 mt-6">
               <a

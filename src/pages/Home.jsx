@@ -37,7 +37,7 @@ export default function Home() {
   const [subLoading, setSubLoading] = useState(false)
 
   useEffect(() => {
-    document.title = '224 Clubhouse | Private Cannabis Lifestyle Lounge'
+    document.title = "224 Clubhouse | Private Cannabis Members' Club"
   }, [])
 
   const handleSubscribe = async (e) => {

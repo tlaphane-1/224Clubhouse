@@ -17,7 +17,7 @@ const timeline = [
   {
     year: '2025',
     title: '224 Clubhouse',
-    description: 'April 2025. The culmination of years of experience and community building — 224 Clubhouse opens its doors as a private, members-based lifestyle lounge at 224 Rondebult Road, Boksburg.',
+    description: 'April 2025. The culmination of years of experience and community building — 224 Clubhouse opens its doors as a private, members-based club at 224 Rondebult Road, Boksburg.',
   },
 ]
 
