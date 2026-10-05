@@ -8,11 +8,13 @@ import { useMyMembership } from '../hooks/useMyMembership'
 import { memberPurchaseGate } from '../utils/memberGate'
 import Badge from '../components/ui/Badge'
 import ProductCard from '../components/store/ProductCard'
+import ProductReviews from '../components/store/ProductReviews'
 import StickyActionBar from '../components/ui/StickyActionBar'
 import { formatZAR } from '../utils/formatCurrency'
 import { SHIPPING_FEE } from '../utils/shipping'
 import { toastAddedToCart } from '../utils/cartToast'
 import BrandLogo from '../components/ui/BrandLogo'
+import { purchasableVariants, hasVariants, toCartItem } from '../utils/variants'
 
 export default function ProductDetail() {
   const { slug } = useParams()
@@ -23,6 +25,8 @@ export default function ProductDetail() {
   const membership = useMyMembership()
   const [quantity, setQuantity] = useState(1)
   const [imageIndex, setImageIndex] = useState(0)
+  // The shopper's pick; null = the default option (first one in stock).
+  const [chosenVariantId, setChosenVariantId] = useState(null)
 
   useEffect(() => {
     if (product) document.title = `${product.name} | 224 Clubhouse`
@@ -68,13 +72,32 @@ export default function ProductDetail() {
   // member never sees a "join" flash.
   const memberLocked = memberPurchaseGate(user, membership).isLocked(product)
 
+  // Options: price and stock follow the chosen option. A product whose every
+  // option is switched off reads as unavailable (the server would reject a
+  // plain line for it — see hasVariants).
+  const withOptions = hasVariants(product)
+  const options = purchasableVariants(product)
+  const variant = withOptions
+    ? (options.find(v => v.id === chosenVariantId)
+        ?? options.find(v => v.stock_quantity > 0)
+        ?? options[0]
+        ?? null)
+    : null
+  const unitPrice = variant ? variant.price : product.price
+  const stock = withOptions ? (variant?.stock_quantity ?? 0) : product.stock_quantity
+
+  const chooseVariant = (id) => {
+    setChosenVariantId(id)
+    setQuantity(1) // the old quantity may exceed the new option's stock
+  }
+
   const handleAddToCart = () => {
-    addItem(product, quantity)
-    toastAddedToCart(product.name, membership.effectiveStatus === 'active')
+    addItem(toCartItem(product, variant), quantity)
+    toastAddedToCart(variant ? `${product.name} — ${variant.label}` : product.name, membership.effectiveStatus === 'active')
   }
 
   const isMember = membership.effectiveStatus === 'active'
-  const inStock = product.stock_quantity > 0
+  const inStock = stock > 0
 
   // One purchase control, rendered in two places: inline from md up, and in a
   // bar pinned to the bottom of the screen on phones (within thumb reach, and
@@ -88,7 +111,7 @@ export default function ProductDetail() {
   ) : inStock ? (
     <button type="button" onClick={handleAddToCart} className="btn-gold w-full py-4 flex items-center justify-center gap-3">
       <ShoppingCart size={18} />
-      Add to Cart — {formatZAR(product.price * quantity)}
+      Add to Cart — {formatZAR(unitPrice * quantity)}
     </button>
   ) : (
     <div className="btn-outline w-full py-4 text-center opacity-50 cursor-not-allowed">Out of Stock</div>
@@ -189,7 +212,7 @@ export default function ProductDetail() {
               </div>
             )}
 
-            <div className="text-gold font-bold text-3xl md:text-4xl mb-3">{formatZAR(product.price)}</div>
+            <div className="text-gold font-bold text-3xl md:text-4xl mb-3">{formatZAR(unitPrice)}</div>
 
             {/* Delivery note — the membership nudge where it matters most */}
             <p className="flex items-start gap-2 text-sm mb-6">
@@ -220,6 +243,38 @@ export default function ProductDetail() {
               </div>
             )}
 
+            {withOptions && options.length > 0 && (
+              <fieldset className="mb-5">
+                <legend className="text-muted text-xs uppercase tracking-widest mb-2">Choose an option</legend>
+                <div className="flex flex-wrap gap-2">
+                  {options.map(v => {
+                    const selected = v.id === variant?.id
+                    const soldOut = v.stock_quantity < 1
+                    return (
+                      <label
+                        key={v.id}
+                        className={`chip cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-gold
+                                    has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background
+                                    ${selected ? 'chip-active' : 'chip-idle'} ${soldOut ? 'opacity-50' : ''}`}
+                      >
+                        <input
+                          type="radio"
+                          name="product-option"
+                          value={v.id}
+                          checked={selected}
+                          onChange={() => chooseVariant(v.id)}
+                          className="sr-only"
+                        />
+                        <span>{v.label}</span>
+                        <span className={selected ? 'text-black/70' : 'text-gold'}>{formatZAR(v.price)}</span>
+                        {soldOut && <span className="text-xs">· sold out</span>}
+                      </label>
+                    )
+                  })}
+                </div>
+              </fieldset>
+            )}
+
             {!memberLocked && inStock && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6">
                 <span className="text-muted text-xs uppercase tracking-widest">Quantity</span>
@@ -237,14 +292,14 @@ export default function ProductDetail() {
                   <button
                     type="button"
                     aria-label="Increase quantity"
-                    disabled={quantity >= product.stock_quantity}
-                    onClick={() => setQuantity(q => Math.min(product.stock_quantity, q + 1))}
+                    disabled={quantity >= stock}
+                    onClick={() => setQuantity(q => Math.min(stock, q + 1))}
                     className="focus-ring rounded-lg w-11 h-11 flex items-center justify-center text-lg text-muted hover:text-white active:scale-90 disabled:opacity-40 transition-all"
                   >
                     +
                   </button>
                 </div>
-                <span className="text-muted text-xs">{product.stock_quantity} in stock</span>
+                <span className="text-muted text-xs">{stock} in stock</span>
               </div>
             )}
 
@@ -260,6 +315,8 @@ export default function ProductDetail() {
       <StickyActionBar hideFrom="md" className="mt-6">
         {purchaseAction}
       </StickyActionBar>
+
+      <ProductReviews productId={product.id} />
 
       {/* Related Products */}
       {related && related.length > 0 && (

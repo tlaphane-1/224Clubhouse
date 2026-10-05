@@ -1,5 +1,6 @@
+import { lineName } from '../../utils/variants'
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
+import { ChevronDown, ChevronRight, AlertTriangle, FileText } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import Badge from '../../components/ui/Badge'
 import { useOrders, useUpdateOrderStatus } from '../../hooks/useOrders'
@@ -188,6 +189,15 @@ export default function Orders() {
                           <p className="text-muted">Order #: <span className="text-white">{order.order_number || order.id.slice(0, 8)}</span></p>
                           <p className="text-muted">Payment: <span className="text-white">{paymentLabel(order.payment_method)}</span></p>
                           <p className="text-muted">Phone: <span className="text-white">{order.customer_phone}</span></p>
+                          <a
+                            href={`/orders/${order.id}/invoice`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 min-h-11 text-gold hover:text-gold-light text-xs uppercase tracking-widest"
+                          >
+                            <FileText size={14} />
+                            Invoice
+                          </a>
                           {order.paystack_reference && (
                             <p className="text-muted">Ref: <span className="font-mono text-gold text-xs">{order.paystack_reference}</span></p>
                           )}
@@ -198,7 +208,7 @@ export default function Orders() {
                         <div className="space-y-2">
                           {order.items?.map((item, i) => (
                             <div key={i} className="flex justify-between text-sm">
-                              <span className="text-white">{item.name} <span className="text-muted">×{item.quantity}</span></span>
+                              <span className="text-white">{lineName(item)} <span className="text-muted">×{item.quantity}</span></span>
                               <span className="text-white">{formatZAR(item.price * item.quantity)}</span>
                             </div>
                           ))}

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { formatZAR } from '../../utils/formatCurrency'
 import { SHIPPING_THRESHOLD, SHIPPING_FEE, shippingFeeFor } from '../../utils/shipping'
 import BrandLogo from '../ui/BrandLogo'
+import { cartLineKey, lineName } from '../../utils/variants'
 
 export { SHIPPING_THRESHOLD, SHIPPING_FEE }
 
@@ -37,7 +38,7 @@ export default function OrderSummary({
       {/* Items */}
       <div className="space-y-3 mb-5">
         {items.map(item => (
-          <div key={item.id} className="flex items-center gap-3">
+          <div key={cartLineKey(item)} className="flex items-center gap-3">
             <div className="w-12 h-12 bg-background rounded-lg flex-shrink-0 overflow-hidden">
               {item.images?.[0] ? (
                 <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
@@ -48,7 +49,7 @@ export default function OrderSummary({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm truncate">{item.name}</p>
+              <p className="text-white text-sm truncate">{lineName(item)}</p>
               <p className="text-muted text-xs">Qty: {item.quantity}</p>
             </div>
             <span className="text-white text-sm font-semibold flex-shrink-0">

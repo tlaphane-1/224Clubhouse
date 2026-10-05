@@ -12,6 +12,7 @@
  * component level (WhatsAppOrderPanel) — never inside these utils.
  */
 import { formatZAR } from './formatCurrency'
+import { lineName } from './variants'
 
 /**
  * Digits-only number -> wa.me deep link. An optional `text` prefills the
@@ -38,7 +39,7 @@ export function composeOrderMessage({ items, mode, name, address, note }) {
   const out = ['*224 Clubhouse order*', '']
 
   for (const i of items) {
-    out.push(`${i.quantity}× ${i.name} — ${formatZAR(i.price * i.quantity)}`)
+    out.push(`${i.quantity}× ${lineName(i)} — ${formatZAR(i.price * i.quantity)}`)
   }
 
   out.push('', `*Total: ${formatZAR(subtotal)}*`, '')

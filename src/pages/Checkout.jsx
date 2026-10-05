@@ -165,7 +165,10 @@ export default function Checkout() {
         province: checkoutForm.province,
         postalCode: checkoutForm.postalCode,
       },
-      p_items: items.map(i => ({ id: i.id, quantity: i.quantity })),
+      // variant_id only for products sold in options; the server prices the option.
+      p_items: items.map(i => (i.variant_id
+        ? { id: i.id, variant_id: i.variant_id, quantity: i.quantity }
+        : { id: i.id, quantity: i.quantity })),
       p_payment_method: method,
       // Code only — never an amount. The server recomputes what it's worth.
       p_discount_code: discount.applied?.code ?? null,

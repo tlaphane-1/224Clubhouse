@@ -117,6 +117,11 @@ export default function Products() {
                       <span className={product.stock_quantity === 0 ? 'text-red-400' : 'text-white'}>
                         {product.stock_quantity}
                       </span>
+                      {product.product_variants?.length > 0 && (
+                        <span className="block text-muted text-xs">
+                          {product.product_variants.length} option{product.product_variants.length === 1 ? '' : 's'}
+                        </span>
+                      )}
                     </td>
                     <td className="p-4 text-center">
                       <button

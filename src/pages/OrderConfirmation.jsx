@@ -1,3 +1,4 @@
+import { lineName } from '../utils/variants'
 import { useEffect } from 'react'
 import { useLocation, Link } from 'react-router-dom'
 import { CheckCircle, Package, Truck } from 'lucide-react'
@@ -80,9 +81,9 @@ export default function OrderConfirmation() {
             <h3 className="text-white font-semibold text-sm uppercase tracking-widest mb-4">Items Ordered</h3>
             <div className="space-y-3">
               {items.map((item, i) => (
-                <div key={item.id ?? i} className="flex justify-between text-sm">
+                <div key={`${item.id ?? ''}-${item.variant_id ?? ''}-${i}`} className="flex justify-between text-sm">
                   <div>
-                    <span className="text-white">{item.name}</span>
+                    <span className="text-white">{lineName(item)}</span>
                     <span className="text-muted ml-2">× {item.quantity}</span>
                   </div>
                   <span className="text-white">{formatZAR(item.price * item.quantity)}</span>
