@@ -49,13 +49,11 @@ about to be opened.
 Each live contract suite passes on its own, but a full combined run occasionally times out. Being
 fixed. (The earlier cross-run fixture collision was fixed in `a65108d`; this is a separate issue.)
 
-### 3.2 Pre-existing lint errors
-`npm run lint` reports **10 errors** (unused vars, `react-refresh/only-export-components`), all
-unrelated to recent work.
+### 3.2 ~~Pre-existing lint errors~~ — resolved
+`npm run lint` is clean as of 2026-10-05.
 
-### 3.3 `docs/DESIGN_SYSTEM.md` does not exist
-`CLAUDE.md` says to read it before any UI work and treat it as authoritative, but the file is not
-in the repo. Either write it or drop the reference.
+### 3.3 ~~`docs/DESIGN_SYSTEM.md` does not exist~~ — resolved
+It exists (written 2026-10-02/03).
 
 ---
 
@@ -86,6 +84,20 @@ business stores **SA ID numbers** — keep POPIA in mind for any change touching
   `scripts/build-auth-email-templates.mjs`.
 - **Membership form PDF** (on letterhead) lives in `docs/membership-form/`, built by
   `scripts/build-membership-form.mjs`.
+- **Store upgrades (2026-10-05, `tasks/store-upgrades.md`):**
+  - *Product options:* add them in Admin → Products → edit → Options. While a product has options,
+    its price (cheapest available option) and stock (total) are set by a trigger, so those fields lock.
+  - *Cart reminders:* pg_cron job `send-cart-reminders` (hourly at :17) posts to the Edge Function
+    of the same name, deployed with `--no-verify-jwt`. It authenticates with the Vault secret
+    `cart_reminders_cron_secret`, which must equal the function secret `CRON_SECRET`. To rotate
+    the secret, update both. Job runs are in `cron.job_run_details`, HTTP results in
+    `net._http_response`. `purge-saved-carts` deletes carts daily, 30 days after their last change.
+    The function URL is hardcoded in the migration: change it there if the project ref ever changes.
+  - *Reviews:* moderated at Admin → Reviews; nothing shows until published.
+  - *SEO:* `npm run build` runs `scripts/prerender-seo.mjs`, so product/event link previews only
+    refresh on a deploy. The default share image is the small white logo; a 1200×630 dark-background
+    brand image would preview much better (owner to supply).
+  - *Invoices:* `/orders/:id/invoice`, "Invoice" not "Tax invoice" (no VAT number on record).
 - **Account gates before any deploy** (see `CLAUDE.md`): `gh auth status` must be `tlaphane-1`,
   `firebase login:list` must be `tlaphane@gmail.com`, and the Supabase project ref is
   `aogdkqczvlffgydgxsmz`.

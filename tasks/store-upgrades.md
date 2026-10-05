@@ -25,16 +25,26 @@ Branch: `feature/store-upgrades`.
 
 ## Checklist
 
-- [ ] 1 Variants — migration, RPC, restock, admin form, product page, cart, emails, tests
-- [ ] 2 Reports — `/admin/reports`, low-stock on dashboard, orders CSV
-- [ ] 3 Abandoned cart — table + RLS, cart sync, edge function, cron, opt-out, tests
-- [ ] 4 SEO — prerender script, sitemap, robots, build wiring
-- [ ] 5 Invoices — invoice page, links from order detail + admin orders
-- [ ] 6 Reviews — table + RPCs, product page section, admin moderation, tests
-- [ ] lint + build + contract tests
-- [ ] account checks, `supabase db push`, functions deploy, Firebase preview → live
-- [ ] PR + merge; update OPEN_ITEMS.md
+- [x] 1 Variants — migration, RPC, restock, admin form, product page, cart, emails, tests
+- [x] 2 Reports — `/admin/reports`, low-stock on dashboard, orders CSV
+- [x] 3 Abandoned cart — table + RLS, cart sync, edge function, cron, opt-out, tests
+- [x] 4 SEO — prerender script, sitemap, robots, build wiring
+- [x] 5 Invoices — invoice page, links from order detail + admin orders
+- [x] 6 Reviews — table + RPCs, product page section, admin moderation, tests
+- [x] lint + build + contract tests
+- [x] account checks, `supabase db push`, functions deploy, Firebase preview
+- [ ] Firebase live deploy, PR + merge (in progress)
 
 ## Review
 
-(filled in at the end)
+- Migrations dry-run inside a rolled-back transaction on the live DB, then pushed.
+- `storeUpgrades.contract.test.js`: 14/14 live tests pass (variants pricing/stock/restock, cart
+  RLS + reminded_at pinning + claim is service-only, review gating + public RPC field whitelist +
+  anon negative control). Full contract run: 114 passed; 1 newsletter test hit the known 90s
+  network-freeze timeout (OPEN_ITEMS §3.1) and passed on re-run.
+- Cron path verified end to end: no secret → 401; cron-style call → 200 `{claimed:0}`.
+- Preview channel: SEO pages 200 with no redirect, per-product title/og:image; storefront pages
+  have no horizontal scroll at 360/390px.
+- NOT verified in a browser: admin screens (Reports, Reviews, product Options editor) and the
+  invoice print layout — they need a signed-in admin/customer. No product has options yet, so the
+  option picker has only been exercised by unit + contract tests.
