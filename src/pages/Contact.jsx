@@ -38,8 +38,8 @@ const INFO = [
   {
     icon: Mail,
     label: 'Email',
-    lines: ['team@224clubhouse.co.za'],
-    action: { label: 'Send Email', href: 'mailto:team@224clubhouse.co.za' },
+    lines: ['224clubhouse@gmail.com'],
+    action: { label: 'Send Email', href: 'mailto:224clubhouse@gmail.com' },
   },
   {
     icon: Clock,
@@ -74,7 +74,7 @@ export default function Contact() {
       })
 
       if (error) {
-        toast.error('Something went wrong. Please email us directly at team@224clubhouse.co.za')
+        toast.error('Something went wrong. Please email us directly at 224clubhouse@gmail.com')
       } else {
         toast.success('Message sent! We\'ll get back to you within 1–2 business days.', {
           duration: 5000,
@@ -83,7 +83,7 @@ export default function Contact() {
         setForm({ name: '', email: '', subject: '', message: '' })
       }
     } catch {
-      toast.error('Something went wrong. Please email us directly at team@224clubhouse.co.za')
+      toast.error('Something went wrong. Please email us directly at 224clubhouse@gmail.com')
     } finally {
       setLoading(false)
     }
