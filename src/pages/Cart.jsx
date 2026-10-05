@@ -121,9 +121,9 @@ export default function Cart() {
                     <div className="flex items-start gap-1">
                       <Link
                         to={`/store/${item.slug}`}
-                        className="focus-ring rounded flex-1 min-w-0 py-3 -my-3 text-white font-semibold text-sm sm:text-base leading-snug line-clamp-2 hover:text-gold transition-colors"
+                        className="focus-ring rounded flex-1 min-w-0 py-3 -my-3 text-white font-semibold text-sm sm:text-base leading-snug hover:text-gold transition-colors"
                       >
-                        {item.name}
+                        <span className="line-clamp-2">{item.name}</span>
                         {item.variant_label && <span className="block text-muted text-xs font-normal mt-0.5">{item.variant_label}</span>}
                       </Link>
                       <button

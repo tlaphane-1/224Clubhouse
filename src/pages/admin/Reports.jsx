@@ -147,6 +147,9 @@ function RevenueChart({ buckets, rangeLabel }) {
               <div key={t} aria-hidden="true" className="absolute inset-x-0 h-px bg-border" style={{ top: `${100 - pct(t)}%` }} />
             ))}
             <div className="absolute inset-0 flex items-end gap-0.5" onMouseLeave={() => setActive(null)}>
+              {/* Bars are a pointer convenience (hover/tap readout). Keyboard and
+                  screen-reader users get the same data from the "Show table"
+                  toggle, so the bars stay plain divs. */}
               {buckets.map((b, i) => {
                 const hasOther = b.other > 0
                 const hasDelivered = b.delivered > 0

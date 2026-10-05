@@ -253,7 +253,7 @@ export default function ProductDetail() {
                     return (
                       <label
                         key={v.id}
-                        className={`chip cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-gold
+                        className={`chip whitespace-normal h-auto min-h-11 py-2 text-left max-w-full cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-gold
                                     has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background
                                     ${selected ? 'chip-active' : 'chip-idle'} ${soldOut ? 'opacity-50' : ''}`}
                       >

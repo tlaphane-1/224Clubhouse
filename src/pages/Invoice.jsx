@@ -22,7 +22,7 @@ const BUSINESS = {
 export default function Invoice() {
   const { id } = useParams()
   const { user, isAdmin, loading: authLoading } = useAuth()
-  const { data: order, isLoading, isError } = useInvoiceOrder(id)
+  const { data: order, isLoading, isError, refetch } = useInvoiceOrder(id)
 
   useEffect(() => {
     document.title = order?.order_number
@@ -39,7 +39,7 @@ export default function Invoice() {
   }
 
   if (!user || isError || !order) {
-    return <InvoiceUnavailable signedOut={!user} failed={!!user && isError} />
+    return <InvoiceUnavailable signedOut={!user} failed={!!user && isError} onRetry={refetch} />
   }
 
   // An admin opening another customer's invoice (from /admin/orders) can't use
@@ -68,7 +68,7 @@ export default function Invoice() {
             <Download size={14} />
             Download PDF
           </button>
-          <p className="text-muted text-[11px]">In the print dialog, choose “Save as PDF”.</p>
+          <p className="text-muted text-xs">In the print dialog, choose “Save as PDF”.</p>
         </div>
       </div>
 
@@ -77,7 +77,7 @@ export default function Invoice() {
   )
 }
 
-function InvoiceUnavailable({ signedOut, failed }) {
+function InvoiceUnavailable({ signedOut, failed, onRetry }) {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-surface border border-border rounded-2xl p-8 text-center">
@@ -100,9 +100,16 @@ function InvoiceUnavailable({ signedOut, failed }) {
               ? 'Please try again in a moment.'
               : 'It may belong to a different account, or the link is out of date.'}
         </p>
-        <Link to="/orders" className="btn-gold px-6 py-3 text-xs uppercase tracking-widest">
-          Go to My Orders
-        </Link>
+        <div className="flex flex-wrap justify-center gap-3">
+          {failed && (
+            <button type="button" onClick={() => onRetry()} className="btn-outline px-6 h-11 text-xs uppercase tracking-widest">
+              Retry
+            </button>
+          )}
+          <Link to="/orders" className="btn-gold px-6 py-3 text-xs uppercase tracking-widest">
+            Go to My Orders
+          </Link>
+        </div>
       </div>
     </div>
   )
@@ -140,7 +147,7 @@ function InvoiceSheet({ order }) {
   })
 
   return (
-    <article className="max-w-[210mm] mx-auto bg-white text-black rounded-md shadow-xl p-5 sm:p-10 text-xs sm:text-sm print:max-w-none print:rounded-none print:shadow-none print:p-0 print:text-sm">
+    <article className="max-w-[210mm] mx-auto bg-white text-black rounded-lg shadow-xl p-5 sm:p-10 text-xs sm:text-sm print:max-w-none print:rounded-none print:shadow-none print:p-0 print:text-sm">
       {/* Seller + title */}
       <header className="flex flex-col sm:flex-row print:flex-row sm:items-start sm:justify-between gap-4 pb-6 border-b border-neutral-300">
         <div>
@@ -158,7 +165,7 @@ function InvoiceSheet({ order }) {
               registration number on record, so a tax invoice would be invalid. */}
           <h1 className="font-heading text-2xl sm:text-3xl font-bold uppercase tracking-wide">Invoice</h1>
           {cancelled && (
-            <p className="mt-1 inline-block border border-black px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest">
+            <p className="mt-1 inline-block border border-black px-2 py-0.5 text-xs font-bold uppercase tracking-widest">
               Cancelled
             </p>
           )}
@@ -177,7 +184,7 @@ function InvoiceSheet({ order }) {
 
       {/* Bill to */}
       <section className="py-6 border-b border-neutral-300">
-        <h2 className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500 mb-2">Bill to</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-neutral-500 mb-2">Bill to</h2>
         <p className="font-semibold">{customer_name}</p>
         <p className="text-neutral-700 break-all">{customer_email}</p>
         {customer_phone && <p className="text-neutral-700">{customer_phone}</p>}
@@ -194,7 +201,7 @@ function InvoiceSheet({ order }) {
       {/* Line items. On a phone the unit-price column folds under the name. */}
       <table className="w-full mt-6 border-collapse">
         <thead>
-          <tr className="border-b border-neutral-400 text-left text-[11px] uppercase tracking-widest text-neutral-500">
+          <tr className="border-b border-neutral-400 text-left text-xs uppercase tracking-widest text-neutral-500">
             <th scope="col" className="py-2 pr-2 font-semibold">Item</th>
             <th scope="col" className="py-2 px-2 font-semibold text-right">Qty</th>
             <th scope="col" className="py-2 px-2 font-semibold text-right hidden sm:table-cell print:table-cell">Unit price</th>
@@ -246,7 +253,7 @@ function InvoiceSheet({ order }) {
 
       <footer className="mt-10 pt-4 border-t border-neutral-300 text-center text-neutral-600 space-y-1">
         <p className="font-semibold text-black">Thank you for your order</p>
-        <p className="text-[11px]">Not for persons under 21</p>
+        <p className="text-xs">Not for persons under 21</p>
       </footer>
     </article>
   )

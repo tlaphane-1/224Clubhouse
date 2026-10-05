@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { useAuth } from '../../context/useAuth'
 import { useProductReviews, useMyReviewStatus, useSubmitReview } from '../../hooks/useProductReviews'
 import { Stars, StarPicker } from './StarRating'
+import { focusField } from '../../utils/focusField'
 
 const dateFmt = new Intl.DateTimeFormat('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })
 
@@ -42,7 +43,7 @@ export default function ProductReviews({ productId }) {
             <div className="bg-surface border border-red-500/20 rounded-2xl p-6 text-center">
               <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
               <p className="text-white text-sm mb-4">Reviews couldn't be loaded.</p>
-              <button type="button" onClick={() => refetch()} className="btn-gold text-sm">Retry</button>
+              <button type="button" onClick={() => refetch()} className="btn-outline text-sm px-5 h-11">Retry</button>
             </div>
           )}
 
@@ -86,6 +87,7 @@ function ReviewForm({ productId, existing }) {
   const [body, setBody] = useState(existing?.body ?? '')
   const [displayName, setDisplayName] = useState(existing?.display_name ?? '')
   const [editing, setEditing] = useState(!existing)
+  const [ratingMissing, setRatingMissing] = useState(false)
   const submit = useSubmitReview(productId)
 
   if (existing && !editing) {
@@ -99,7 +101,7 @@ function ReviewForm({ productId, existing }) {
           {existing.status === 'pending' && <><Clock size={12} /> Waiting for approval</>}
           {existing.status === 'rejected' && <span className="text-red-400">Not published</span>}
         </p>
-        <button type="button" onClick={() => setEditing(true)} className="btn-outline text-xs uppercase tracking-widest px-4 py-2 mt-4">
+        <button type="button" onClick={() => setEditing(true)} className="btn-outline text-xs uppercase tracking-widest px-4 h-11 mt-4">
           Edit review
         </button>
       </div>
@@ -109,7 +111,9 @@ function ReviewForm({ productId, existing }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (rating < 1) {
+      setRatingMissing(true)
       toast.error('Please choose a star rating')
+      focusField('review-rating')
       return
     }
     try {
@@ -126,7 +130,10 @@ function ReviewForm({ productId, existing }) {
       <h3 className="text-white font-semibold text-sm uppercase tracking-widest">
         {existing ? 'Edit your review' : 'Write a review'}
       </h3>
-      <StarPicker value={rating} onChange={setRating} />
+      <div id="review-rating" tabIndex={-1} aria-invalid={ratingMissing || undefined} aria-describedby={ratingMissing ? 'review-rating-error' : undefined}>
+        <StarPicker value={rating} onChange={(n) => { setRating(n); setRatingMissing(false) }} />
+        {ratingMissing && <p id="review-rating-error" className="text-red-400 text-xs mt-1">Choose 1 to 5 stars</p>}
+      </div>
       <div>
         <label htmlFor="review-body" className="block text-muted text-xs uppercase tracking-widest mb-1.5">Your review</label>
         <textarea

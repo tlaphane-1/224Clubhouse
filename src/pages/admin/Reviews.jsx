@@ -59,7 +59,7 @@ export default function AdminReviews() {
     <AdminLayout>
       <div className="flex items-center gap-3 mb-2">
         <Star size={22} className="text-gold" />
-        <h1 className="font-heading text-2xl font-bold text-white">Reviews</h1>
+        <h1 className="font-heading text-3xl font-bold text-white">Reviews</h1>
       </div>
       <p className="text-muted text-sm mb-6 max-w-2xl">
         Only customers with a delivered order can review a product, and nothing appears on the store
@@ -112,7 +112,7 @@ export default function AdminReviews() {
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     <Stars value={r.rating} size={14} />
                     <span className="text-muted text-xs">by {r.display_name}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_PILL[r.status]}`}>{r.status}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_PILL[r.status]}`}>{FILTERS.find(f => f.key === r.status)?.label ?? r.status}</span>
                   </div>
                 </div>
                 <p className="text-muted text-xs flex-shrink-0">{formatDate(r.updated_at ?? r.created_at)}</p>

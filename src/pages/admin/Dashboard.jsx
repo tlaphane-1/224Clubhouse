@@ -11,7 +11,7 @@ import { lowStockItems } from '../../utils/salesReport'
 
 export default function Dashboard() {
   const { data: orders, isError, refetch } = useOrders()
-  const { data: products } = useAllProducts()
+  const { data: products, isError: productsError, refetch: refetchProducts } = useAllProducts()
 
   useEffect(() => {
     document.title = 'Dashboard | 224 Admin'
@@ -46,6 +46,13 @@ export default function Dashboard() {
         />
         <StatsCard title="Pending Orders" value={pendingOrders} icon={Clock} />
       </div>
+
+      {productsError && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-8 flex items-center justify-between gap-3">
+          <p className="text-white text-sm">Stock levels couldn't be loaded, so low stock can't be checked.</p>
+          <button type="button" onClick={() => refetchProducts()} className="btn-outline text-sm px-4 h-11 shrink-0">Retry</button>
+        </div>
+      )}
 
       {/* Low stock (on-sale products or variants with 5 or fewer left) */}
       {lowStock.length > 0 && (
