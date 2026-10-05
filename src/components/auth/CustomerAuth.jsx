@@ -145,7 +145,7 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
         <button
           type="button"
           onClick={() => setMode('signin')}
-          className={`py-2.5 text-xs uppercase tracking-widest rounded-lg border transition-colors ${
+          className={`focus-ring h-11 text-xs uppercase tracking-widest rounded-lg border transition-all active:scale-95 ${
             !isSignup ? 'border-gold text-gold bg-gold/5' : 'border-border text-muted hover:text-white'
           }`}
         >
@@ -154,7 +154,7 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
         <button
           type="button"
           onClick={() => setMode('signup')}
-          className={`py-2.5 text-xs uppercase tracking-widest rounded-lg border transition-colors ${
+          className={`focus-ring h-11 text-xs uppercase tracking-widest rounded-lg border transition-all active:scale-95 ${
             isSignup ? 'border-gold text-gold bg-gold/5' : 'border-border text-muted hover:text-white'
           }`}
         >
@@ -164,8 +164,9 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
 
       <form onSubmit={isSignup ? handleSignUp : handleSignIn} className="space-y-4">
         <div>
-          <label className={labelCls}>Email Address</label>
+          <label htmlFor="auth-email" className={labelCls}>Email Address</label>
           <input
+            id="auth-email"
             type="email"
             required
             className={inputCls}
@@ -176,8 +177,9 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
           />
         </div>
         <div>
-          <label className={labelCls}>Password</label>
+          <label htmlFor="auth-password" className={labelCls}>Password</label>
           <input
+            id="auth-password"
             type="password"
             required
             className={inputCls}
@@ -187,11 +189,11 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
             autoComplete={isSignup ? 'new-password' : 'current-password'}
           />
           {!isSignup && (
-            <div className="text-right mt-1.5">
+            <div className="text-right">
               <button
                 type="button"
                 onClick={() => setMode('forgot')}
-                className="text-muted hover:text-gold text-xs transition-colors"
+                className="focus-ring rounded-lg inline-flex items-center h-11 text-muted hover:text-gold text-xs transition-colors"
               >
                 Forgot password?
               </button>
@@ -200,8 +202,9 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
         </div>
         {isSignup && (
           <div>
-            <label className={labelCls}>Confirm Password</label>
+            <label htmlFor="auth-confirm" className={labelCls}>Confirm Password</label>
             <input
+              id="auth-confirm"
               type="password"
               required
               className={inputCls}

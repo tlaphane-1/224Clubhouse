@@ -2,19 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Star, Mail, Truck, Sparkles, Crown, AlertTriangle } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
-import { useMembershipTiers } from '../hooks/useMembershipTiers'
+import { useCheapestTier } from '../hooks/useMembershipTiers'
 import { CATEGORIES } from '../components/store/categories'
-import { formatZAR } from '../utils/formatCurrency'
+import { formatTierPrice } from '../utils/tierPrice'
 import { supabase } from '../lib/supabase'
 import ProductGrid from '../components/store/ProductGrid'
 import toast from 'react-hot-toast'
 import { HIGHLIGHT_TOAST_STYLE } from '../utils/toastTheme'
 import { BRAND_IMAGES } from '../hooks/useStorageImages'
-
-// Whole-rand prices read as "R10", matching the membership page.
-function tierPrice(cents) {
-  return cents % 100 === 0 ? `R${cents / 100}` : formatZAR(cents)
-}
 
 const reviews = [
   {
@@ -35,12 +30,8 @@ export default function Home() {
   const { data: products, isLoading, isError, refetch } = useProducts()
   const featuredProducts = products?.slice(0, 4)
   // Cheapest active tier for the membership band. While loading (or if the
-  // read fails) the button simply says "Become a Member" — no price is shown
-  // rather than a stale hardcoded one.
-  const { data: tiers } = useMembershipTiers()
-  const cheapestTier = tiers?.length
-    ? tiers.reduce((min, t) => (t.price_cents < min.price_cents ? t : min))
-    : null
+  // read fails) the button simply says "Become a Member".
+  const cheapestTier = useCheapestTier()
   const [newsletter, setNewsletter] = useState({ firstName: '', lastName: '', email: '' })
   const [subLoading, setSubLoading] = useState(false)
 
@@ -233,7 +224,7 @@ export default function Home() {
               to="/membership"
               className="btn-gold w-full md:w-auto flex-shrink-0 px-8 py-4 text-sm uppercase tracking-widest"
             >
-              {cheapestTier ? `Join from ${tierPrice(cheapestTier.price_cents)}` : 'Become a Member'}
+              {cheapestTier ? `Join from ${formatTierPrice(cheapestTier.price_cents)}` : 'Become a Member'}
               <ArrowRight size={16} />
             </Link>
           </div>

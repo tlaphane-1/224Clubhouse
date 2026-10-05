@@ -129,7 +129,7 @@ export default function Account() {
                 <div className="text-center py-2">
                   <p className="text-white text-sm mb-1">You're not a member yet</p>
                   <p className="text-muted text-xs mb-5">
-                    Unlock lounge access, member pricing and event perks.
+                    Unlock free delivery, members-only products and event perks.
                   </p>
                   <Link to="/membership" className="btn-gold px-6 py-3 text-xs uppercase tracking-widest">
                     Become a Member

@@ -92,7 +92,7 @@ export default function TierForm({ tier, onClose }) {
         <label className={labelCls}>Perks (one per line)</label>
         <textarea rows={5} className={inputCls} value={form.perksText}
           onChange={e => set('perksText', e.target.value)}
-          placeholder={'30-day lounge access\nPriority event invitations\nMember-only discounts'} />
+          placeholder={'Free delivery on every order for 30 days\nPriority event invitations\nMember-only discounts'} />
       </div>
 
       <label className="flex items-center gap-2 cursor-pointer w-fit">

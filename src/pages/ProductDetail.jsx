@@ -8,6 +8,7 @@ import { useMyMembership } from '../hooks/useMyMembership'
 import { memberPurchaseGate } from '../utils/memberGate'
 import Badge from '../components/ui/Badge'
 import ProductCard from '../components/store/ProductCard'
+import StickyActionBar from '../components/ui/StickyActionBar'
 import { formatZAR } from '../utils/formatCurrency'
 import { SHIPPING_FEE } from '../utils/shipping'
 import { toastAddedToCart } from '../utils/cartToast'
@@ -255,9 +256,9 @@ export default function ProductDetail() {
           focus order, pins to the bottom of the screen while the product is on
           screen, then settles here above "You Might Also Like". No transformed
           ancestor (see the wrapper above). */}
-      <div className="md:hidden sticky bottom-0 z-30 mt-6 px-4 pt-3 pb-4 bg-background/95 backdrop-blur-md border-t border-border">
+      <StickyActionBar hideFrom="md" className="mt-6">
         {purchaseAction}
-      </div>
+      </StickyActionBar>
 
       {/* Related Products */}
       {related && related.length > 0 && (

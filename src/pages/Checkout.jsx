@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Crown, Lock, Tag, X } from 'lucide-react'
+import { ChevronDown, Crown, Lock, Tag, X } from 'lucide-react'
 import { useCart } from '../context/useCart'
 import { useAuth } from '../context/useAuth'
 import { useLastOrder, useMyOrders } from '../hooks/useMyOrders'
@@ -10,6 +10,10 @@ import { useDiscountCode } from '../hooks/useDiscountCode'
 import { memberPurchaseGate } from '../utils/memberGate'
 import { supabase } from '../lib/supabase'
 import CheckoutForm from '../components/checkout/CheckoutForm'
+import { CHECKOUT_FIELD_ORDER, checkoutFieldId } from '../components/checkout/checkoutFields'
+import StickyActionBar from '../components/ui/StickyActionBar'
+import Checkbox from '../components/ui/Checkbox'
+import { focusField } from '../utils/focusField'
 import CustomerAuth from '../components/auth/CustomerAuth'
 import OrderSummary from '../components/checkout/OrderSummary'
 import Modal from '../components/ui/Modal'
@@ -46,6 +50,8 @@ export default function Checkout() {
   const [agreed, setAgreed] = useState(false)
   const [method, setMethod] = useState('cash_on_delivery')
   const [processing, setProcessing] = useState(false)
+  // Phones show the order summary collapsed behind a total bar (desktop: always open).
+  const [summaryOpen, setSummaryOpen] = useState(false)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -131,10 +137,14 @@ export default function Checkout() {
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
       toast.error('Please fill in all required fields')
+      // On a phone the first problem is usually off-screen above the button.
+      const firstInvalid = CHECKOUT_FIELD_ORDER.find(key => validationErrors[key])
+      if (firstInvalid) focusField(checkoutFieldId(firstInvalid))
       return
     }
     if (!agreed) {
       toast.error('Please confirm you are 21 or older')
+      focusField('checkout-agree')
       return
     }
     if (!method) {
@@ -224,174 +234,203 @@ export default function Checkout() {
     )
   }
 
-  return (
-    <div
-      className="min-h-screen pt-28 pb-20 animate-fadeIn"
+  const itemCount = items.reduce((n, i) => n + i.quantity, 0)
+  const paymentNote = method === 'eft'
+    ? "No payment now — we'll show our banking details after you place your order."
+    : `No payment now — you'll pay by ${method ? paymentLabel(method) : 'cash/card'} on delivery.`
+
+  // One place-order control, rendered inline on desktop and in the phone's
+  // sticky bar (each copy hidden at the other size).
+  const placeOrderAction = processing ? (
+    <div className="flex items-center justify-center gap-3 py-4 text-muted" role="status">
+      <div className="w-5 h-5 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+      Placing your order...
+    </div>
+  ) : (
+    <button
+      type="button"
+      onClick={handlePlaceOrder}
+      disabled={lockedItems.length > 0}
+      className="btn-gold w-full py-4 text-base"
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-10">
+      Place Order — {formatZAR(total)}
+    </button>
+  )
+
+  // Discount code — signed-in only: validate_discount_code is granted to
+  // `authenticated`, and checkout requires an account anyway.
+  const discountField = user && (
+    <div>
+      <label htmlFor="discount-code" className="block text-muted text-xs uppercase tracking-widest mb-2">
+        Discount code
+      </label>
+      {discount.applied ? (
+        <div className="flex items-center gap-3 border border-gold/40 bg-gold/5 rounded-lg pl-3">
+          <Tag size={15} className="text-gold shrink-0" />
+          <div className="flex-1 min-w-0 py-2.5">
+            <p className="text-white text-sm font-semibold truncate">{discount.applied.code}</p>
+            <p className="text-gold text-xs">−{formatZAR(discount.discountCents)} applied</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { discount.remove(); setCodeInput('') }}
+            className="focus-ring w-11 h-11 flex items-center justify-center text-muted hover:text-red-400 transition-colors rounded-lg shrink-0"
+            aria-label="Remove discount code"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      ) : (
+        <form
+          onSubmit={(e) => { e.preventDefault(); discount.apply(codeInput) }}
+          className="flex gap-2"
+        >
+          <input
+            id="discount-code"
+            value={codeInput}
+            onChange={e => setCodeInput(e.target.value.toUpperCase())}
+            placeholder="WELCOME10"
+            autoComplete="off"
+            autoCapitalize="characters"
+            maxLength={40}
+            className="input-base text-sm py-2.5 uppercase tracking-widest"
+          />
+          <button
+            type="submit"
+            disabled={discount.checking || !codeInput.trim()}
+            className="btn-outline text-sm px-5 py-2.5 shrink-0 disabled:opacity-50"
+          >
+            {discount.checking ? 'Checking...' : 'Apply'}
+          </button>
+        </form>
+      )}
+      {discount.error && (
+        <p className="text-red-400 text-xs mt-2">{discount.error}</p>
+      )}
+    </div>
+  )
+
+  const stepBadge = 'w-7 h-7 rounded-full bg-gold/10 text-gold flex items-center justify-center text-xs'
+  const stepHeading = 'flex items-center gap-3 font-semibold text-white uppercase tracking-widest text-sm'
+
+  return (
+    // No transform on this wrapper: it is the sticky bar's containing block.
+    <div className="min-h-screen pt-24 md:pt-28 lg:pb-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 animate-fadeIn">
+        <div className="mb-5 md:mb-10">
           <p className="text-gold text-xs uppercase tracking-[0.4em] mb-2">Final Step</p>
-          <h1 className="font-heading text-4xl font-bold text-white">Checkout</h1>
+          <h1 className="font-heading text-3xl md:text-4xl font-bold text-white">Checkout</h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 lg:gap-8">
+          {/* Summary — first on phones (a collapsible total bar), the right-hand column on desktop */}
+          <div className="lg:order-last lg:col-span-2">
+            <div className="lg:sticky lg:top-28">
+              <button
+                type="button"
+                onClick={() => setSummaryOpen(o => !o)}
+                aria-expanded={summaryOpen}
+                aria-controls="checkout-summary"
+                className="focus-ring lg:hidden w-full flex items-center justify-between gap-3 min-h-14 px-4
+                           bg-surface border border-border rounded-xl text-left"
+              >
+                <span className="flex items-center gap-2 text-sm text-white">
+                  {summaryOpen ? 'Hide' : 'Show'} order summary
+                  <span className="text-muted">({itemCount} {itemCount === 1 ? 'item' : 'items'})</span>
+                  <ChevronDown size={16} className={`text-gold transition-transform ${summaryOpen ? 'rotate-180' : ''}`} />
+                </span>
+                <span className="text-gold font-bold">{formatZAR(total)}</span>
+              </button>
+              <div id="checkout-summary" className={`${summaryOpen ? 'block mt-3' : 'hidden'} lg:block lg:mt-0`}>
+                <OrderSummary
+                  items={items}
+                  subtotal={cartSubtotal}
+                  discountCents={discount.discountCents}
+                  discountCode={discount.applied?.code ?? null}
+                  isMember={gate.isActiveMember}
+                >
+                  {discountField}
+                </OrderSummary>
+              </div>
+            </div>
+          </div>
+
           {/* Form — or sign-in, since orders are tied to an account */}
           {!user ? (
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-3 pb-12 lg:pb-0">
               <CustomerAuth
                 title="Sign in to check out"
                 subtitle="You need an account so your orders are saved and you can track them any time."
               />
             </div>
           ) : (
-          <div className="lg:col-span-3 space-y-6">
-            <div className="bg-surface border border-border rounded-xl p-6">
-              <h2 className="font-semibold text-white mb-6 uppercase tracking-widest text-sm">
-                Contact & Delivery
-              </h2>
-              <CheckoutForm form={checkoutForm} onChange={handleFormChange} errors={errors} lockEmail />
-            </div>
+            <div className="lg:col-span-3 space-y-5 lg:space-y-6">
+              <section className="bg-surface border border-border rounded-xl p-4 sm:p-6" aria-labelledby="checkout-step-1">
+                <h2 id="checkout-step-1" className={`${stepHeading} mb-5 sm:mb-6`}>
+                  <span className={stepBadge} aria-hidden="true">1</span>
+                  Contact & Delivery
+                </h2>
+                <CheckoutForm form={checkoutForm} onChange={handleFormChange} errors={errors} lockEmail />
+              </section>
 
-            {/* Age confirmation */}
-            <div className="bg-surface border border-border rounded-xl p-6">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <div
-                  onClick={() => setAgreed(a => !a)}
-                  className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 transition-colors ${
-                    agreed ? 'bg-gold border-gold' : 'border-border hover:border-gold'
-                  }`}
-                >
-                  {agreed && <span className="text-black text-xs font-bold">✓</span>}
-                </div>
-                <span className="text-muted text-sm leading-relaxed">
-                  I confirm that I am <span className="text-white font-semibold">21 years of age or older</span> and agree to the{' '}
-                  <Link to="/terms" className="text-gold hover:text-gold-light underline transition-colors">terms of service</Link>, including the{' '}
-                  <Link to="/privacy" className="text-gold hover:text-gold-light underline transition-colors">Privacy Policy</Link>. I understand that cannabis products are intended for adults only.
-                </span>
-              </label>
-            </div>
+              <section className="bg-surface border border-border rounded-xl p-4 sm:p-6" aria-labelledby="checkout-step-2">
+                <h2 id="checkout-step-2" className={`${stepHeading} mb-5 sm:mb-6`}>
+                  <span className={stepBadge} aria-hidden="true">2</span>
+                  Payment Method
+                </h2>
+                <PaymentMethodSelect value={method} onChange={setMethod} />
+              </section>
 
-            {/* Payment method */}
-            <div className="bg-surface border border-border rounded-xl p-6">
-              <h2 className="font-semibold text-white mb-6 uppercase tracking-widest text-sm">
-                Payment Method
-              </h2>
-              <PaymentMethodSelect value={method} onChange={setMethod} />
-            </div>
+              <section className="bg-surface border border-border rounded-xl p-4 sm:p-6" aria-labelledby="checkout-step-3">
+                <h2 id="checkout-step-3" className={`${stepHeading} mb-4`}>
+                  <span className={stepBadge} aria-hidden="true">3</span>
+                  Confirm
+                </h2>
+                <Checkbox id="checkout-agree" checked={agreed} onChange={setAgreed}>
+                  <span className="text-muted">
+                    I confirm that I am <span className="text-white font-semibold">21 years of age or older</span> and agree to the{' '}
+                    <Link to="/terms" className="text-gold hover:text-gold-light underline transition-colors">terms of service</Link>, including the{' '}
+                    <Link to="/privacy" className="text-gold hover:text-gold-light underline transition-colors">Privacy Policy</Link>. I understand that cannabis products are intended for adults only.
+                  </span>
+                </Checkbox>
 
-            {/* Place order */}
-            <div className="bg-surface border border-border rounded-xl p-6">
-              {processing ? (
-                <div className="flex items-center justify-center gap-3 py-4 text-muted">
-                  <div className="w-5 h-5 border-2 border-gold border-t-transparent rounded-full animate-spin" />
-                  Processing your order...
-                </div>
-              ) : (
-                <>
-                  {lockedItems.length > 0 && (
-                    <div className="border border-gold/40 bg-gold/5 rounded-lg p-4 mb-4 flex items-start gap-3">
-                      <Lock size={16} className="text-gold mt-0.5 shrink-0" />
-                      <p className="text-muted text-sm leading-relaxed">
-                        <span className="text-white font-semibold">Members only:</span>{' '}
-                        {lockedItems.map(i => i.name).join(', ')}{' '}
-                        {lockedItems.length > 1 ? 'are' : 'is'} reserved for active members.{' '}
-                        <Link to="/cart" className="text-gold hover:text-gold-light underline transition-colors">
-                          Remove {lockedItems.length > 1 ? 'them' : 'it'} from your cart
-                        </Link>{' '}
-                        or{' '}
-                        <Link to="/membership" className="text-gold hover:text-gold-light underline transition-colors">
-                          join 224
-                        </Link>{' '}
-                        to place this order.
-                      </p>
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handlePlaceOrder}
-                    disabled={lockedItems.length > 0}
-                    className="btn-gold w-full py-4 text-base"
-                  >
-                    Place Order — {formatZAR(total)}
-                  </button>
-                  <p className="text-muted text-xs text-center mt-3">
-                    {method === 'eft'
-                      ? "No payment now — we'll show our banking details after you place your order."
-                      : `No payment now — you'll pay by ${method ? paymentLabel(method) : 'cash/card'} when your order is delivered.`}
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-          )}
-
-          {/* Summary */}
-          <div className="lg:col-span-2">
-            <div className="sticky top-28">
-              <OrderSummary
-                items={items}
-                subtotal={cartSubtotal}
-                discountCents={discount.discountCents}
-                discountCode={discount.applied?.code ?? null}
-                isMember={gate.isActiveMember}
-              >
-                {/* Discount code — signed-in only: validate_discount_code is
-                    granted to `authenticated`, and checkout requires an
-                    account anyway. */}
-                {user && (
-                  <div>
-                    <label htmlFor="discount-code" className="block text-muted text-xs uppercase tracking-widest mb-2">
-                      Discount code
-                    </label>
-                    {discount.applied ? (
-                      <div className="flex items-center gap-3 border border-gold/40 bg-gold/5 rounded-lg px-3 py-2.5">
-                        <Tag size={15} className="text-gold shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm font-semibold truncate">{discount.applied.code}</p>
-                          <p className="text-gold text-xs">−{formatZAR(discount.discountCents)} applied</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => { discount.remove(); setCodeInput('') }}
-                          className="text-muted hover:text-red-400 transition-colors p-1 shrink-0"
-                          aria-label="Remove discount code"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <form
-                        onSubmit={(e) => { e.preventDefault(); discount.apply(codeInput) }}
-                        className="flex gap-2"
-                      >
-                        <input
-                          id="discount-code"
-                          value={codeInput}
-                          onChange={e => setCodeInput(e.target.value.toUpperCase())}
-                          placeholder="WELCOME10"
-                          autoComplete="off"
-                          maxLength={40}
-                          className="input-base text-sm py-2.5 uppercase tracking-widest"
-                        />
-                        <button
-                          type="submit"
-                          disabled={discount.checking || !codeInput.trim()}
-                          className="btn-outline text-sm px-5 py-2.5 shrink-0"
-                        >
-                          {discount.checking ? 'Checking...' : 'Apply'}
-                        </button>
-                      </form>
-                    )}
-                    {discount.error && (
-                      <p className="text-red-400 text-xs mt-2">{discount.error}</p>
-                    )}
+                {lockedItems.length > 0 && (
+                  <div className="border border-gold/40 bg-gold/5 rounded-lg p-4 mt-4 flex items-start gap-3">
+                    <Lock size={16} className="text-gold mt-0.5 shrink-0" />
+                    <p className="text-muted text-sm leading-relaxed">
+                      <span className="text-white font-semibold">Members only:</span>{' '}
+                      {lockedItems.map(i => i.name).join(', ')}{' '}
+                      {lockedItems.length > 1 ? 'are' : 'is'} reserved for active members.{' '}
+                      <Link to="/cart" className="text-gold hover:text-gold-light underline transition-colors">
+                        Remove {lockedItems.length > 1 ? 'them' : 'it'} from your cart
+                      </Link>{' '}
+                      or{' '}
+                      <Link to="/membership" className="text-gold hover:text-gold-light underline transition-colors">
+                        join 224
+                      </Link>{' '}
+                      to place this order.
+                    </p>
                   </div>
                 )}
-              </OrderSummary>
+
+                {/* Desktop place-order (phones use the sticky bar below) */}
+                <div className="hidden lg:block mt-6">
+                  {placeOrderAction}
+                  <p className="text-muted text-xs text-center mt-3">{paymentNote}</p>
+                </div>
+              </section>
             </div>
-          </div>
+          )}
         </div>
       </div>
+
+      {/* Phone place-order bar — after the form in reading/focus order */}
+      {user && (
+        <StickyActionBar hideFrom="lg" className="mt-6">
+          {placeOrderAction}
+          <p className="text-muted text-xs text-center mt-2">{paymentNote}</p>
+        </StickyActionBar>
+      )}
 
       <Modal isOpen={showJoinPrompt} onClose={() => setShowJoinPrompt(false)} title="Become a member to order again" size="sm">
         <div className="text-center">
@@ -408,7 +447,7 @@ export default function Checkout() {
           <button
             type="button"
             onClick={() => setShowJoinPrompt(false)}
-            className="text-muted hover:text-white text-sm mt-4 transition-colors"
+            className="focus-ring rounded-lg h-11 px-4 text-muted hover:text-white text-sm mt-2 transition-colors"
           >
             Not now
           </button>
