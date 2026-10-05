@@ -95,7 +95,7 @@ serve(async (req) => {
 
     <!-- CTA -->
     <div style="text-align:center; margin-bottom:40px;">
-      <a href="https://224clubhouse.co.za/shop"
+      <a href="${SITE_URL}/store"
          style="display:inline-block; background:#C9A84C; color:#000000; text-decoration:none;
                 padding:14px 36px; border-radius:8px; font-weight:700; font-size:13px;
                 text-transform:uppercase; letter-spacing:3px;">
