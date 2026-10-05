@@ -50,8 +50,8 @@ export default function Unsubscribe() {
         <p className="text-muted text-sm leading-relaxed">
           The unsubscribe link looks incomplete. Some email apps cut long links in half — try
           opening it again from the original email, or email us at{' '}
-          <a href="mailto:hello@224clubhouse.co.za" className="text-gold hover:underline">
-            hello@224clubhouse.co.za
+          <a href="mailto:224clubhouse@gmail.com" className="text-gold hover:underline">
+            224clubhouse@gmail.com
           </a>{' '}
           and we'll remove you.
         </p>
@@ -89,8 +89,8 @@ export default function Unsubscribe() {
         <p className="text-muted text-sm leading-relaxed">
           We couldn't match this link to a subscription. It may already have been removed. If you
           are still receiving our newsletter, email{' '}
-          <a href="mailto:hello@224clubhouse.co.za" className="text-gold hover:underline">
-            hello@224clubhouse.co.za
+          <a href="mailto:224clubhouse@gmail.com" className="text-gold hover:underline">
+            224clubhouse@gmail.com
           </a>{' '}
           and we'll take you off the list.
         </p>
