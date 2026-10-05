@@ -10,6 +10,7 @@ import ProductGrid from '../components/store/ProductGrid'
 import toast from 'react-hot-toast'
 import { HIGHLIGHT_TOAST_STYLE } from '../utils/toastTheme'
 import { BRAND_IMAGES } from '../hooks/useStorageImages'
+import BrandLogo from '../components/ui/BrandLogo'
 
 const reviews = [
   {
@@ -101,14 +102,7 @@ export default function Home() {
 
         <div className="relative z-10 w-full max-w-4xl mx-auto px-5 pt-20 pb-16 text-center">
           <div className="animate-scaleIn">
-            <div className="inline-flex flex-col items-center mb-6">
-              <span className="font-heading text-7xl sm:text-8xl md:text-9xl font-bold text-gold leading-none tracking-wider">
-                224
-              </span>
-              <span className="text-white text-xs md:text-sm tracking-[0.6em] uppercase font-light mt-2">
-                Clubhouse
-              </span>
-            </div>
+            <BrandLogo className="h-20 sm:h-24 md:h-28 mx-auto mb-6" />
 
             <div className="w-24 h-px bg-gold mx-auto mb-6 md:mb-8" />
 

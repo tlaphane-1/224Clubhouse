@@ -7,6 +7,7 @@ import { useMyMembership } from '../../hooks/useMyMembership'
 import { memberPurchaseGate } from '../../utils/memberGate'
 import { formatZAR } from '../../utils/formatCurrency'
 import { toastAddedToCart } from '../../utils/cartToast'
+import BrandLogo from '../ui/BrandLogo'
 
 // Phones: a 44px round icon button (thumb-sized, fits a half-width card).
 // sm+: the roomier icon + label button, still 44px tall for touch tablets.
@@ -56,7 +57,7 @@ export default function ProductCard({ product }) {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <span className="font-heading text-4xl font-bold text-gold/30">224</span>
+              <BrandLogo decorative className="w-1/2 opacity-30" />
             </div>
           )}
 

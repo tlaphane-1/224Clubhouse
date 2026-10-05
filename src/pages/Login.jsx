@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import ForgotPasswordForm from '../components/auth/ForgotPasswordForm'
 import toast from 'react-hot-toast'
+import BrandLogo from '../components/ui/BrandLogo'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -38,8 +39,8 @@ export default function Login() {
         <div className="bg-surface border border-border rounded-2xl p-10">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="font-heading text-5xl font-bold text-gold">224</div>
-            <div className="text-white text-[9px] tracking-[0.5em] uppercase font-light mt-0.5">Admin Panel</div>
+            <BrandLogo className="h-12 mx-auto" />
+            <div className="text-muted text-xs tracking-[0.4em] uppercase font-light mt-2">Admin Panel</div>
           </div>
 
           <h2 className="font-heading text-xl font-semibold text-white text-center mb-8">

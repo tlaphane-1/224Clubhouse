@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { MailCheck, MailX, AlertTriangle } from 'lucide-react'
 import { useNewsletterUnsubscribe } from '../hooks/useNewsletterSubscribers'
+import BrandLogo from '../components/ui/BrandLogo'
 
 // The token is a uuid straight from the DB. Checking the shape here means a
 // mangled link (truncated by a mail client, or someone poking at the URL)
@@ -14,8 +15,7 @@ function Shell({ icon, title, children }) {
     <div className="min-h-screen bg-background pt-32 pb-20 px-4 animate-fadeIn">
       <div className="max-w-md mx-auto text-center">
         {/* Wordmark */}
-        <p className="font-heading text-3xl font-bold text-gold tracking-[0.3em] mb-1">224</p>
-        <p className="text-muted text-[10px] uppercase tracking-[0.4em] mb-10">Clubhouse</p>
+        <BrandLogo className="h-12 mx-auto mb-10" />
 
         <div className="bg-surface border border-border rounded-xl p-8">
           <div className="flex justify-center mb-5">{icon}</div>

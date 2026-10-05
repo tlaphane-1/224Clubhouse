@@ -12,6 +12,7 @@ import StickyActionBar from '../components/ui/StickyActionBar'
 import { formatZAR } from '../utils/formatCurrency'
 import { SHIPPING_FEE } from '../utils/shipping'
 import { toastAddedToCart } from '../utils/cartToast'
+import BrandLogo from '../components/ui/BrandLogo'
 
 export default function ProductDetail() {
   const { slug } = useParams()
@@ -140,7 +141,7 @@ export default function ProductDetail() {
                   </>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <span className="font-heading text-7xl font-bold text-gold/20">224</span>
+                    <BrandLogo decorative className="w-1/2 opacity-20" />
                   </div>
                 )}
               </div>

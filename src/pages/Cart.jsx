@@ -11,6 +11,7 @@ import { formatTierPrice } from '../utils/tierPrice'
 import { SHIPPING_THRESHOLD, shippingFeeFor } from '../utils/shipping'
 import WhatsAppOrderPanel from '../components/store/WhatsAppOrderPanel'
 import StickyActionBar from '../components/ui/StickyActionBar'
+import BrandLogo from '../components/ui/BrandLogo'
 
 const STEPPER_BTN = `focus-ring w-11 h-11 flex items-center justify-center text-lg text-muted hover:text-white
                      active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all rounded-lg`
@@ -108,7 +109,7 @@ export default function Cart() {
                         <img src={item.images[0]} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <span className="font-heading text-gold/30 font-bold text-sm">224</span>
+                          <BrandLogo decorative className="w-3/4 opacity-30" />
                         </div>
                       )}
                     </div>

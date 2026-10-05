@@ -1,4 +1,5 @@
 import ProductCard from './ProductCard'
+import BrandLogo from '../ui/BrandLogo'
 
 // Two columns on phones (where most visitors shop), so a screen shows four
 // products instead of one; widens to 3–4 on larger screens.
@@ -32,7 +33,7 @@ export default function ProductGrid({ products, loading, skeletonCount = 8 }) {
   if (!products || products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="font-heading text-6xl font-bold text-gold/20 mb-4">224</div>
+        <BrandLogo decorative className="h-12 mx-auto mb-4 opacity-30" />
         <h3 className="text-white font-semibold text-xl mb-2">No products found</h3>
         <p className="text-muted text-sm">Check back soon — new stock drops regularly.</p>
       </div>
