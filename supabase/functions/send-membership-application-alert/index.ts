@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, serviceClient } from '../_shared/supabaseClients.ts'
+import { emailLogo } from '../_shared/brand.ts'
 
 // Tells the club a membership application is waiting for approval. Invoked by
 // the APPLICANT right after place_membership succeeds (fire-and-forget).
@@ -65,7 +66,7 @@ serve(async (req) => {
 <!DOCTYPE html>
 <html><body style="margin:0;background:#0a0a0a;font-family:Arial,sans-serif;">
   <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
-    <p style="font-family:Georgia,serif;color:#C9A84C;font-size:28px;font-weight:bold;margin:0 0 4px;">224</p>
+    <p style="margin:0 0 12px;">${emailLogo(140)}</p>
     <h1 style="color:#fff;font-size:20px;margin:0 0 20px;">New membership application</h1>
     <table style="border-collapse:collapse;">
       ${row('Name', m.full_name)}

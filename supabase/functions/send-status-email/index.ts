@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerIsAdmin, serviceClient } from '../_shared/supabaseClients.ts'
+import { emailLogo } from '../_shared/brand.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 // Interim: sends go out from a domain already verified on the Resend account until
@@ -99,8 +100,7 @@ serve(async (req) => {
 
     <!-- Logo -->
     <div style="text-align:center; margin-bottom:40px;">
-      <div style="font-size:48px; font-weight:900; color:#C9A84C; letter-spacing:8px; font-family:Georgia,serif;">224</div>
-      <div style="color:#ffffff; font-size:9px; letter-spacing:6px; text-transform:uppercase; margin-top:4px;">Clubhouse</div>
+      ${emailLogo(200)}
     </div>
 
     <!-- Divider -->
@@ -130,8 +130,7 @@ serve(async (req) => {
 
     <!-- Footer -->
     <div style="text-align:center; border-top:1px solid #222222; padding-top:28px;">
-      <div style="color:#C9A84C; font-size:20px; font-family:Georgia,serif; font-weight:700; letter-spacing:4px; margin-bottom:4px;">224</div>
-      <div style="color:#888888; font-size:9px; letter-spacing:4px; text-transform:uppercase; margin-bottom:16px;">Clubhouse</div>
+      ${emailLogo(110, 'margin-bottom:16px;')}
       <p style="color:#888888; font-size:12px; margin-bottom:4px;">224 Rondebult Road, Libradene, Boksburg, 1459</p>
       <p style="color:#888888; font-size:12px; margin-bottom:16px;">Mon–Sun 09:00–19:00</p>
       <div style="display:flex; justify-content:center; gap:16px; margin-bottom:16px;">
