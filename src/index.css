@@ -232,3 +232,13 @@
   }
   .skeleton::after { display: none; }
 }
+
+/*
+ * Printing (the /orders/:id/invoice page). Screen-only UI uses Tailwind's
+ * print:hidden; this only sets the paper size and drops the dark page colour
+ * so a "Save as PDF" is a plain white A4 sheet.
+ */
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body { background: white; }
+}
