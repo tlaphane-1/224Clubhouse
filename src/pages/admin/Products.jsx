@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase'
 import { formatZAR } from '../../utils/formatCurrency'
 import { useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
+import BrandLogo from '../../components/ui/BrandLogo'
 
 export default function Products() {
   const { data: products, isLoading, isError, refetch } = useAllProducts()
@@ -96,7 +97,7 @@ export default function Products() {
                             <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <span className="text-gold/30 font-heading font-bold text-xs">224</span>
+                              <BrandLogo decorative className="w-4/5 opacity-30" />
                             </div>
                           )}
                         </div>

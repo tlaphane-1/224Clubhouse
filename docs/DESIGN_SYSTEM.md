@@ -191,7 +191,9 @@ Don't use `rounded-md`, `rounded-sm` or `rounded-3xl`. None of them are used any
 | `Button.jsx` | `variant`: `gold` (default) \| `outline` \| `ghost` \| `danger`, plus native props | Used in admin forms. `gold` and `outline` match `.btn-*`. `danger` = `bg-red-600`. |
 | `Badge.jsx` | `variant` = category, strain, `members`, or order status | `rounded-full text-xs uppercase tracking-wide`. Unknown variants fall back to `bg-surface text-muted`. |
 | `Card.jsx` | `hover` bool, `className` | `bg-surface border border-border rounded-xl`. It is **not imported anywhere** right now, because pages write the same classes inline. Prefer it for new cards. |
-| `Modal.jsx` | `isOpen`, `onClose`, `title`, `size`: `sm`\|`md`\|`lg`\|`xl` | Locks body scroll and closes on backdrop click. The header and body each have `p-6`. |
+| `Modal.jsx` | `isOpen`, `onClose`, `title`, `size`: `sm`\|`md`\|`lg`\|`xl`, **(new)** `sheet`, `footer` | Locks body scroll; closes on backdrop click and **Escape**; `role="dialog"` labelled by its title. `sheet` = full-screen on phones, centred from `sm:` (use for any form). `footer` = actions pinned under the scrolling body so Submit is always visible. |
+| `StickyActionBar.jsx` **(new)** | `hideFrom`: `md` \| `lg`, `className` | The phone primary-action bar (§7). |
+| `Checkbox.jsx` **(new)** | `id`, `checked`, `onChange(bool)`, `invalid` | A real `<input type="checkbox">` (sr-only) with the gold box; the whole label row is the tap target. Never build a checkbox from a `div`. |
 
 ```jsx
 <Badge variant="delivered">Delivered</Badge>
@@ -247,7 +249,15 @@ Full-page empty (`Cart.jsx`) uses a `size={56} strokeWidth={1}` lucide icon, a `
 
 **Toasts.** These use `react-hot-toast`. `<Toaster>` in `App.jsx` gets `toastOptions={TOAST_OPTIONS}` from `src/utils/toastTheme.js`, so every `toast.success()` / `toast.error()` is branded automatically: don't pass a `style`. For the rare gold-edged confirmation, pass `style: HIGHLIGHT_TOAST_STYLE` (newsletter and contact form).
 
-**Sticky purchase bar (new).** On phones the product page's primary action sits in `md:hidden sticky bottom-0 z-30 px-4 pt-3 pb-4 bg-background/95 backdrop-blur-md border-t border-border`. It is a direct child of the (untransformed) page wrapper, placed **right after the product details and before "You Might Also Like"**. That keeps it in the right reading and focus order: it pins to the bottom while the product is on screen, then settles above the related products. The same control renders inline inside a `hidden md:block` wrapper for larger screens, so only one copy is ever visible or in the accessibility tree. Reference: `src/pages/ProductDetail.jsx`.
+**Sticky action bar (new).** Use `components/ui/StickyActionBar.jsx` for a page's primary action on phones: product page (Add to Cart, `hideFrom="md"`), cart (Total + Checkout, `hideFrom="lg"`), checkout (Place Order, `hideFrom="lg"`) and membership (Apply, `hideFrom="md"`). It renders `sticky bottom-0 z-30 px-4 pt-3 pb-4 bg-background/95 backdrop-blur-md border-t border-border`. It is a direct child of the (untransformed) page wrapper, placed **right after the product details and before "You Might Also Like"**. That keeps it in the right reading and focus order: it pins to the bottom while the product is on screen, then settles above the related products. The same control renders inline inside a `hidden md:block` wrapper for larger screens, so only one copy is ever visible or in the accessibility tree. Reference: `src/pages/ProductDetail.jsx`.
+
+**Collapsible order summary (new).** On phones, checkout shows a `min-h-14` total bar ("Show order summary (2 items) ▾ R160", `aria-expanded`) that opens the full summary and the discount field. From `lg:` the summary is a normal sticky sidebar. One render, toggled with `hidden … lg:block`. Reference: `src/pages/Checkout.jsx`.
+
+**Choose-one cards (new).** For picking one option (membership tiers): real radio inputs (`peer sr-only`) inside `<label>`s, in a `<fieldset>` with an sr-only `<legend>`. Phones get compact rows (icon, name, duration, price, radio dot); `md:` gets full cards with perks. The chosen option's details sit under the list on phones. Selected = `border-gold shadow-glow bg-gold/5`. Reference: `src/pages/Membership.jsx`.
+
+**Validation on phones (new).** When a submit fails, call `focusField(id)` (`src/utils/focusField.js`) on the first invalid field, in on-screen order. It scrolls the field to the middle of the screen and focuses it; on a phone the error is otherwise hidden above the button. Error text is linked with `aria-describedby` and fields carry `aria-invalid`. Reference: `CheckoutForm.jsx` + `Checkout.jsx`.
+
+**Fold long secondary content on phones (new).** Long reference lists (the 12 Commandments) collapse behind a full-width `h-12` toggle (`aria-expanded`, `aria-controls`) below `md:` and show normally above it.
 
 **Sticky filter bar (new).** Store category chips sit in `sticky top-16 md:top-20 z-30 bg-background/90 backdrop-blur-md border-b border-border`, right under the navbar. Reference: `src/pages/Store.jsx`.
 
@@ -297,6 +307,9 @@ Transitions use `transition-colors` or `transition-all duration-200` for control
 - [ ] Make every tap target at least 44×44px, including icon-only buttons, chips, steppers and the cart icon.
 - [ ] Make sure the page's primary action is visible on a phone without scrolling, or sits in a sticky bar.
 - [ ] Use `leaf` only as an accent (icons, the delivery pill, member links), never as a button fill.
+- [ ] Give form fields a `<label htmlFor>`, the right mobile keyboard (`type="tel"`, `inputMode="numeric"`, `type="email"`), an `autoComplete` hint, and jump to the first error on submit.
+- [ ] Use `ui/Modal` with `sheet` for forms, and `ui/StickyActionBar` for a page's primary action on phones.
+- [ ] Don't add render-blocking third-party scripts to `index.html`. Load them on demand where they're used (e.g. Paystack in `Membership.jsx`).
 
 **Don't**
 - [ ] Don't use hex literals, `[#...]` arbitrary colors, or `text-gray-*` / `bg-zinc-*`. None are used today, so keep it that way.

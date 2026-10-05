@@ -12,6 +12,7 @@ import CustomerAuth from '../components/auth/CustomerAuth'
 import Badge from '../components/ui/Badge'
 import { formatZAR } from '../utils/formatCurrency'
 import toast from 'react-hot-toast'
+import BrandLogo from '../components/ui/BrandLogo'
 
 const ADDRESS = '224 Rondebult Road, Libradene, Boksburg, 1459'
 const MAX_PER_RESERVATION = 10
@@ -340,7 +341,7 @@ export default function EventDetail() {
                 <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <span className="font-heading text-7xl font-bold text-gold/20">224</span>
+                  <BrandLogo decorative className="w-1/2 opacity-20" />
                 </div>
               )}
             </div>

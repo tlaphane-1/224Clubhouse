@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { formatZAR } from '../../utils/formatCurrency'
 import { SHIPPING_THRESHOLD, SHIPPING_FEE, shippingFeeFor } from '../../utils/shipping'
+import BrandLogo from '../ui/BrandLogo'
 
 export { SHIPPING_THRESHOLD, SHIPPING_FEE }
 
@@ -42,7 +43,7 @@ export default function OrderSummary({
                 <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-gold/30 font-heading text-xs font-bold">224</span>
+                  <BrandLogo decorative className="w-4/5 opacity-30" />
                 </div>
               )}
             </div>

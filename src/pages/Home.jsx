@@ -2,19 +2,15 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Star, Mail, Truck, Sparkles, Crown, AlertTriangle } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
-import { useMembershipTiers } from '../hooks/useMembershipTiers'
+import { useCheapestTier } from '../hooks/useMembershipTiers'
 import { CATEGORIES } from '../components/store/categories'
-import { formatZAR } from '../utils/formatCurrency'
+import { formatTierPrice } from '../utils/tierPrice'
 import { supabase } from '../lib/supabase'
 import ProductGrid from '../components/store/ProductGrid'
 import toast from 'react-hot-toast'
 import { HIGHLIGHT_TOAST_STYLE } from '../utils/toastTheme'
 import { BRAND_IMAGES } from '../hooks/useStorageImages'
-
-// Whole-rand prices read as "R10", matching the membership page.
-function tierPrice(cents) {
-  return cents % 100 === 0 ? `R${cents / 100}` : formatZAR(cents)
-}
+import BrandLogo from '../components/ui/BrandLogo'
 
 const reviews = [
   {
@@ -35,17 +31,13 @@ export default function Home() {
   const { data: products, isLoading, isError, refetch } = useProducts()
   const featuredProducts = products?.slice(0, 4)
   // Cheapest active tier for the membership band. While loading (or if the
-  // read fails) the button simply says "Become a Member" — no price is shown
-  // rather than a stale hardcoded one.
-  const { data: tiers } = useMembershipTiers()
-  const cheapestTier = tiers?.length
-    ? tiers.reduce((min, t) => (t.price_cents < min.price_cents ? t : min))
-    : null
+  // read fails) the button simply says "Become a Member".
+  const cheapestTier = useCheapestTier()
   const [newsletter, setNewsletter] = useState({ firstName: '', lastName: '', email: '' })
   const [subLoading, setSubLoading] = useState(false)
 
   useEffect(() => {
-    document.title = '224 Clubhouse | Private Cannabis Lifestyle Lounge'
+    document.title = "224 Clubhouse | Private Cannabis Members' Club"
   }, [])
 
   const handleSubscribe = async (e) => {
@@ -110,14 +102,7 @@ export default function Home() {
 
         <div className="relative z-10 w-full max-w-4xl mx-auto px-5 pt-20 pb-16 text-center">
           <div className="animate-scaleIn">
-            <div className="inline-flex flex-col items-center mb-6">
-              <span className="font-heading text-7xl sm:text-8xl md:text-9xl font-bold text-gold leading-none tracking-wider">
-                224
-              </span>
-              <span className="text-white text-xs md:text-sm tracking-[0.6em] uppercase font-light mt-2">
-                Clubhouse
-              </span>
-            </div>
+            <BrandLogo className="h-20 sm:h-24 md:h-28 mx-auto mb-6" />
 
             <div className="w-24 h-px bg-gold mx-auto mb-6 md:mb-8" />
 
@@ -233,7 +218,7 @@ export default function Home() {
               to="/membership"
               className="btn-gold w-full md:w-auto flex-shrink-0 px-8 py-4 text-sm uppercase tracking-widest"
             >
-              {cheapestTier ? `Join from ${tierPrice(cheapestTier.price_cents)}` : 'Become a Member'}
+              {cheapestTier ? `Join from ${formatTierPrice(cheapestTier.price_cents)}` : 'Become a Member'}
               <ArrowRight size={16} />
             </Link>
           </div>

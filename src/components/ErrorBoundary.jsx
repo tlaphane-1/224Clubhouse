@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import BrandLogo from './ui/BrandLogo'
 
 /**
  * Top-level error boundary. Without one, a single render error (or a lazy-chunk
@@ -35,7 +36,7 @@ export default class ErrorBoundary extends Component {
       return (
         <div className="min-h-screen bg-background flex items-center justify-center px-6">
           <div className="max-w-md w-full text-center">
-            <div className="font-heading text-5xl font-bold text-gold mb-2">224</div>
+            <BrandLogo className="h-12 mx-auto mb-4" />
             <h1 className="font-heading text-2xl text-white mb-3">Something went wrong</h1>
             <p className="text-muted text-sm mb-8">
               An unexpected error occurred. Please reload — your cart is saved.

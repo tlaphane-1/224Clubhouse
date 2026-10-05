@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { MapPin, Clock, Users, Check } from 'lucide-react'
 import Badge from '../ui/Badge'
 import { formatZAR } from '../../utils/formatCurrency'
+import BrandLogo from '../ui/BrandLogo'
 
 /**
  * @param {object}      props.event        events row (may carry seats_remaining)
@@ -34,7 +35,7 @@ export default function EventCard({ event, reservation = null }) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="font-heading text-5xl font-bold text-gold/20">224</span>
+            <BrandLogo decorative className="w-1/2 opacity-20" />
           </div>
         )}
 

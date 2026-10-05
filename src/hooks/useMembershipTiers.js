@@ -26,3 +26,15 @@ export function useMembershipTiers() {
     },
   })
 }
+
+/**
+ * The cheapest active tier, for "Join from R10"-style nudges. null while
+ * loading or if the read fails — callers then show a price-free label rather
+ * than a stale hardcoded one.
+ */
+export function useCheapestTier() {
+  const { data: tiers } = useMembershipTiers()
+  return tiers?.length
+    ? tiers.reduce((min, t) => (t.price_cents < min.price_cents ? t : min))
+    : null
+}

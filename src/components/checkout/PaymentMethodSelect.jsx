@@ -8,7 +8,7 @@ const HELPER_TEXT = {
 
 export default function PaymentMethodSelect({ value, onChange }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" role="radiogroup" aria-label="Payment method">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4" role="radiogroup" aria-label="Payment method">
       {PAYMENT_METHODS.map((m) => {
         const selected = value === m
         return (
@@ -18,7 +18,7 @@ export default function PaymentMethodSelect({ value, onChange }) {
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(m)}
-            className={`text-left rounded-xl border p-5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold ${
+            className={`focus-ring text-left rounded-xl border p-4 sm:p-5 transition-all active:scale-[0.98] ${
               selected
                 ? 'border-gold ring-1 ring-gold bg-surface'
                 : 'border-border bg-surface hover:border-gold/50'
@@ -34,7 +34,7 @@ export default function PaymentMethodSelect({ value, onChange }) {
               </span>
               <span className="font-semibold text-white">{PAYMENT_LABELS[m]}</span>
             </div>
-            <p className="text-muted text-sm mt-2 ml-8">{HELPER_TEXT[m]}</p>
+            <p className="text-muted text-xs sm:text-sm mt-1.5 sm:mt-2 ml-8">{HELPER_TEXT[m]}</p>
           </button>
         )
       })}

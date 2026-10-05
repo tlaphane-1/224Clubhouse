@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { isAgeVerified, setAgeVerified } from '../../utils/ageGate'
+import BrandLogo from '../ui/BrandLogo'
 
 export default function AgeGate() {
   // localStorage is read synchronously, so the initial value can come straight
@@ -23,19 +24,16 @@ export default function AgeGate() {
         >
           <div className="text-center max-w-md w-full animate-scaleIn">
             {/* Logo */}
-            <div className="mb-8">
-              <div className="font-heading text-7xl font-bold text-gold tracking-wider">224</div>
-              <div className="text-white text-sm tracking-[0.4em] uppercase mt-1 font-light">Clubhouse</div>
-            </div>
+            <BrandLogo className="h-16 sm:h-20 mx-auto mb-8" />
 
             {/* Divider */}
             <div className="w-16 h-px bg-gold mx-auto mb-8" />
 
             <h2 className="font-heading text-2xl font-semibold text-white mb-3">
-              Members Lounge
+              Members' Club
             </h2>
             <p className="text-muted text-sm mb-2">
-              This is a private cannabis lifestyle lounge.
+              Premium cannabis, delivered to your door.
             </p>
             <p className="text-white text-base mb-10">
               Are you <span className="text-gold font-semibold">21 or older?</span>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Package, ShoppingCart, Calendar, Crown, Ticket, Mail, Newspaper, LogOut, Menu, X } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
+import BrandLogo from '../ui/BrandLogo'
 
 const navItems = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -28,8 +29,8 @@ export default function AdminLayout({ children }) {
   const sidebar = (onNavigate) => (
     <>
       <div className="p-6 border-b border-border">
-        <div className="font-heading text-3xl font-bold text-gold">224</div>
-        <div className="text-white text-[9px] tracking-[0.4em] uppercase font-light mt-0.5">Admin Panel</div>
+        <BrandLogo className="h-9" />
+        <div className="text-muted text-xs tracking-[0.3em] uppercase font-light mt-2">Admin Panel</div>
       </div>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -96,9 +97,9 @@ export default function AdminLayout({ children }) {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile top bar */}
         <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between bg-surface border-b border-border px-4 h-16">
-          <div className="flex items-baseline gap-2">
-            <span className="font-heading text-2xl font-bold text-gold">224</span>
-            <span className="text-white text-[8px] tracking-[0.3em] uppercase font-light">Admin</span>
+          <div className="flex items-center gap-2">
+            <BrandLogo className="h-7" />
+            <span className="text-muted text-xs tracking-[0.3em] uppercase font-light">Admin</span>
           </div>
           <button
             onClick={() => setMobileOpen(true)}
