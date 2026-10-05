@@ -7,12 +7,13 @@ import { useMembershipTiers } from '../hooks/useMembershipTiers'
 import { useMyMembership } from '../hooks/useMyMembership'
 import CustomerAuth from '../components/auth/CustomerAuth'
 import Modal from '../components/ui/Modal'
-import Checkbox from '../components/ui/Checkbox'
 import StickyActionBar from '../components/ui/StickyActionBar'
 import { formatTierPrice } from '../utils/tierPrice'
 import { focusField } from '../utils/focusField'
 import toast from 'react-hot-toast'
 import EftDetails from '../components/checkout/EftDetails'
+import PaperApplication from '../components/membership/PaperApplication'
+import { CONSENTS, EMPTY_PAPER_FORM, paperDob } from '../components/membership/paperForm'
 
 // Tiers are data now (membership_tiers table) — only the presentation layer
 // stays client-side. Unknown future slugs fall back to the Star icon.
@@ -51,8 +52,6 @@ const COMMANDMENTS = [
   'Hold each other accountable — we are family.',
 ]
 
-const LABEL = 'text-xs text-muted uppercase tracking-widest block mb-1.5'
-
 export default function Membership() {
   const { user, loading: authLoading } = useAuth()
   const queryClient = useQueryClient()
@@ -70,9 +69,9 @@ export default function Membership() {
   const [step, setStep] = useState('tiers') // 'tiers' | 'form' | 'success'
   const [loading, setLoading] = useState(false)
   const [showRules, setShowRules] = useState(false)
-  const [form, setForm] = useState({
-    full_name: '', phone: '', date_of_birth: '', id_number: '', agreed: false,
-  })
+  const [form, setForm] = useState(EMPTY_PAPER_FORM)
+  // Per-field problems, shown on the paper form after a submit attempt.
+  const [errors, setErrors] = useState({})
 
   useEffect(() => { document.title = 'Membership | 224 Clubhouse' }, [])
 
@@ -110,21 +109,22 @@ export default function Membership() {
     return new Date(y, m - 1, d) <= cutoff
   }
 
-  function handleFormChange(e) {
-    const { name, value } = e.target
-    setForm(f => ({ ...f, [name]: value }))
-  }
-
   // Creates the pending application. `reference` is the Paystack reference when
   // paid online, or null when the member pays by EFT / on delivery.
   async function submitApplication(reference) {
     try {
       const { data, error } = await supabase.rpc('place_membership', {
         p_customer: {
-          full_name: form.full_name,
-          phone: form.phone,
-          date_of_birth: form.date_of_birth,
-          id_number: form.id_number || null,
+          full_name: form.full_name.trim(),
+          phone: form.phone.trim(),
+          date_of_birth: paperDob(form),
+          id_number: form.id_number.trim(),
+          residential_address: form.residential_address.trim(),
+          consumption_reasons: form.reasons,
+          consumption_other: form.reasons.includes('other') ? form.reason_other.trim() : null,
+          consents: form.consents,
+          signature_image: form.sign_by_typing ? null : form.signature_image,
+          signature_typed: form.sign_by_typing ? form.signature_typed.trim() : null,
         },
         p_tier: tier.slug,
         p_reference: reference,
@@ -187,23 +187,26 @@ export default function Membership() {
       setStep('tiers')
       return
     }
-    // Required fields, in on-screen order; jump to the first gap (on a phone it
-    // is usually scrolled out of view).
-    const missing = [['full_name', 'mem-name'], ['phone', 'mem-phone'], ['date_of_birth', 'mem-dob']]
-      .find(([key]) => !form[key])
-    if (missing) {
-      toast.error('Please fill in all required fields.')
-      focusField(missing[1])
-      return
-    }
-    if (!validateAge(form.date_of_birth)) {
-      toast.error('You must be 21 or older to join 224 Clubhouse.')
-      focusField('mem-dob')
-      return
-    }
-    if (!form.agreed) {
-      toast.error('You must agree to the 12 Club Commandments.')
-      focusField('mem-agree')
+    // Everything the paper form asks for, checked in on-screen order; mark
+    // every gap and jump to the first (on a phone it is usually off screen).
+    const dob = paperDob(form)
+    const found = {}
+    if (!form.full_name.trim()) found.full_name = 'mem-name'
+    if (!dob) found.dob = 'mem-dob'
+    else if (!validateAge(dob)) found.dob = 'mem-dob'
+    if (!form.id_number.trim()) found.id_number = 'mem-id'
+    if (!form.phone.trim()) found.phone = 'mem-phone'
+    if (!form.residential_address.trim()) found.residential_address = 'mem-address'
+    if (form.reasons.length === 0) found.reasons = 'mem-reasons'
+    else if (form.reasons.includes('other') && !form.reason_other.trim()) found.reason_other = 'mem-reason-other-text'
+    if (CONSENTS.some(c => !form.consents[c.key])) found.consents = 'mem-consents'
+    const signed = form.sign_by_typing ? form.signature_typed.trim() : form.signature_image
+    if (!signed) found.signature = 'mem-signature'
+    const keys = Object.keys(found)
+    setErrors(Object.fromEntries(keys.map(k => [k, k === 'dob' && dob ? 'age' : true])))
+    if (keys.length) {
+      toast.error(found.dob && dob ? 'You must be 21 or older to join 224 Clubhouse.' : 'Please complete the highlighted parts of the form.')
+      focusField(found[keys[0]])
       return
     }
 
@@ -522,7 +525,7 @@ export default function Membership() {
         isOpen={step === 'form' && Boolean(tier)}
         onClose={() => setStep('tiers')}
         title={sheetTitle}
-        size="sm"
+        size="md"
         sheet
         footer={showForm && (
           <div className="flex gap-3">
@@ -605,54 +608,19 @@ export default function Membership() {
           </>
         ) : (
           <>
-            <p className="text-muted text-sm mb-5">
-              Complete your details to apply. {PAY_ONLINE ? '' : 'You pay by EFT or with your next delivery.'}
+            <p className="text-muted text-sm mb-4">
+              This is our paper membership form — fill it in and sign it on screen.
+              {PAY_ONLINE ? '' : ' You pay by EFT or with your next delivery.'}
             </p>
-
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="mem-name" className={LABEL}>Full Name *</label>
-                <input id="mem-name" className="input-base" name="full_name" value={form.full_name} onChange={handleFormChange} placeholder="Your full name" autoComplete="name" />
-              </div>
-              <div>
-                <label htmlFor="mem-email" className={LABEL}>Email Address</label>
-                <input
-                  id="mem-email"
-                  className="input-base opacity-60 cursor-not-allowed"
-                  type="email"
-                  value={user.email ?? ''}
-                  disabled
-                />
-                <p className="text-muted text-xs mt-1">Memberships are tied to your account email.</p>
-              </div>
-              <div>
-                <label htmlFor="mem-phone" className={LABEL}>Phone Number *</label>
-                <input id="mem-phone" className="input-base" type="tel" inputMode="tel" name="phone" value={form.phone} onChange={handleFormChange} placeholder="0XX XXX XXXX" autoComplete="tel" />
-              </div>
-              <div>
-                <label htmlFor="mem-dob" className={LABEL}>Date of Birth * (Must be 21+)</label>
-                <input id="mem-dob" className="input-base" type="date" name="date_of_birth" value={form.date_of_birth} onChange={handleFormChange} autoComplete="bday" />
-              </div>
-              <div>
-                <label htmlFor="mem-id" className={LABEL}>SA ID Number (optional)</label>
-                <input id="mem-id" className="input-base" inputMode="numeric" name="id_number" value={form.id_number} onChange={handleFormChange} placeholder="13-digit ID number" maxLength={13} />
-              </div>
-
-              {/* Commandments agreement */}
-              <div className="bg-background border border-border rounded-xl p-4">
-                <p className="text-gold text-xs uppercase tracking-widest mb-3">The 12 Club Commandments</p>
-                <ol className="space-y-1.5 mb-4">
-                  {COMMANDMENTS.map((c, i) => (
-                    <li key={i} className="text-muted text-xs flex gap-2">
-                      <span className="text-gold shrink-0">{i + 1}.</span>{c}
-                    </li>
-                  ))}
-                </ol>
-                <Checkbox id="mem-agree" checked={form.agreed} onChange={agreed => setForm(f => ({ ...f, agreed }))}>
-                  <span className="text-white">I have read and agree to the 12 Club Commandments and the terms of membership.</span>
-                </Checkbox>
-              </div>
-            </div>
+            <PaperApplication
+              form={form}
+              setForm={setForm}
+              email={user.email ?? ''}
+              tiers={tiers ?? []}
+              selectedSlug={selected}
+              onSelectTier={setSelected}
+              errors={errors}
+            />
           </>
         )}
       </Modal>

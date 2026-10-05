@@ -132,3 +132,19 @@ export function useUpdateMembershipTier() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['membership-tiers'] }),
   })
 }
+
+// The "Notes" line of the paper form's "224 Clubhouse use only" block.
+// Plain table update — memberships_admin_update RLS limits it to admins.
+export function useUpdateMembershipNotes() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, notes }) => {
+      const { error } = await supabase
+        .from('memberships')
+        .update({ admin_notes: notes.trim() || null })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['memberships'] }),
+  })
+}

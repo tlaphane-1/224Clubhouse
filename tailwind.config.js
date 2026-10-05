@@ -10,6 +10,12 @@ const colors = {
   // (chips, glows, delivery/member highlights) — gold stays the CTA colour.
   leaf: '#7CC242',
   'leaf-deep': '#1B2E12',
+  // The paper membership form only: off-white sheet, printed black text,
+  // ruled lines, and blue pen ink for what the applicant "writes".
+  paper: '#FBF8F1',
+  'paper-line': '#CFC8B8',
+  print: '#1C1C1C',
+  ink: '#1D3D8F',
 }
 
 const rgba = (hex, alpha) => {
@@ -35,6 +41,8 @@ export default {
       fontFamily: {
         heading: ['"Playfair Display"', 'serif'],
         body: ['Inter', 'sans-serif'],
+        // Handwriting for answers on the paper membership form.
+        hand: ['Caveat', 'cursive'],
       },
       aspectRatio: {
         // Product photos: taller than square so two fit side by side on a phone

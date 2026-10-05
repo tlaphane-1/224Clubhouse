@@ -10,8 +10,9 @@ import MembershipForm from '../../components/admin/MembershipForm'
 import TierForm from '../../components/admin/TierForm'
 import {
   useMemberships, useUpdateMembershipStatus, useLinkMembershipUser,
-  useAllMembershipTiers, useUpdateMembershipTier,
+  useAllMembershipTiers, useUpdateMembershipTier, useUpdateMembershipNotes,
 } from '../../hooks/useMemberships'
+import { CONSENTS, CONSUMPTION_REASONS } from '../../components/membership/paperForm'
 import { formatZAR } from '../../utils/formatCurrency'
 import toast from 'react-hot-toast'
 
@@ -466,6 +467,8 @@ function MemberRow({ m, eff, lapsed, tierName, expanded, onToggle, onStatus, onL
                   )}
                 </div>
               </div>
+              <PaperFormDetails m={m} />
+              <ClubUseOnly m={m} />
               <div>
                 <h4 className="text-gold text-xs uppercase tracking-widest mb-3">Status History</h4>
                 {Array.isArray(m.status_history) && m.status_history.length > 0 ? (
@@ -492,5 +495,101 @@ function MemberRow({ m, eff, lapsed, tierName, expanded, onToggle, onStatus, onL
         </tr>
       )}
     </>
+  )
+}
+
+const REASON_LABELS = Object.fromEntries(CONSUMPTION_REASONS.map(r => [r.key, r.label]))
+
+// What the applicant filled in on the paper membership form (rows from before
+// 2026-10-05 and walk-ins have none of it).
+function PaperFormDetails({ m }) {
+  const hasForm = m.residential_address || m.consents || m.signed_at
+  return (
+    <div>
+      <h4 className="text-gold text-xs uppercase tracking-widest mb-3">Membership Form</h4>
+      {!hasForm ? (
+        <p className="text-muted text-sm">No paper form on file (walk-in or applied before the form went online).</p>
+      ) : (
+        <div className="space-y-3 text-sm">
+          <p className="text-muted">
+            Residential Address:{' '}
+            <span className="text-white whitespace-pre-line">{m.residential_address || '—'}</span>
+          </p>
+          <p className="text-muted">
+            Consumes cannabis for:{' '}
+            <span className="text-white">
+              {(m.consumption_reasons ?? []).map(r => REASON_LABELS[r] ?? r).join(', ') || '—'}
+              {m.consumption_other ? ` (${m.consumption_other})` : ''}
+            </span>
+          </p>
+          <div>
+            <p className="text-muted mb-1">Agreement &amp; Consent:</p>
+            <ul className="space-y-1">
+              {CONSENTS.map(c => {
+                const ok = m.consents?.[c.key] === true
+                return (
+                  <li key={c.key} className="flex items-start gap-2 text-xs">
+                    {ok
+                      ? <Check size={13} className="text-green-400 mt-0.5 shrink-0" />
+                      : <X size={13} className="text-red-400 mt-0.5 shrink-0" />}
+                    <span className={ok ? 'text-white/80' : 'text-red-400'}>{c.text}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+          <div>
+            <p className="text-muted mb-1">Signature:</p>
+            {m.signature_image ? (
+              <img src={m.signature_image} alt={`Signature of ${m.full_name}`} className="h-20 bg-paper rounded px-2" />
+            ) : m.signature_typed ? (
+              <p className="font-hand text-3xl text-white">{m.signature_typed} <span className="font-body text-muted text-xs">(typed)</span></p>
+            ) : <p className="text-white">—</p>}
+            <p className="text-muted text-xs mt-1">Signed: <span className="text-white">{fmtDateTime(m.signed_at)}</span></p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// The paper form's "224 Clubhouse Use Only" block.
+function ClubUseOnly({ m }) {
+  const updateNotes = useUpdateMembershipNotes()
+  const [notes, setNotes] = useState(m.admin_notes ?? '')
+  const dirty = notes.trim() !== (m.admin_notes ?? '').trim()
+
+  async function save() {
+    try {
+      await updateNotes.mutateAsync({ id: m.id, notes })
+      toast.success('Notes saved')
+    } catch (err) {
+      toast.error(err.message || 'Could not save notes')
+    }
+  }
+
+  return (
+    <div>
+      <h4 className="text-gold text-xs uppercase tracking-widest mb-3">224 Clubhouse Use Only</h4>
+      <div className="space-y-1 text-sm mb-3">
+        <p className="text-muted">Membership ID: <span className="font-mono text-white text-xs">{m.id}</span></p>
+        <p className="text-muted">Date Approved: <span className="text-white">{fmtDate(m.approved_at)}</span></p>
+        <p className="text-muted">Approved By: <span className="text-white">{m.approved_by || '—'}</span></p>
+      </div>
+      <label htmlFor={`notes-${m.id}`} className="block text-muted text-xs uppercase tracking-widest mb-1.5">Notes</label>
+      <textarea
+        id={`notes-${m.id}`}
+        rows={3}
+        maxLength={2000}
+        className="input-base text-sm resize-y"
+        value={notes}
+        onChange={e => setNotes(e.target.value)}
+      />
+      <div className="flex justify-end mt-2">
+        <Button type="button" className="text-sm" onClick={save} disabled={!dirty || updateNotes.isPending}>
+          {updateNotes.isPending ? 'Saving...' : 'Save Notes'}
+        </Button>
+      </div>
+    </div>
   )
 }

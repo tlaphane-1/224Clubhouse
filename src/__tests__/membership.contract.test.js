@@ -67,7 +67,13 @@ let otherUserEmail = null
 let membershipId = null
 let memberProductId = null
 
-const applicationPayload = () => ({
+// Everything the paper membership form asks for (migration 20261005130000).
+const ALL_CONSENTS = {
+  age_21: true, private_club: true, no_redistribution: true,
+  personal_use: true, code_of_conduct: true, release_liability: true,
+}
+
+const applicationPayload = (overrides = {}) => ({
   p_customer: {
     full_name: 'Vitest Member',
     // Deliberately NOT the account email — the server must ignore this and
@@ -75,7 +81,14 @@ const applicationPayload = () => ({
     email: 'spoofed+attacker@example.com',
     phone: '0000000000',
     date_of_birth: '1990-01-01',
-    id_number: null,
+    id_number: '9001015800085',
+    residential_address: '1 Test Street, Boksburg',
+    consumption_reasons: ['recreational'],
+    consumption_other: null,
+    consents: ALL_CONSENTS,
+    signature_image: null,
+    signature_typed: 'Vitest Member',
+    ...overrides,
   },
   p_tier: 'daily',
   p_reference: null,
@@ -149,6 +162,26 @@ describe.skipIf(SKIP)('Membership contract — account-required applications + t
     expect(rows ?? []).toHaveLength(0)
   })
 
+  // The paper form's required parts are enforced server-side: each of these
+  // must be rejected with no row created (the account has none yet here).
+  it.each([
+    ['an unticked consent', { consents: { ...ALL_CONSENTS, release_liability: false } }, /agreement statements/i],
+    ['no signature', { signature_typed: null, signature_image: null }, /signature required/i],
+    ['no residential address', { residential_address: '  ' }, /missing required details/i],
+    ['no ID/passport number', { id_number: '' }, /missing required details/i],
+    ['no consumption reason', { consumption_reasons: [] }, /what you use cannabis for/i],
+    ['"other" without a description', { consumption_reasons: ['other'] }, /describe "other"/i],
+    ['a non-PNG signature image', { signature_typed: null, signature_image: 'data:text/html;base64,PGI+' }, /invalid signature/i],
+  ])('NEGATIVE: paper form with %s is rejected — no row', async (_label, overrides, message) => {
+    const { data, error } = await userClient.rpc('place_membership', applicationPayload(overrides))
+    expect(error).not.toBeNull()
+    expect(data).toBeNull()
+    expect(error.message).toMatch(message)
+
+    const { data: rows } = await admin.from('memberships').select('id').eq('user_id', testUserId)
+    expect(rows ?? []).toHaveLength(0)
+  })
+
   it('POSITIVE: a signed-in customer places a pending application stamped with user_id + ACCOUNT email, clock NOT started', async () => {
     const { data, error } = await userClient.rpc('place_membership', applicationPayload())
     expect(error).toBeNull()
@@ -162,9 +195,14 @@ describe.skipIf(SKIP)('Membership contract — account-required applications + t
     // service-role client.
     const { data: row } = await admin
       .from('memberships')
-      .select('user_id, email, tier_id, status, starts_at, expires_at, approved_at')
+      .select('user_id, email, tier_id, status, starts_at, expires_at, approved_at, residential_address, consumption_reasons, consents, signature_typed, signed_at')
       .eq('id', membershipId)
       .single()
+    expect(row?.residential_address).toBe('1 Test Street, Boksburg')
+    expect(row?.consumption_reasons).toEqual(['recreational'])
+    expect(row?.consents).toMatchObject(ALL_CONSENTS)
+    expect(row?.signature_typed).toBe('Vitest Member')
+    expect(row?.signed_at).toBeTruthy()
     expect(row?.user_id).toBe(testUserId)
     expect(row?.email).toBe(testUserEmail)
     expect(row?.tier_id).toBeTruthy()
