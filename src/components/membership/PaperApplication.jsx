@@ -55,6 +55,9 @@ export default function PaperApplication({ form, setForm, email, tiers, selected
           <span className="font-bold text-xs">Address</span>
           <span>224 Rondebult Rd</span>
           <span>Libradene, Boksburg</span>
+          <a href="mailto:224clubhouse@gmail.com" className="mt-1 font-semibold break-all hover:underline">
+            224clubhouse@gmail.com
+          </a>
         </div>
       </div>
 
