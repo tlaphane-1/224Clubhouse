@@ -5,6 +5,7 @@ import { useAuth } from '../context/useAuth'
 import { useInvoiceOrder } from '../hooks/useInvoiceOrder'
 import { formatZAR } from '../utils/formatCurrency'
 import { statusLabel, paymentLabel } from '../utils/orderStatus'
+import { BANK_DETAILS } from '../utils/bankDetails'
 
 // Seller details printed on every invoice. Same facts as Contact.jsx / Footer.jsx
 // (there is no shared constant yet — keep these in step if the club moves).
@@ -250,6 +251,21 @@ function InvoiceSheet({ order }) {
           <dd className="tabular-nums">{formatZAR(total)}</dd>
         </div>
       </dl>
+
+      {/* Banking details on every live invoice: EFT customers need them, and
+          anyone can choose to settle by transfer. Not on cancelled invoices —
+          nothing is owed. */}
+      {!cancelled && BANK_DETAILS && (
+        <section className="mt-8 p-4 border border-neutral-300 rounded-lg print:break-inside-avoid">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-neutral-500 mb-2">
+            Banking details{payment_method === 'eft' ? '' : ' (for EFT payments)'}
+          </h2>
+          <p className="whitespace-pre-line leading-relaxed">{BANK_DETAILS}</p>
+          <p className="text-neutral-600 mt-2">
+            Reference: <span className="font-mono font-semibold text-black">{order_number}</span>
+          </p>
+        </section>
+      )}
 
       <footer className="mt-10 pt-4 border-t border-neutral-300 text-center text-neutral-600 space-y-1">
         <p className="font-semibold text-black">Thank you for your order</p>
