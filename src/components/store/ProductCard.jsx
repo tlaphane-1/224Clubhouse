@@ -1,4 +1,4 @@
-import { ShoppingCart, Lock } from 'lucide-react'
+import { ShoppingCart, Lock, SlidersHorizontal } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Badge from '../ui/Badge'
 import { useCart } from '../../context/useCart'
@@ -8,6 +8,7 @@ import { memberPurchaseGate } from '../../utils/memberGate'
 import { formatZAR } from '../../utils/formatCurrency'
 import { toastAddedToCart } from '../../utils/cartToast'
 import BrandLogo from '../ui/BrandLogo'
+import { hasVariants, variantPriceRange, toCartItem } from '../../utils/variants'
 
 // Phones: a 44px round icon button (thumb-sized, fits a half-width card).
 // sm+: the roomier icon + label button, still 44px tall for touch tablets.
@@ -20,6 +21,13 @@ export default function ProductCard({ product }) {
   const { user } = useAuth()
   const membership = useMyMembership()
   const isOutOfStock = product.stock_quantity === 0
+  // Sold in options (1g / 3.5g …): the card can't know which one, so its
+  // action opens the product page to choose instead of adding to the cart.
+  const withOptions = hasVariants(product)
+  const range = variantPriceRange(product)
+  const priceText = range && range.min !== range.max
+    ? `From ${formatZAR(range.min)}`
+    : formatZAR(product.price)
 
   // Purchase gate only — browsing member-only products stays open. Locks once
   // the membership query settles (success OR failure — see memberGate: a failed
@@ -30,7 +38,7 @@ export default function ProductCard({ product }) {
 
   const handleAddToCart = () => {
     if (isOutOfStock) return
-    addItem(product, 1)
+    addItem(toCartItem(product), 1)
     toastAddedToCart(product.name, membership.effectiveStatus === 'active')
   }
 
@@ -41,7 +49,7 @@ export default function ProductCard({ product }) {
     <div className="group relative h-full transition-transform duration-200 active:scale-[0.98]">
       <Link
         to={`/store/${product.slug}`}
-        aria-label={`${product.name}, ${formatZAR(product.price)}`}
+        aria-label={`${product.name}, ${priceText}`}
         className="focus-ring flex flex-col h-full bg-surface border border-border rounded-xl overflow-hidden
                    transition-all duration-300 hover:border-gold hover:shadow-glow"
       >
@@ -105,7 +113,7 @@ export default function ProductCard({ product }) {
 
           {/* Price row — right padding leaves room for the action button */}
           <div className="flex items-center min-h-11 mt-auto pt-3 pr-12 sm:pr-24">
-            <span className="text-gold font-bold text-base sm:text-lg leading-tight">{formatZAR(product.price)}</span>
+            <span className="text-gold font-bold text-base sm:text-lg leading-tight">{priceText}</span>
           </div>
         </div>
       </Link>
@@ -118,6 +126,15 @@ export default function ProductCard({ product }) {
         >
           <Lock size={16} />
           <span className="hidden sm:inline">Members</span>
+        </Link>
+      ) : withOptions && !isOutOfStock ? (
+        <Link
+          to={`/store/${product.slug}`}
+          aria-label={`Choose an option for ${product.name}`}
+          className={`${ACTION_BASE} bg-gold/10 text-gold hover:bg-gold hover:text-black active:bg-gold active:text-black`}
+        >
+          <SlidersHorizontal size={16} />
+          <span className="hidden sm:inline">Choose</span>
         </Link>
       ) : (
         <button

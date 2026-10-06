@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { MailCheck, MailX, AlertTriangle } from 'lucide-react'
 import { useNewsletterUnsubscribe } from '../hooks/useNewsletterSubscribers'
+import { useStopCartReminders } from '../hooks/useSavedCart'
 import BrandLogo from '../components/ui/BrandLogo'
 
 // The token is a uuid straight from the DB. Checking the shape here means a
@@ -32,9 +33,69 @@ function Shell({ icon, title, children }) {
   )
 }
 
+// Two kinds of link land here: newsletter (?token=) and abandoned-cart
+// reminders (?cart=, from send-cart-reminders).
 export default function Unsubscribe() {
   const [searchParams] = useSearchParams()
-  const raw = (searchParams.get('token') || '').trim()
+  if (searchParams.has('cart')) return <CartRemindersOptOut raw={searchParams.get('cart') || ''} />
+  return <NewsletterUnsubscribe raw={searchParams.get('token') || ''} />
+}
+
+function CartRemindersOptOut({ raw }) {
+  const token = UUID_RE.test(raw.trim()) ? raw.trim() : null
+  const { data, isLoading, isError, refetch } = useStopCartReminders(token)
+
+  useEffect(() => {
+    document.title = 'Cart reminders | 224 Clubhouse'
+  }, [])
+
+  if (!token || (!isLoading && !isError && data === false)) {
+    return (
+      <Shell icon={<AlertTriangle size={32} className="text-gold" />} title="This link isn't valid">
+        <p className="text-muted text-sm leading-relaxed">
+          We couldn't match this link. Try opening it again from the original email, or email{' '}
+          <a href="mailto:224clubhouse@gmail.com" className="text-gold underline underline-offset-2">
+            224clubhouse@gmail.com
+          </a>{' '}
+          and we'll switch cart reminders off for you.
+        </p>
+      </Shell>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <Shell icon={<MailX size={32} className="text-muted" />} title="Updating…">
+        <p className="text-muted text-sm">One moment while we update your preferences.</p>
+      </Shell>
+    )
+  }
+
+  if (isError) {
+    return (
+      <Shell icon={<AlertTriangle size={32} className="text-red-400" />} title="Something went wrong">
+        <p className="text-muted text-sm leading-relaxed mb-6">
+          We couldn't update your preferences just now. Please try again — reminders are still on.
+        </p>
+        <button onClick={() => refetch()} className="btn-gold text-sm">
+          Try again
+        </button>
+      </Shell>
+    )
+  }
+
+  return (
+    <Shell icon={<MailCheck size={32} className="text-gold" />} title="Cart reminders are off">
+      <p className="text-muted text-sm leading-relaxed">
+        We won't email you about items left in your cart again. You'll still get emails about
+        orders and memberships you place.
+      </p>
+    </Shell>
+  )
+}
+
+function NewsletterUnsubscribe({ raw: rawToken }) {
+  const raw = rawToken.trim()
   const token = UUID_RE.test(raw) ? raw : null
 
   const { data, isLoading, isError, refetch } = useNewsletterUnsubscribe(token)

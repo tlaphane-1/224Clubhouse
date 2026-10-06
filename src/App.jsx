@@ -25,6 +25,7 @@ const TrackOrder = lazy(() => import('./pages/TrackOrder'))
 const MyOrders = lazy(() => import('./pages/MyOrders'))
 const Account = lazy(() => import('./pages/Account'))
 const OrderDetail = lazy(() => import('./pages/OrderDetail'))
+const Invoice = lazy(() => import('./pages/Invoice'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const Events = lazy(() => import('./pages/Events'))
 const EventDetail = lazy(() => import('./pages/EventDetail'))
@@ -44,6 +45,8 @@ const AdminMemberships = lazy(() => import('./pages/admin/Memberships'))
 const AdminMessages = lazy(() => import('./pages/admin/Messages'))
 const AdminNewsletter = lazy(() => import('./pages/admin/Newsletter'))
 const AdminDiscounts = lazy(() => import('./pages/admin/Discounts'))
+const AdminReports = lazy(() => import('./pages/admin/Reports'))
+const AdminReviews = lazy(() => import('./pages/admin/Reviews'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,6 +116,8 @@ export default function App() {
                 <Route path="/orders" element={<PublicLayout><MyOrders /></PublicLayout>} />
                 <Route path="/account" element={<PublicLayout><Account /></PublicLayout>} />
                 <Route path="/orders/:id" element={<PublicLayout><OrderDetail /></PublicLayout>} />
+                {/* Bare page (no navbar/footer) so it prints as a clean A4 invoice. */}
+                <Route path="/orders/:id/invoice" element={<Invoice />} />
                 {/* Password-recovery landing page — the emailed reset link points here. */}
                 <Route path="/reset-password" element={<PublicLayout><ResetPassword /></PublicLayout>} />
                 <Route path="/events" element={<PublicLayout><Events /></PublicLayout>} />
@@ -136,6 +141,8 @@ export default function App() {
                 <Route path="/admin/messages" element={<ProtectedRoute><AdminMessages /></ProtectedRoute>} />
                 <Route path="/admin/newsletter" element={<ProtectedRoute><AdminNewsletter /></ProtectedRoute>} />
                 <Route path="/admin/discounts" element={<ProtectedRoute><AdminDiscounts /></ProtectedRoute>} />
+                <Route path="/admin/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
+                <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
 
                 {/* Fallback */}
                 <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />

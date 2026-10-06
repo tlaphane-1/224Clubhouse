@@ -1,13 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
+// Options (product_variants) are publicly readable, same as products — see
+// migration 20261005140000 — so this embed is safe for signed-out shoppers.
+const PRODUCT_SELECT = '*, product_variants(*)'
+
 export function useProducts(category = null) {
   return useQuery({
     queryKey: ['products', category],
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select('*')
+        .select(PRODUCT_SELECT)
         .eq('is_available', true)
         .order('created_at', { ascending: false })
 
@@ -28,7 +32,7 @@ export function useProduct(slug) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(PRODUCT_SELECT)
         .eq('slug', slug)
         .single()
       if (error) throw error
@@ -47,7 +51,7 @@ export async function fetchProductsByIds(ids) {
   if (!ids || ids.length === 0) return []
   const { data, error } = await supabase
     .from('products')
-    .select('*')
+    .select(PRODUCT_SELECT)
     .in('id', ids)
   if (error) throw error
   return data
@@ -59,7 +63,7 @@ export function useAllProducts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(PRODUCT_SELECT)
         .order('created_at', { ascending: false })
       if (error) throw error
       return data

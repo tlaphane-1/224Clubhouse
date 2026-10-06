@@ -12,6 +12,7 @@ import { SHIPPING_THRESHOLD, shippingFeeFor } from '../utils/shipping'
 import WhatsAppOrderPanel from '../components/store/WhatsAppOrderPanel'
 import StickyActionBar from '../components/ui/StickyActionBar'
 import BrandLogo from '../components/ui/BrandLogo'
+import { cartLineKey, lineName } from '../utils/variants'
 
 const STEPPER_BTN = `focus-ring w-11 h-11 flex items-center justify-center text-lg text-muted hover:text-white
                      active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all rounded-lg`
@@ -97,7 +98,7 @@ export default function Cart() {
               const atMax = item.stock_quantity != null && item.quantity >= item.stock_quantity
               return (
                 <div
-                  key={item.id}
+                  key={cartLineKey(item)}
                   className={`flex gap-3 sm:gap-4 p-3 sm:p-4 bg-surface border rounded-xl ${
                     locked ? 'border-gold/40' : 'border-border'
                   }`}
@@ -120,14 +121,15 @@ export default function Cart() {
                     <div className="flex items-start gap-1">
                       <Link
                         to={`/store/${item.slug}`}
-                        className="focus-ring rounded flex-1 min-w-0 py-3 -my-3 text-white font-semibold text-sm sm:text-base leading-snug line-clamp-2 hover:text-gold transition-colors"
+                        className="focus-ring rounded flex-1 min-w-0 py-3 -my-3 text-white font-semibold text-sm sm:text-base leading-snug hover:text-gold transition-colors"
                       >
-                        {item.name}
+                        <span className="line-clamp-2">{item.name}</span>
+                        {item.variant_label && <span className="block text-muted text-xs font-normal mt-0.5">{item.variant_label}</span>}
                       </Link>
                       <button
                         type="button"
-                        onClick={() => removeItem(item.id)}
-                        aria-label={`Remove ${item.name} from cart`}
+                        onClick={() => removeItem(cartLineKey(item))}
+                        aria-label={`Remove ${lineName(item)} from cart`}
                         className="focus-ring flex-shrink-0 w-11 h-11 -mt-2.5 -mr-2 flex items-center justify-center rounded-lg
                                    text-muted hover:text-red-400 active:text-red-400 active:scale-90 transition-all"
                       >
@@ -147,10 +149,10 @@ export default function Cart() {
                     )}
 
                     <div className="flex items-center justify-between gap-3 mt-2">
-                      <div className="flex items-center border border-border rounded-lg" role="group" aria-label={`Quantity of ${item.name}`}>
+                      <div className="flex items-center border border-border rounded-lg" role="group" aria-label={`Quantity of ${lineName(item)}`}>
                         <button
                           type="button"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(cartLineKey(item), item.quantity - 1)}
                           disabled={item.quantity <= 1}
                           aria-label="Decrease quantity"
                           className={STEPPER_BTN}
@@ -160,7 +162,7 @@ export default function Cart() {
                         <span className="text-white text-sm w-7 text-center" aria-live="polite">{item.quantity}</span>
                         <button
                           type="button"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(cartLineKey(item), item.quantity + 1)}
                           disabled={atMax}
                           aria-label="Increase quantity"
                           className={STEPPER_BTN}

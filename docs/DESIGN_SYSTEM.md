@@ -70,6 +70,7 @@ Use the tokens above. Known exceptions that exist today:
 - Toasts are styled in one place, `src/utils/toastTheme.js`, which **reads the colours from `tailwind.config.js`**. The only literal left is `#fff` for toast text. (The old per-page toast styles and `accent-[#C9A84C]` are gone, and `index.css` now uses `theme()` instead of hex.)
 - Box-shadow and gradient colours are defined once in `tailwind.config.js` (`shadow-glow`) and `index.css` (`.hero-aura`, `.skeleton`) via `theme()`. Use the classes, not new rgba values.
 - **Email HTML** (`supabase/functions/*`, `supabase/templates/*`) is exempt, because email clients need inline hex. See §10.
+- **Printable invoice sheet** (`src/pages/Invoice.jsx`) uses `bg-white text-black` and Tailwind `neutral-*` greys, on screen and on paper, because it is printed / saved as PDF. The toolbar around it stays on brand tokens. Print CSS is the small `@media print` block at the end of `index.css`.
 
 ---
 

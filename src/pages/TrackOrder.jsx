@@ -1,3 +1,4 @@
+import { lineName } from '../utils/variants'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Check, Search, AlertTriangle, X } from 'lucide-react'
@@ -365,10 +366,10 @@ function OrderTracking({ order }) {
         <div className="p-6 border-b border-border">
           <h3 className="text-white font-semibold text-sm uppercase tracking-widest mb-4">Order Summary</h3>
           <div className="space-y-3">
-            {items.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm">
+            {items.map((item, i) => (
+              <div key={`${item.id}-${item.variant_id ?? ''}-${i}`} className="flex justify-between text-sm">
                 <div>
-                  <span className="text-white">{item.name}</span>
+                  <span className="text-white">{lineName(item)}</span>
                   <span className="text-muted ml-2">× {item.quantity}</span>
                 </div>
                 <span className="text-white">{formatZAR(item.price * item.quantity)}</span>

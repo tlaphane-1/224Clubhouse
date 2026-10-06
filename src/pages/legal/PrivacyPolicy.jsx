@@ -55,6 +55,14 @@ export default function PrivacyPolicy() {
             when you use the contact form.
           </li>
           <li>
+            <span className="text-white">Saved cart</span> — if you are signed in, the items in
+            your cart, so your cart follows you between devices.
+          </li>
+          <li>
+            <span className="text-white">Product reviews</span> — your rating, review text and the
+            display name you choose, if you review a product.
+          </li>
+          <li>
             <span className="text-white">WhatsApp orders</span> — if you order via WhatsApp, we see
             your WhatsApp number and message. WhatsApp itself is governed by WhatsApp&rsquo;s own
             privacy policy.
@@ -87,6 +95,11 @@ export default function PrivacyPolicy() {
           <li>
             <span className="text-white">Newsletter</span> — sent only with your consent; you can
             unsubscribe at any time.
+          </li>
+          <li>
+            <span className="text-white">Cart reminders</span> — if you leave items in your cart
+            while signed in, we may send you one reminder email about them. Every reminder has a
+            link to stop these emails.
           </li>
           <li>
             <span className="text-white">Legal obligations</span> — keeping records we are required
@@ -146,6 +159,10 @@ export default function PrivacyPolicy() {
           <li>
             <span className="text-white">Contact messages</span> — as long as needed to handle your
             enquiry.
+          </li>
+          <li>
+            <span className="text-white">Saved carts</span> — deleted when you empty your cart or
+            place your order, and automatically 30 days after you last changed it.
           </li>
         </ul>
         <p>

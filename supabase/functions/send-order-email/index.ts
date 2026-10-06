@@ -14,6 +14,7 @@ const ADMIN_ALERT_EMAIL = Deno.env.get('ADMIN_ALERT_EMAIL') ?? ''
 
 interface OrderItem {
   name: string
+  variant_label?: string | null
   price: number
   quantity: number
 }
@@ -49,6 +50,11 @@ function paymentLabel(method?: string): string {
   if (method === 'cash' || method === 'cash_on_delivery') return 'Cash on delivery'
   if (method === 'eft') return 'EFT (bank transfer)'
   return 'On delivery'
+}
+
+// "Name — Option" for lines bought as a product option (migration 20261005140000).
+function lineName(item: OrderItem): string {
+  return item.variant_label ? `${item.name} — ${item.variant_label}` : item.name
 }
 
 function formatZAR(cents: number): string {
@@ -101,7 +107,7 @@ interface OwnerAlert {
 function ownerAlertHtml(alert: OwnerAlert): string {
   const rows = alert.items.map(item => `
         <tr>
-          <td style="padding:6px 0; border-bottom:1px solid #eeeeee;">${escapeHtml(item.name)}</td>
+          <td style="padding:6px 0; border-bottom:1px solid #eeeeee;">${escapeHtml(lineName(item))}</td>
           <td style="padding:6px 0; border-bottom:1px solid #eeeeee; text-align:center; white-space:nowrap;">&times;&nbsp;${escapeHtml(item.quantity)}</td>
           <td style="padding:6px 0; border-bottom:1px solid #eeeeee; text-align:right; white-space:nowrap;">${escapeHtml(formatZAR(item.price * item.quantity))}</td>
         </tr>`).join('')
@@ -260,7 +266,7 @@ serve(async (req) => {
 
     const itemRows = items.map(item => `
       <tr>
-        <td style="padding: 8px 0; color: #ffffff; border-bottom: 1px solid #222222;">${escapeHtml(item.name)}</td>
+        <td style="padding: 8px 0; color: #ffffff; border-bottom: 1px solid #222222;">${escapeHtml(lineName(item))}</td>
         <td style="padding: 8px 0; color: #888888; text-align: center; border-bottom: 1px solid #222222;">${escapeHtml(item.quantity)}</td>
         <td style="padding: 8px 0; color: #C9A84C; text-align: right; border-bottom: 1px solid #222222;">${formatZAR(item.price * item.quantity)}</td>
       </tr>

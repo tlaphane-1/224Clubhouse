@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, AlertTriangle, Package, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Check, AlertTriangle, Package, RotateCcw, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/useAuth'
 import { useCart } from '../context/useCart'
 import { useMyOrder } from '../hooks/useMyOrders'
 import { fetchProductsByIds } from '../hooks/useProducts'
+import { hasVariants, lineName, toCartItem } from '../utils/variants'
 import { formatZAR } from '../utils/formatCurrency'
 import { STATUS_STEPS, statusLabel, paymentLabel } from '../utils/orderStatus'
 
@@ -127,13 +128,23 @@ function OrderDetailBody({ order }) {
       let added = 0
       for (const item of items) {
         const product = byId.get(item.id)
-        if (!product || !product.is_available || product.stock_quantity < 1) {
-          skipped.push(item.name)
+        // Options: re-add the SAME option, judged on its own stock and price.
+        // An option that was deleted or switched off is skipped like a
+        // product — and a line from before the product had options can't be
+        // reordered as-is, because the server now requires a choice.
+        const variant = product && item.variant_id
+          ? (product.product_variants ?? []).find((v) => v.id === item.variant_id && v.is_available)
+          : null
+        const needsChoice = product && !item.variant_id && hasVariants(product)
+        const stock = variant ? variant.stock_quantity : product?.stock_quantity
+        if (!product || !product.is_available || needsChoice || (item.variant_id && !variant) || stock < 1) {
+          skipped.push(lineName(item))
           continue
         }
-        addItem(product, Math.min(item.quantity, product.stock_quantity))
+        addItem(toCartItem(product, variant), Math.min(item.quantity, stock))
         added += 1
-        if (product.price !== item.price) priceChanged.push(product.name)
+        const price = variant ? variant.price : product.price
+        if (price !== item.price) priceChanged.push(lineName(item))
       }
 
       if (added === 0) {
@@ -167,6 +178,14 @@ function OrderDetailBody({ order }) {
             {' · '}{paymentLabel(payment_method)}
           </p>
         </div>
+        <div className="flex flex-wrap gap-3">
+        <Link
+          to={`/orders/${order.id}/invoice`}
+          className="btn-outline h-11 px-5 text-xs uppercase tracking-widest inline-flex items-center gap-2"
+        >
+          <FileText size={14} />
+          View / download invoice
+        </Link>
         <button
           type="button"
           onClick={handleReorder}
@@ -176,6 +195,7 @@ function OrderDetailBody({ order }) {
           <RotateCcw size={14} />
           {reordering ? 'Adding…' : 'Reorder'}
         </button>
+        </div>
       </div>
 
       {/* Cancelled banner */}
@@ -245,10 +265,10 @@ function OrderDetailBody({ order }) {
         <div className="p-6 border-b border-border">
           <h3 className="text-white font-semibold text-sm uppercase tracking-widest mb-4">Order Summary</h3>
           <div className="space-y-3">
-            {items.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm">
+            {items.map((item, i) => (
+              <div key={`${item.id}-${item.variant_id ?? ''}-${i}`} className="flex justify-between text-sm">
                 <div>
-                  <span className="text-white">{item.name}</span>
+                  <span className="text-white">{lineName(item)}</span>
                   <span className="text-muted ml-2">× {item.quantity}</span>
                 </div>
                 <span className="text-white">{formatZAR(item.price * item.quantity)}</span>
