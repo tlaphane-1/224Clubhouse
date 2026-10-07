@@ -1,17 +1,21 @@
 import { lineName } from '../../utils/variants'
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronRight, AlertTriangle, FileText } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import Badge from '../../components/ui/Badge'
 import { useOrders, useUpdateOrderStatus } from '../../hooks/useOrders'
 import { formatZAR } from '../../utils/formatCurrency'
-import { ALL_STATUSES, statusLabel, paymentLabel } from '../../utils/orderStatus'
+import { ALL_STATUSES, statusLabel, paymentLabel, eftState, EFT_GATED_STATUSES } from '../../utils/orderStatus'
+import EftAdminPanel, { EftPill } from '../../components/admin/EftAdminPanel'
 import toast from 'react-hot-toast'
 
 export default function Orders() {
   const { data: orders, isLoading, isError, refetch } = useOrders()
   const updateStatus = useUpdateOrderStatus()
-  const [filter, setFilter] = useState('all')
+  // ?filter=eft opens straight on the EFT payments to check (Dashboard link).
+  const [searchParams] = useSearchParams()
+  const [filter, setFilter] = useState(searchParams.get('filter') === 'eft' ? 'eft' : 'all')
   const [expandedId, setExpandedId] = useState(null)
 
   useEffect(() => {
@@ -46,12 +50,19 @@ export default function Orders() {
         customerEmail: order.customer_email,
       })
       toast.success(`Order status updated to "${statusLabel(status)}"`)
-    } catch {
-      toast.error('Failed to update status')
+    } catch (err) {
+      // The server refuses some moves (e.g. an unpaid EFT order to Preparing);
+      // say why instead of a generic failure, and put the select back.
+      toast.error(err?.message || 'Failed to update status')
+      if (selectEl) selectEl.value = order.status
     }
   }
 
-  const filtered = orders?.filter(o => filter === 'all' || o.status === filter) || []
+  const filtered = orders?.filter(o =>
+    filter === 'all' ||
+    (filter === 'eft' ? ['awaiting', 'proof'].includes(eftState(o)) : o.status === filter)
+  ) || []
+  const eftToCheck = orders?.filter(o => ['awaiting', 'proof'].includes(eftState(o))).length ?? 0
 
   return (
     <AdminLayout>
@@ -62,6 +73,16 @@ export default function Orders() {
 
       {/* Filter */}
       <div className="flex gap-2 flex-wrap mb-6">
+        <button
+          onClick={() => setFilter('eft')}
+          className={`px-4 py-1.5 rounded-full text-xs font-medium uppercase tracking-wide transition-all border ${
+            filter === 'eft'
+              ? 'border-gold text-gold bg-gold/10'
+              : 'border-border text-muted hover:border-muted hover:text-white'
+          }`}
+        >
+          EFT to check{eftToCheck > 0 ? ` (${eftToCheck})` : ''}
+        </button>
         {['all', ...ALL_STATUSES].map(s => (
           <button
             key={s}
@@ -121,6 +142,7 @@ export default function Orders() {
                     <div className="text-right flex-shrink-0">
                       <p className="text-white font-semibold text-sm">{formatZAR(order.total)}</p>
                       <div className="mt-1"><Badge variant={order.status}>{statusLabel(order.status)}</Badge></div>
+                      <div className="mt-1"><EftPill order={order} /></div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-3">
@@ -129,7 +151,10 @@ export default function Orders() {
                       onChange={e => handleStatusChange(order, e.target.value, e.target)}
                       className="flex-1 bg-background border border-border text-white text-xs rounded px-2 py-2 cursor-pointer"
                     >
-                      {ALL_STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
+                      {ALL_STATUSES.map(s => {
+                        const blocked = s !== order.status && order.payment_method === 'eft' && !order.paid_at && EFT_GATED_STATUSES.includes(s)
+                        return <option key={s} value={s} disabled={blocked}>{statusLabel(s)}{blocked ? ' (needs EFT payment)' : ''}</option>
+                      })}
                     </select>
                     <button
                       onClick={() => setExpandedId(id => id === order.id ? null : order.id)}
@@ -151,8 +176,9 @@ export default function Orders() {
                     <p className="text-muted text-xs">{order.customer_email}</p>
                   </div>
                   <div className="text-right text-white font-semibold text-sm">{formatZAR(order.total)}</div>
-                  <div className="text-center">
+                  <div className="text-center space-y-1">
                     <Badge variant={order.status}>{statusLabel(order.status)}</Badge>
+                    <div><EftPill order={order} /></div>
                   </div>
                   <div className="text-center">
                     <select
@@ -160,7 +186,10 @@ export default function Orders() {
                       onChange={e => handleStatusChange(order, e.target.value, e.target)}
                       className="bg-background border border-border text-white text-xs rounded px-2 py-1.5 cursor-pointer w-full"
                     >
-                      {ALL_STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
+                      {ALL_STATUSES.map(s => {
+                        const blocked = s !== order.status && order.payment_method === 'eft' && !order.paid_at && EFT_GATED_STATUSES.includes(s)
+                        return <option key={s} value={s} disabled={blocked}>{statusLabel(s)}{blocked ? ' (needs EFT payment)' : ''}</option>
+                      })}
                     </select>
                   </div>
                   <div className="text-center">
@@ -215,6 +244,7 @@ export default function Orders() {
                         </div>
                       </div>
                     </div>
+                    <EftAdminPanel order={order} />
                   </div>
                 )}
               </div>

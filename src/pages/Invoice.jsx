@@ -179,6 +179,12 @@ function InvoiceSheet({ order }) {
             <dd>{statusLabel(status)}</dd>
             <dt className="text-neutral-600">Payment</dt>
             <dd>{paymentLabel(payment_method)}</dd>
+            {order.paid_at && (
+              <>
+                <dt className="text-neutral-600">Paid</dt>
+                <dd>{new Date(order.paid_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}</dd>
+              </>
+            )}
           </dl>
         </div>
       </header>
@@ -253,9 +259,9 @@ function InvoiceSheet({ order }) {
       </dl>
 
       {/* Banking details on every live invoice: EFT customers need them, and
-          anyone can choose to settle by transfer. Not on cancelled invoices —
-          nothing is owed. */}
-      {!cancelled && BANK_DETAILS && (
+          anyone can choose to settle by transfer. Not on cancelled or paid
+          invoices — nothing is owed. */}
+      {!cancelled && !order.paid_at && BANK_DETAILS && (
         <section className="mt-8 p-4 border border-neutral-300 rounded-lg print:break-inside-avoid">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-neutral-500 mb-2">
             Banking details{payment_method === 'eft' ? '' : ' (for EFT payments)'}

@@ -135,6 +135,14 @@ export default function OrderConfirmation() {
             <div className="p-6 border-b border-border">
               <EftDetails reference={order.order_number} amountLabel={formatZAR(order.total)} />
               <p className="text-muted text-xs mt-3">We dispatch your order once the payment reflects.</p>
+              {order.id && (
+                <Link
+                  to={`/orders/${order.id}`}
+                  className="btn-outline h-11 px-5 mt-4 text-xs uppercase tracking-widest inline-flex items-center"
+                >
+                  Upload proof of payment
+                </Link>
+              )}
             </div>
           ) : (
             <div className="p-6 border-b border-border bg-gold/5 flex items-start gap-3">

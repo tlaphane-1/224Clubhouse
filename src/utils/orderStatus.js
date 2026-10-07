@@ -57,4 +57,18 @@ export const paymentLabel = (m) => PAYMENT_LABELS[m] ?? m
  * nothing to pay.
  */
 export const eftAwaitingPayment = (order) =>
-  order?.payment_method === 'eft' && !['delivered', 'cancelled'].includes(order?.status)
+  order?.payment_method === 'eft' && !order?.paid_at && !['delivered', 'cancelled'].includes(order?.status)
+
+/**
+ * Admin-facing EFT state: 'paid', 'proof' (customer uploaded proof, money not
+ * yet confirmed), 'awaiting', or null (not EFT / nothing to check).
+ */
+export function eftState(order) {
+  if (order?.payment_method !== 'eft') return null
+  if (order.paid_at) return 'paid'
+  if (['delivered', 'cancelled'].includes(order.status)) return null
+  return order.payment_proof_uploaded_at ? 'proof' : 'awaiting'
+}
+
+/** Statuses an unpaid EFT order may not move to (admin_update_order_status gate). */
+export const EFT_GATED_STATUSES = ['preparing', 'out_for_delivery', 'delivered']
