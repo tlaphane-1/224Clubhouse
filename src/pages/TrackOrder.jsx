@@ -1,10 +1,9 @@
 import { lineName } from '../utils/variants'
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Check, Search, AlertTriangle, X } from 'lucide-react'
 import { useAuth } from '../context/useAuth'
 import { useOrderTracking } from '../hooks/useOrderTracking'
-import { useOrdersByEmail } from '../hooks/useOrdersByEmail'
 import { formatZAR } from '../utils/formatCurrency'
 import { forgetOrder, getRecentOrders } from '../utils/recentOrders'
 import {
@@ -68,22 +67,18 @@ export default function TrackOrder() {
     submitted,
   )
 
-  // Email on its own lists that address's orders, for customers who never noted
-  // the number. Only runs when the order-number field is empty.
-  const byEmail = useOrdersByEmail(email.trim(), submitted && !orderNumber.trim())
-
+  // Both the order number AND the email are required. The email-only listing
+  // (get_orders_by_email) was retired on 2026-10-07: anyone who could guess an
+  // address could list that customer's orders. Signed-in customers see all
+  // their orders on /orders instead.
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!email.trim()) return
+    if (!email.trim() || !orderNumber.trim()) return
     setSubmitted(true)
   }
 
   // The query is "done" with a null result only after a real fetch returned no row.
-  const notFound = submitted && !orderNumber.trim()
-    ? !byEmail.isLoading && !byEmail.isError && (byEmail.data ?? []).length === 0
-    : submitted && !isLoading && !isError && data === null
-
-  const listing = submitted && !orderNumber.trim() ? (byEmail.data ?? []) : []
+  const notFound = submitted && !isLoading && !isError && data === null
 
   return (
     <div className="min-h-screen pt-28 pb-20 animate-fadeIn">
@@ -93,8 +88,8 @@ export default function TrackOrder() {
           <p className="text-gold text-xs uppercase tracking-[0.3em] mb-3">Order Status</p>
           <h1 className="font-heading text-3xl md:text-4xl font-bold text-white">Track Your Order</h1>
           <p className="text-muted text-sm mt-3">
-            Enter the email you checked out with to see your orders — or add the order number
-            to go straight to one.
+            Enter your order number and the email you checked out with.{' '}
+            <Link to="/orders" className="text-gold underline underline-offset-2">Signed in? See all your orders.</Link>
           </p>
         </div>
 
@@ -150,13 +145,15 @@ export default function TrackOrder() {
         >
           <div>
             <label htmlFor="order-number" className="block text-muted text-xs uppercase tracking-widest mb-2">
-              Order Number <span className="normal-case tracking-normal">(optional)</span>
+              Order Number
             </label>
             <input
               id="order-number"
               type="text"
               className="input-base"
               placeholder="224-XXXXXX"
+              required
+              autoCapitalize="characters"
               value={orderNumber}
               onChange={(e) => setOrderNumber(e.target.value)}
             />
@@ -170,6 +167,8 @@ export default function TrackOrder() {
               type="email"
               className="input-base"
               placeholder="you@example.com"
+              required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -183,52 +182,15 @@ export default function TrackOrder() {
           </button>
         </form>
 
-        {/* Orders found for the email — pick one to see its live status. */}
-        {listing.length > 0 && (
-          <div className="bg-surface border border-border rounded-2xl p-6 mb-8 animate-fadeIn">
-            <h2 className="text-white font-semibold text-sm uppercase tracking-widest mb-1">
-              Orders for {email.trim()}
-            </h2>
-            <p className="text-muted text-xs mb-4">
-              {listing.length} order{listing.length === 1 ? '' : 's'} · newest first
-            </p>
-            <ul className="space-y-2">
-              {listing.map((o) => (
-                <li
-                  key={o.order_number}
-                  className="flex items-center justify-between gap-3 flex-wrap border border-border rounded-xl p-3"
-                >
-                  <div className="min-w-0">
-                    <p className="font-mono text-gold text-sm font-semibold">{o.order_number}</p>
-                    <p className="text-muted text-xs mt-0.5">
-                      {new Date(o.created_at).toLocaleDateString('en-ZA')} · {formatZAR(o.total)}
-                      {o.item_count ? ` · ${o.item_count} item${o.item_count === 1 ? '' : 's'}` : ''}
-                      {' · '}
-                      {statusLabel(o.status)}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setOrderNumber(o.order_number)}
-                    className="btn-gold px-4 py-2 text-xs uppercase tracking-widest"
-                  >
-                    View
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         {/* Loading */}
-        {submitted && (isLoading || byEmail.isLoading) && (
+        {submitted && isLoading && (
           <div className="flex justify-center py-12">
             <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
           </div>
         )}
 
         {/* Error */}
-        {submitted && (isError || byEmail.isError) && (
+        {submitted && isError && (
           <div className="bg-surface border border-red-500/20 rounded-2xl p-6 text-center animate-fadeIn">
             <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
             <p className="text-white text-sm">
@@ -242,7 +204,7 @@ export default function TrackOrder() {
           <div className="bg-surface border border-border rounded-2xl p-6 text-center animate-fadeIn">
             <Search size={28} className="text-muted mx-auto mb-3" />
             <p className="text-white text-sm">
-              We couldn't find any orders for those details. Double-check the email (and order number, if you entered one) and try again.
+              We couldn't find any orders for those details. Double-check the order number and email and try again.
             </p>
           </div>
         )}
