@@ -50,3 +50,11 @@ export const PAYMENT_LABELS = {
 
 export const statusLabel = (s) => STATUS_LABELS[s] ?? s
 export const paymentLabel = (m) => PAYMENT_LABELS[m] ?? m
+
+/**
+ * An EFT order the customer may still need to pay: the bank details must be
+ * shown wherever the order is shown. Once delivered or cancelled there is
+ * nothing to pay.
+ */
+export const eftAwaitingPayment = (order) =>
+  order?.payment_method === 'eft' && !['delivered', 'cancelled'].includes(order?.status)

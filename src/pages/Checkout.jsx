@@ -19,6 +19,7 @@ import OrderSummary from '../components/checkout/OrderSummary'
 import Modal from '../components/ui/Modal'
 import { shippingFeeFor } from '../utils/shipping'
 import PaymentMethodSelect from '../components/checkout/PaymentMethodSelect'
+import EftDetails from '../components/checkout/EftDetails'
 // Paystack is disabled while the online paygate is being confirmed (PaystackButton.jsx retained for re-enable).
 import { paymentLabel } from '../utils/orderStatus'
 import { formatZAR } from '../utils/formatCurrency'
@@ -202,6 +203,7 @@ export default function Checkout() {
       email: checkoutForm.email,
       total: data.total,
       itemCount: items.reduce((n, i) => n + i.quantity, 0),
+      paymentMethod: method,
     })
 
     // Receipt email — fire and forget. The order is already placed; if Resend is
@@ -239,7 +241,7 @@ export default function Checkout() {
 
   const itemCount = items.reduce((n, i) => n + i.quantity, 0)
   const paymentNote = method === 'eft'
-    ? "No payment now — we'll show our banking details after you place your order."
+    ? 'No payment now — pay by EFT using your order number as the reference.'
     : `No payment now — you'll pay by ${method ? paymentLabel(method) : 'cash/card'} on delivery.`
 
   // One place-order control, rendered inline on desktop and in the phone's
@@ -382,6 +384,15 @@ export default function Checkout() {
                   Payment Method
                 </h2>
                 <PaymentMethodSelect value={method} onChange={setMethod} />
+                {method === 'eft' && (
+                  <div className="mt-4">
+                    <EftDetails reference="your order number" amountLabel={formatZAR(total)} />
+                    <p className="text-muted text-xs mt-2">
+                      You'll get your order number when you place the order. It's also on your
+                      order page and in your email.
+                    </p>
+                  </div>
+                )}
               </section>
 
               <section className="bg-surface border border-border rounded-xl p-4 sm:p-6" aria-labelledby="checkout-step-3">

@@ -31,6 +31,14 @@ export default function OrderConfirmation() {
               <>
                 <p className="text-muted text-xs uppercase tracking-widest mb-1">Your order number</p>
                 <p className="font-mono text-gold text-lg font-semibold mb-6">{saved.orderNumber}</p>
+                {saved.paymentMethod === 'eft' && (
+                  <div className="mb-6">
+                    <EftDetails
+                      reference={saved.orderNumber}
+                      amountLabel={saved.total != null ? formatZAR(saved.total) : null}
+                    />
+                  </div>
+                )}
               </>
             ) : (
               <p className="text-muted text-sm mb-8">

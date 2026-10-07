@@ -11,7 +11,9 @@ import {
   STATUS_STEPS,
   statusLabel,
   paymentLabel,
+  eftAwaitingPayment,
 } from '../utils/orderStatus'
+import EftDetails from '../components/checkout/EftDetails'
 
 export default function TrackOrder() {
   const [searchParams] = useSearchParams()
@@ -295,6 +297,12 @@ function OrderTracking({ order }) {
           <span className="text-green-400 text-xs uppercase tracking-widest">Live tracking</span>
         </div>
       </div>
+
+      {/* EFT still to pay: the bank details must be reachable from here, not
+          only from the one-off confirmation page. */}
+      {eftAwaitingPayment(order) && (
+        <EftDetails reference={order_number} amountLabel={formatZAR(total)} />
+      )}
 
       {/* Cancelled banner */}
       {cancelled && (
