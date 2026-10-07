@@ -348,7 +348,7 @@ serve(async (req) => {
           </tr>
         </table>
         ${paymentMethod === 'eft'
-          ? `<div style="color:#888888; font-size:12px; margin-top:6px; white-space:pre-line;">${EFT_BANK_DETAILS ? escapeHtml(EFT_BANK_DETAILS) : 'We will send you our banking details shortly.'}<br>Use your order number as the payment reference. We dispatch once the payment reflects.</div>`
+          ? `<div style="color:#888888; font-size:12px; margin-top:6px; white-space:pre-line;">${EFT_BANK_DETAILS ? escapeHtml(EFT_BANK_DETAILS) : 'We will send you our banking details shortly.'}<br>Use your name and surname (${escapeHtml(customerName)}) as the payment reference. We dispatch once the payment reflects.</div>`
           : `<div style="color:#888888; font-size:12px; margin-top:6px;">${paymentLabel(paymentMethod)} — no payment is needed now.</div>`}
       </div>
     </div>

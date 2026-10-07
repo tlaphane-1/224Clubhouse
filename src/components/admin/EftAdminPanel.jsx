@@ -117,7 +117,8 @@ export default function EftAdminPanel({ order }) {
       ) : order.status !== 'cancelled' && (
         <div className="mt-2">
           <p className="text-muted text-xs mb-2">
-            Check the FNB app first — a proof of payment can be faked. Reference: <span className="font-mono text-white">{order.order_number}</span>
+            Check the FNB app first — a proof of payment can be faked. Look for the reference{' '}
+            <span className="text-white">{order.customer_name}</span> and {formatZAR(order.total)}.
           </p>
           <div className="flex flex-wrap items-end gap-2">
             <div>

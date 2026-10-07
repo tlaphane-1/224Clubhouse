@@ -53,7 +53,7 @@ export default function EftPaymentPanel({ order }) {
 
   return (
     <div className="bg-surface border border-border rounded-2xl p-5 sm:p-6 space-y-4">
-      <EftDetails reference={order.order_number} amountLabel={formatZAR(order.total)} />
+      <EftDetails reference={order.customer_name || 'your name and surname'} amountLabel={formatZAR(order.total)} />
 
       {hasProof ? (
         <p className="flex items-start gap-2 text-sm">
