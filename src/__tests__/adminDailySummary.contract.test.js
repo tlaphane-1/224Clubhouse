@@ -16,10 +16,12 @@ import {
 const gate = await probeMigration({
   migration: '20261008160000_admin_daily_summary',
   label: 'admin_daily_summary()',
-  // Anon gets "Not authorized" (P0001) once the function exists — that's "applied".
+  // Anon is refused once the function exists — permission denied (42501,
+  // execute revoked) or "Not authorized" (P0001). Either means "applied";
+  // a missing function is PGRST202 and is passed through as "not applied".
   probe: async () => {
     const res = await anonClient().rpc('admin_daily_summary', { p_day: null })
-    return res.error?.code === 'P0001' ? { data: null, error: null } : res
+    return ['42501', 'P0001'].includes(res.error?.code) ? { data: null, error: null } : res
   },
 })
 const SKIP = !gate.applied
