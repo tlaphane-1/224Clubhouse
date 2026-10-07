@@ -3,6 +3,7 @@ import { cartReducer, CART_KEY, CART_CLEAR_EVENT } from './cartReducer'
 import { CartContext } from './useCart'
 import { useAuth } from './useAuth'
 import { fetchSavedCart, saveCart, deleteSavedCart, rebuildCartLines } from '../hooks/useSavedCart'
+import { trackEvent } from '../utils/analytics'
 
 // Debounce for the server copy: steppers fire one change per tap.
 const SAVE_DELAY_MS = 1500
@@ -85,6 +86,7 @@ export function CartProvider({ children }) {
 
   const addItem = (item, quantity = 1) => {
     dispatch({ type: 'ADD_ITEM', item: { ...item, quantity } })
+    trackEvent('add_to_cart')
   }
 
   // `key` is cartLineKey(item) — see cartReducer.
