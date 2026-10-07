@@ -191,9 +191,9 @@ function ownerAlertHtml(alert: OwnerAlert): string {
  * Throws on a failed send. Callers MUST swallow that: the customer's receipt is
  * the contract with the browser, the owner alert is a courtesy on top of it.
  */
-async function sendOwnerAlert(alert: OwnerAlert): Promise<void> {
+async function sendOwnerAlert(alert: OwnerAlert): Promise<string> {
   const to = ADMIN_ALERT_EMAIL.split(',').map(address => address.trim()).filter(Boolean)
-  if (to.length === 0) return // secret not set yet — a deliberate, silent no-op
+  if (to.length === 0) return 'skipped: ADMIN_ALERT_EMAIL not set'
 
   const subject = `New order ${alert.orderNumber} — ${formatZAR(alert.total)} (${paymentLabel(alert.paymentMethod).toLowerCase()})`
 
@@ -212,6 +212,8 @@ async function sendOwnerAlert(alert: OwnerAlert): Promise<void> {
   })
 
   if (!res.ok) throw new Error(await res.text())
+  const sent = await res.json().catch(() => ({}))
+  return `sent to ${to.length} address(es), id ${sent?.id ?? 'unknown'}`
 }
 
 serve(async (req) => {
@@ -413,9 +415,12 @@ serve(async (req) => {
 
     // Owner alert: strictly additive. Anything it throws (bad recipient,
     // Resend outage, malformed row) is logged and dropped here so it can never
-    // turn a delivered receipt into a 500 for the customer's browser.
+    // turn a delivered receipt into a 500 for the customer's browser. Its
+    // outcome is reported in the response body (the browser ignores it) so a
+    // missing alert can be diagnosed without function logs.
+    let ownerAlert = 'sent'
     try {
-      await sendOwnerAlert({
+      ownerAlert = await sendOwnerAlert({
         orderNumber,
         placedAt: formatPlacedAt(order.created_at),
         customerName,
@@ -432,11 +437,12 @@ serve(async (req) => {
       })
     } catch (alertError) {
       console.error('[send-order-email] owner alert failed:', alertError)
+      ownerAlert = `failed: ${alertError instanceof Error ? alertError.message : String(alertError)}`
     }
 
     if (customerSendError) throw customerSendError
 
-    return jsonResponse({ success: true })
+    return jsonResponse({ success: true, ownerAlert })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return jsonResponse({ error: message }, 500)
