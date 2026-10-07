@@ -37,6 +37,11 @@ function useDriverStatusMutation(rpc) {
       if (error) throw error
       // Customer status email — fire and forget, as on the admin side.
       supabase.functions.invoke('send-status-email', { body: { orderId } }).catch(() => {})
+      // Map point for the customer's ETA and the "driver nearby" email
+      // (migration 20261008140000). Best effort: a miss just means no ETA.
+      if (rpc === 'driver_start_delivery') {
+        supabase.functions.invoke('geocode-order', { body: { orderId } }).catch(() => {})
+      }
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['driver-orders'] }),
   })
@@ -88,11 +93,21 @@ export function useLocationSharing(active) {
         p_accuracy: c.accuracy ?? null,
         p_heading: Number.isFinite(c.heading) ? c.heading : null,
         p_speed: Number.isFinite(c.speed) ? c.speed : null,
-      }).then(({ error }) => {
-        if (error) setState('error')
-        else {
+      }).then(({ data, error }) => {
+        if (error) {
+          setState('error')
+          return
+        }
+        // {stored, nearby}: nearby = orders that just came within 1 km of
+        // their destination, each reported once by the server.
+        if (data?.stored) {
           setState('sharing')
           setLastSentAt(new Date())
+        }
+        for (const orderId of data?.nearby ?? []) {
+          supabase.functions
+            .invoke('send-status-email', { body: { orderId, kind: 'nearby' } })
+            .catch(() => {})
         }
       }, () => setState('error'))
     }

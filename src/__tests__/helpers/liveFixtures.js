@@ -359,10 +359,29 @@ export async function createTestUser(admin, label) {
   })
   if (attempts > 1 && result.error?.code === 'email_exists') {
     const id = await findUserIdByEmail(admin, email)
-    if (id) return { id, email }
+    if (id) {
+      await giveAdultProfile(admin, id)
+      return { id, email }
+    }
   }
   const data = mustSucceed(`create test account ${email}`, result)
+  await giveAdultProfile(admin, data.user.id)
   return { id: data.user.id, email }
+}
+
+/**
+ * Since 20261008120000 place_cod_order refuses accounts without a 21+ date of
+ * birth on record, so every fixture account gets one (the age-verification
+ * suite deletes it where it needs a bare account). Before that migration is
+ * pushed the table doesn't exist — only that error is ignored.
+ */
+export async function giveAdultProfile(admin, userId) {
+  const { error } = await admin
+    .from('customer_profiles')
+    .upsert({ user_id: userId, date_of_birth: '1990-01-01' }, { onConflict: 'user_id' })
+  if (error && !['PGRST205', '42P01'].includes(error.code)) {
+    throw new Error(`adult profile for ${userId}: ${error.message}`)
+  }
 }
 
 async function findUserIdByEmail(admin, email) {

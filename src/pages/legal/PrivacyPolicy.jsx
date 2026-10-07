@@ -32,7 +32,10 @@ export default function PrivacyPolicy() {
         <ul className="list-disc pl-5 space-y-2">
           <li>
             <span className="text-white">Account details</span> — your email address and a password
-            (stored in hashed form by our authentication provider, never readable by us).
+            (stored in hashed form by our authentication provider, never readable by us), and your{' '}
+            <span className="text-white">date of birth</span>, asked for when you create an account
+            or at your first checkout, so we can confirm every customer is 21 or older before an
+            order is accepted.
           </li>
           <li>
             <span className="text-white">Order details</span> — your name, email, phone number,
