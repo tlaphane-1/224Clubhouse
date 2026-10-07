@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { Mail } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import { validateNewPassword } from '../../utils/passwordValidation'
+import { isAdultDob, latestAdultDob, MIN_AGE } from '../../utils/age'
 import ForgotPasswordForm from './ForgotPasswordForm'
 import toast from 'react-hot-toast'
 
@@ -24,6 +25,7 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [dob, setDob] = useState('')
   const [busy, setBusy] = useState(false)
   const [resendWait, setResendWait] = useState(false)
 
@@ -56,9 +58,15 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
       toast.error(invalid)
       return
     }
+    if (!isAdultDob(dob)) {
+      toast.error(dob ? `Sorry — you must be ${MIN_AGE} or older to join 224 Clubhouse.` : 'Please enter your date of birth.')
+      return
+    }
     setBusy(true)
     try {
-      const data = await signUp(email.trim(), password, { redirectTo })
+      // The DOB rides along as user metadata; a DB trigger records it for the
+      // server-side 21+ check at checkout.
+      const data = await signUp(email.trim(), password, { redirectTo, data: { date_of_birth: dob } })
       // Supabase obfuscates signups on an existing confirmed email: it
       // "succeeds" but returns a user with no identities.
       if (data?.user && (data.user.identities?.length ?? 0) === 0) {
@@ -213,6 +221,24 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
               placeholder="Repeat your password"
               autoComplete="new-password"
             />
+          </div>
+        )}
+        {isSignup && (
+          <div>
+            <label htmlFor="auth-dob" className={labelCls}>Date of Birth</label>
+            <input
+              id="auth-dob"
+              type="date"
+              required
+              className={inputCls}
+              value={dob}
+              max={latestAdultDob()}
+              min="1900-01-01"
+              onChange={(e) => setDob(e.target.value)}
+              autoComplete="bday"
+              aria-describedby="auth-dob-help"
+            />
+            <p id="auth-dob-help" className="text-muted text-xs mt-1">You must be {MIN_AGE} or older to order.</p>
           </div>
         )}
         <button

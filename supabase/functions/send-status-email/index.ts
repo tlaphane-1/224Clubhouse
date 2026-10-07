@@ -14,6 +14,17 @@ const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za
 // (public) anon key could send branded mail from the club's verified domain.
 interface StatusEmailPayload {
   orderId: string
+  // 'nearby': the one-off "driver is less than 1 km away" email, sent by the
+  // driver portal when driver_update_location reports the order as nearby.
+  kind?: 'status' | 'nearby'
+}
+
+// Not a status, so it lives outside STATUS_COPY. Only sent while the order is
+// actually out for delivery.
+const NEARBY_COPY = {
+  subject: 'Your 224 Clubhouse driver is nearby 🚚',
+  heading: 'Your Driver Is Nearby 🚚',
+  message: '{name}, your driver is less than a kilometre away — please be ready to receive your order.',
 }
 
 const SITE_URL = 'https://224clubhouse.store'
@@ -56,6 +67,7 @@ serve(async (req) => {
   try {
     const payload: StatusEmailPayload = await req.json()
     const { orderId } = payload
+    const nearby = payload.kind === 'nearby'
     if (!orderId) return jsonResponse({ error: 'orderId is required' }, 400)
 
     const authHeader = req.headers.get('Authorization') ?? ''
@@ -91,7 +103,9 @@ serve(async (req) => {
     // No email for 'pending' (covered by the order receipt) or for any status
     // without copy (legacy values like 'paid'/'shipped'). Report success so the
     // caller's fire-and-forget path never treats a deliberate skip as a failure.
-    const copy = STATUS_COPY[status]
+    const copy = nearby
+      ? (status === 'out_for_delivery' ? NEARBY_COPY : undefined)
+      : STATUS_COPY[status]
     if (!copy) {
       return jsonResponse({ success: true, skipped: true })
     }

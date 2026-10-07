@@ -43,6 +43,11 @@ export function useSubmitReview(productId) {
         p_display_name: displayName,
       })
       if (error) throw error
+      // Tell the club there's a review to approve — fire and forget; the
+      // review is saved either way.
+      supabase.functions
+        .invoke('send-review-alert', { body: { productId } })
+        .catch(() => { /* the review stands with or without the alert */ })
       return data
     },
     onSuccess: () => {

@@ -1,67 +1,62 @@
 # 224 Clubhouse — Open Items
 
-> Consolidated status as of **2026-10-02**. Every claim here was verified against the repo (or, where
-> noted, the live services) on that date, not carried over from older notes.
+> Consolidated status as of **2026-10-07** (site launched publicly that day). Every claim here was
+> verified against the repo or the live services on that date, not carried over from older notes.
 >
-> `tasks/todo.md` remains the detailed engineering backlog. This file is the shorter "what is
-> actually open and why it matters" list. Where the two disagree, trust this file — several
-> `todo.md` entries have since been fixed (see §5). Resolved items are kept, dated, in §8.
+> `tasks/todo.md` remains the older detailed engineering backlog; `tasks/store-upgrades.md` covers
+> the 2026-10-05 upgrades. This file is the shorter "what is actually open and why it matters"
+> list. Where they disagree, trust this file. Resolved items are kept, dated, in §8.
 
 ---
 
 ## 1. Blocked on the owner
 
-### 1.1 Supabase "Outstanding invoices" ⚠️ URGENT
-The Supabase dashboard shows **Outstanding invoices** for the account. The owner must pay them or
-the project (`aogdkqczvlffgydgxsmz` — database, auth, storage, edge functions) may be suspended,
-which takes the whole store offline. Owner action only.
+### 1.1 Online payments (Paystack / Ozow) — waiting on a provider
+The app takes cash/card **on delivery** or **EFT** (verified by an admin, §6). Online checkout is
+disabled; `PaystackButton.jsx` is retained for re-enable. The owner must first get a payment
+provider to accept a cannabis business. `docs/PAYSTACK_PLAN.md` and `tasks/todo.md` Workstream 2
+have the server-side verification spec. **Never** re-enable client-trusted totals — the server must
+recompute totals from DB prices.
 
-### 1.2 Paystack online payments — under investigation
-The app takes cash/card **on delivery** or **EFT**; online checkout is disabled.
-`PaystackButton.jsx` is retained for re-enable. The plan is being written up in
-`docs/PAYSTACK_PLAN.md` (not yet in the repo as of 2026-10-02); `tasks/todo.md` Workstream 2 has
-the earlier server-side verification spec. Do not re-enable client-trusted totals — the server
-must recompute totals from DB prices.
+### 1.2 Owner to-dos (no code)
+- Delete or hide the `sss` product (looks like test data; it is in the sitemap).
+- Supply a 1200×630 dark-background share image; WhatsApp/Facebook previews currently use the small
+  white logo.
+- Rename the auto-created admin driver profile (it is called "admin"): Admin → Drivers → Add driver
+  with the admin's own email and real name (leaves the password alone).
+- Do one real delivery end to end on a phone before relying on live tracking.
 
 ---
 
 ## 2. Decisions waiting
 
-### 2.1 Retire the email-only order lookup?
-`get_orders_by_email` lets anyone list the orders for any email address they can guess. This was
-**accepted knowingly** on 2026-08-06 — rationale in the migration header
-`20260806120000_orders_by_email.sql`. It is narrowed to summary fields only and capped at 20.
-
-New orders are account-tied and listed on `/orders`, so the RPC only serves **pre-account**
-(pre-2026-08-08) orders. Receipts now deliver (§8), so the original blocker is gone: retire it once
-those old orders have aged out. **Do not "fix" it as an oversight.**
-
-### 2.2 `master` is 44 commits behind the deployed branch
-Production is deployed from `feature/memberships-and-pages`. `master` still sits at `3d045e5`
-"Add initial schema migration and storage buckets". A PR to merge the branch into `master` is
-about to be opened.
+### 2.1 PR #15 — report the owner-alert outcome in `send-order-email`
+Already deployed (it was needed to diagnose missing alerts on 2026-10-07); the PR is open only
+because the owner hasn't said to merge it. Harmless: the browser ignores the response body.
 
 ---
 
 ## 3. Live defects / engineering debt
 
 ### 3.1 Live contract suites occasionally time out when run together
-Each live contract suite passes on its own, but a full combined run occasionally times out. Being
-fixed. (The earlier cross-run fixture collision was fixed in `a65108d`; this is a separate issue.)
+Each live contract suite passes on its own; a full combined run occasionally hits the ~90 s
+network freeze (seen again 2026-10-05 on one newsletter test, passed on re-run).
 
-### 3.2 ~~Pre-existing lint errors~~ — resolved
-`npm run lint` is clean as of 2026-10-05.
-
-### 3.3 ~~`docs/DESIGN_SYSTEM.md` does not exist~~ — resolved
-It exists (written 2026-10-02/03).
+### 3.2 Driver tracking stops when the portal is not on screen
+`/driver` is a web page: the phone only shares location while it is open and visible (it keeps
+the screen awake via the Wake Lock API where supported). Background tracking needs a native app.
 
 ---
 
 ## 4. Compliance and risk
 
-### 4.1 Age consent is client-side only
-Policy pages now exist (§8), but the 21+ age gate is still only a localStorage boolean, and the
-business stores **SA ID numbers** — keep POPIA in mind for any change touching member data.
+### 4.1 Personal data held
+SA ID numbers (memberships), dates of birth (memberships + `customer_profiles`, used for the
+21+ check), delivery addresses and their geocoded points, proof-of-payment files (private
+bucket `payment-proofs`), the latest driver position (deleted after each delivery round, swept
+daily), saved carts (30-day purge) and anonymous site-usage events (13-month purge). Keep POPIA in
+mind for any change touching these; the privacy policy (`src/pages/legal/PrivacyPolicy.jsx`)
+describes each and must be kept in step.
 
 ---
 
@@ -74,85 +69,80 @@ business stores **SA ID numbers** — keep POPIA in mind for any change touching
 
 ## 6. Notes for whoever picks this up
 
-- **Edge Function deploys need `--use-api`.** `supabase functions deploy` bundles with Docker, and
-  Docker Desktop does not start on this machine. `supabase functions deploy <name> --use-api`
-  bundles server-side and works.
-- **Email config lives in function secrets:** `MAIL_FROM_DOMAIN` (= `224clubhouse.store`),
-  `ADMIN_ALERT_EMAIL` (= `224clubhous@gmail.com` — **no "e" before the @**; the owner
-  confirmed on 2026-10-07 that this is the club's real inbox, reversing the 2026-10-05 note),
-  `EFT_BANK_DETAILS`. The same address is shown on the contact page, invoices, the unsubscribe
-  page and the printable membership form. Supabase Auth mail goes through custom SMTP (Resend) from
-  `noreply@224clubhouse.store` using the templates in `supabase/templates/`, generated by
-  `scripts/build-auth-email-templates.mjs`.
-- **Membership form PDF** (on letterhead) lives in `docs/membership-form/`, built by
-  `scripts/build-membership-form.mjs`.
-- **Store upgrades (2026-10-05, `tasks/store-upgrades.md`):**
-  - *Product options:* add them in Admin → Products → edit → Options. While a product has options,
-    its price (cheapest available option) and stock (total) are set by a trigger, so those fields lock.
-  - *Cart reminders:* pg_cron job `send-cart-reminders` (hourly at :17) posts to the Edge Function
-    of the same name, deployed with `--no-verify-jwt`. It authenticates with the Vault secret
-    `cart_reminders_cron_secret`, which must equal the function secret `CRON_SECRET`. To rotate
-    the secret, update both. Job runs are in `cron.job_run_details`, HTTP results in
-    `net._http_response`. `purge-saved-carts` deletes carts daily, 30 days after their last change.
-    The function URL is hardcoded in the migration: change it there if the project ref ever changes.
-  - *Reviews:* moderated at Admin → Reviews; nothing shows until published.
-  - *SEO:* `npm run build` runs `scripts/prerender-seo.mjs`, so product/event link previews only
-    refresh on a deploy. The default share image is the small white logo; a 1200×630 dark-background
-    brand image would preview much better (owner to supply).
-  - *Invoices:* `/orders/:id/invoice`, "Invoice" not "Tax invoice" (no VAT number on record).
 - **Account gates before any deploy** (see `CLAUDE.md`): `gh auth status` must be `tlaphane-1`,
   `firebase login:list` must be `tlaphane@gmail.com`, and the Supabase project ref is
-  `aogdkqczvlffgydgxsmz`.
+  `aogdkqczvlffgydgxsmz`. Production deploys from `master` (all work goes through PRs).
+- **Deploy order:** dry-run new migrations inside `begin; … rollback;` with
+  `supabase db query --linked -f`, then `supabase db push`, run the live contract suites, deploy
+  functions, then `firebase deploy --only hosting --non-interactive` (without
+  `--non-interactive` it has hung for 10+ minutes on this machine).
+- **Edge Function deploys need `--use-api`** (Docker Desktop doesn't start here). Functions called
+  by pg_cron are deployed with `--no-verify-jwt` and authenticate with the `x-cron-secret` header:
+  `send-cart-reminders` and `send-daily-summary` (07:00 SAST).
+- **Cron secret:** Vault secret `cart_reminders_cron_secret` must equal the function secret
+  `CRON_SECRET`; it is shared by every cron-called function. Rotate both together. Job runs are in
+  `cron.job_run_details`, HTTP results in `net._http_response`. Function URLs are hardcoded in the
+  migrations — change them there if the project ref ever changes.
+- **Email config lives in function secrets:** `MAIL_FROM_DOMAIN` (= `224clubhouse.store`),
+  `ADMIN_ALERT_EMAIL` (= `224clubhous@gmail.com` — **no "e" before the @**; owner confirmed
+  2026-10-07, reversing a 2026-10-05 note), `EFT_BANK_DETAILS`. The same address is shown on the
+  contact page, invoices, the unsubscribe page and the printable membership form. Supabase Auth mail
+  goes through custom SMTP (Resend) from `noreply@224clubhouse.store` using `supabase/templates/`,
+  generated by `scripts/build-auth-email-templates.mjs`. Ask the owner to check Spam/Promotions and
+  add a Gmail filter for `from:orders@224clubhouse.store` if alerts seem missing.
+- **EFT payments:** reference is the customer's **name and surname** (owner decision 2026-10-07).
+  Unpaid EFT orders can't move to Preparing / Out for delivery / Delivered (enforced in
+  `admin_update_order_status` and `driver_start_delivery`). Admin confirms at Admin → Orders →
+  "EFT to check" after checking FNB; a customer's uploaded proof is a claim, not evidence.
+- **Visitor analytics:** first-party, cookie-free (`site_events`, `track_event`, admin-only
+  `site_analytics`). Only counts on `224clubhouse.store` / `.web.app`, not dev or preview channels;
+  admins and `/admin` are excluded. Links shared with `?utm_source=whatsapp` are attributed.
+- **Driver portal:** `/driver`. Admins create driver logins at Admin → Drivers (Edge Function
+  `admin-create-driver`); every admin is also a driver (trigger on `admin_users`). Orders are
+  assigned on Admin → Orders. Map tiles: OpenStreetMap via Leaflet (no key).
+- **Store upgrades (2026-10-05):** product options (price/stock derived by trigger while options
+  exist), cart reminders (hourly, `purge-saved-carts` daily), reviews (moderated), SEO prerender on
+  every build (`scripts/prerender-seo.mjs`), invoices at `/orders/:id/invoice`.
+- **Membership form PDF** (on letterhead): `docs/membership-form/`, built by
+  `scripts/build-membership-form.mjs`.
 
 ---
 
-## 7. Recently completed (2026-10-01 → 02) — do not redo
+## 7. Recently completed (2026-10-05 → 07) — do not redo
 
-- **Delivery-only store + membership changes** (`88114ea`, migration
-  `20261001120000_delivery_only_feedback.sql`): tiers Daily R10 / Weekly R50 / Monthly R150;
-  delivery fee R30, free for active members and at R500+; **EFT** payment method with FNB details
-  (`src/components/checkout/EftDetails.jsx`); new `joints` category; a customer with a previous
-  order must have applied for membership (pending or active) before ordering again; free-delivery
-  nudge on add-to-cart; admin email alert on membership applications
-  (`supabase/functions/send-membership-application-alert`); store-closed / delivery-only wording.
-- **Password-reset hang fixed**: `AuthContext` `onAuthStateChange` no longer awaits `is_admin`
-  inside the supabase-js auth lock.
-- **Address** corrected to 224 Rondebult Road (`b96d415`, migration
-  `20261001130000_address_rondebult_road.sql`).
-- **Custom domain** `https://224clubhouse.store` (`2ef509d`): DNS at domains.co.za, Firebase
-  Hosting custom domain, `www` redirects to it, `224clubhouse.web.app` still works. All edge
-  functions' `SITE_URL` point at `.store`. Supabase Auth Site URL is `.store` with redirect
-  allowlist `.store/**`, `.web.app/**`, `localhost:5173/**`.
-- **Email**: `224clubhouse.store` verified in Resend and set as `MAIL_FROM_DOMAIN` (previously
-  sending from another organisation's domain); branded Supabase Auth templates (`e8a9641`). Admin
-  alerts and order receipts confirmed delivered in Resend logs on 2026-10-02.
+PR numbers are on `tlaphane-1/224Clubhouse`.
+
+- **#9 Store upgrades:** product options, sales reports, abandoned-cart reminders, SEO prerender +
+  sitemap, invoices, product reviews.
+- **#10–#11, #14 EFT details:** bank details on invoices, at checkout and on every unpaid EFT order
+  view; reference changed to the customer's name and surname.
+- **#12 EFT verification:** proof-of-payment upload, admin "Payment received", dispatch gate.
+- **#13 Visitor analytics** (Admin → Visitors) and **email-only order lookup retired**
+  (`get_orders_by_email` dropped; `/track` needs order number + email).
+- **#16 Club email** switched to `224clubhous@gmail.com`.
+- **#17–#18 Driver portal** with live tracking; admins can drive.
+- **Ops polish (2026-10-07/08):** 21+ age check enforced server-side (`customer_profiles`,
+  `place_cod_order` refuses accounts without a 21+ DOB; asked once at signup or checkout); owner
+  alerts (low stock in the new-order email, review-waiting email, 07:00 daily summary); driver
+  portal installable as an app, destination geocoding (Nominatim) with distance/ETA for the
+  customer, one-off "driver nearby" email within 1 km; **fixed** `Permissions-Policy` that blocked
+  geolocation site-wide.
 
 ---
 
 ## 8. Resolved
 
-- **2026-10-02 — `RESEND_API_KEY` + verified sending domain** (was §1.1, highest impact). Receipts
-  and admin alerts deliver from `224clubhouse.store`. The newsletter welcome email (was §3.1) is
-  unblocked by the same change but was not separately checked in Resend logs.
-- **2026-10-02 — Supabase Auth redirect URLs and custom SMTP** (was §1.5). Done as described in §7.
-- **2026-10-01 — Password-reset flow** (was a known gap in §1.5): added 2026-08-13 (`249e7b1`);
-  its hang fixed 2026-10-01.
-- **2026-08-13 — `is_member_only`** (was §1.3): enforced in `place_cod_order` (migration
-  `20260813150000_membership_accounts_tiers.sql`).
-- **2026-08-14 — `WELCOME10`** (was §1.4): real first-order discount code (discount-codes
-  migrations, `src/__tests__/discountCodes.contract.test.js`).
-- **2026-08-13 — POPIA pages** (was §4.1): Privacy, Terms and Delivery/Returns pages exist under
-  `src/pages/legal/`; the checkout terms link points at `/terms`.
-- **No React error boundary** (was §3.2): `src/components/ErrorBoundary.jsx` is used in `App.jsx`.
-- **Hook error states** (was §3.3): storefront pages (e.g. `Store.jsx`, `Events.jsx`) render
-  `isError` states with retry.
-- **Oversell** (was §3.4): `place_cod_order` locks product rows and decrements stock atomically.
-- **Bundle size** (was §4.2): pages are lazy-loaded per route in `App.jsx` (size not re-measured).
-- **Contract tests dormant** (was §6): since `a65108d` the live suites fail loudly instead of
-  silently skipping.
-- **2026-08-13 — `CLAUDE.md` orders-RLS claim** (was §5): corrected.
-- **2026-08-06 → 07** — order lookup three ways (per-device memory, email, order number);
-  `send-order-email` rewritten for pay-on-delivery ("Amount due on delivery", not "Paid").
-- **2026-08-08 — Account-required checkout** deployed: `place_cod_order` is `authenticated`-only
-  and stamps `user_id` + account email; `/orders` lists the customer's orders. Old anonymous orders
-  deliberately not linked (takeover risk) and stay reachable via `/track`. "Confirm email" stays ON.
+- **2026-10-07 — Supabase outstanding invoices** (was §1.1 ⚠️): paid by the owner.
+- **2026-10-07 — Email-only order lookup** (was §2.1): retired by the owner's decision (§7, #13).
+- **2026-10-07 — `master` behind the deployed branch** (was §2.2): all work now merges to
+  `master` through PRs and production is deployed from it.
+- **2026-10-05 — Pre-existing lint errors / missing `docs/DESIGN_SYSTEM.md`** (were §3.2–3.3).
+- **2026-10-02 — `RESEND_API_KEY` + verified sending domain.** Receipts and admin alerts deliver
+  from `224clubhouse.store`.
+- **2026-10-02 — Supabase Auth redirect URLs and custom SMTP.**
+- **2026-10-01 — Delivery-only store, EFT, `joints` category, membership-after-first-order,
+  password-reset hang, address 224 Rondebult Road, custom domain `224clubhouse.store`.**
+- **2026-08-13 / 14 — `is_member_only` enforced, `WELCOME10`, POPIA pages, password reset.**
+- **Earlier:** React error boundary, hook error states, oversell (atomic stock), lazy-loaded
+  routes, contract tests fail loudly, account-required checkout (2026-08-08; old anonymous orders
+  deliberately unlinked and reachable via `/track`).

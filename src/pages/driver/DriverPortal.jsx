@@ -9,6 +9,7 @@ import { paymentLabel, statusLabel } from '../../utils/orderStatus'
 import { lineName } from '../../utils/variants'
 import BrandLogo from '../../components/ui/BrandLogo'
 import Badge from '../../components/ui/Badge'
+import InstallDriverApp from '../../components/delivery/InstallDriverApp'
 
 // /driver — the driver's phone is the target device. Big tap targets, one job
 // per screen: see your deliveries, call, navigate, start, deliver.
@@ -163,6 +164,7 @@ export default function DriverPortal() {
       </header>
 
       <main className="max-w-xl mx-auto px-4 py-6 space-y-4">
+        <InstallDriverApp />
         {loading ? (
           <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>
         ) : !user ? (

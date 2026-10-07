@@ -124,11 +124,16 @@ export function AuthProvider({ children }) {
   // them up and onAuthStateChange fires SIGNED_IN. Callers detect an
   // already-registered email via data.user?.identities?.length === 0 (Supabase
   // obfuscates that case to prevent account enumeration).
-  const signUp = async (email, password, { redirectTo } = {}) => {
+  // `data` becomes user metadata (e.g. date_of_birth, which a DB trigger copies
+  // into customer_profiles for the server-side 21+ check).
+  const signUp = async (email, password, { redirectTo, data: metadata } = {}) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: redirectTo ?? window.location.origin + '/checkout' },
+      options: {
+        emailRedirectTo: redirectTo ?? window.location.origin + '/checkout',
+        ...(metadata ? { data: metadata } : {}),
+      },
     })
     if (error) throw error
     return data

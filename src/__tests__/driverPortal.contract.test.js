@@ -111,7 +111,8 @@ describe.skipIf(SKIP)('Driver portal contract', () => {
   it('NEGATIVE: nothing en route, so no location is stored', async () => {
     const { data, error } = await driver.rpc('driver_update_location', { p_lat: -26.2, p_lng: 28.26 })
     expect(error).toBeNull()
-    expect(data).toBe(false)
+    // Returns { stored, nearby } since 20261008140000_delivery_eta.
+    expect(data.stored).toBe(false)
   })
 
   it('NEGATIVE: a customer cannot call driver RPCs', async () => {
@@ -129,7 +130,7 @@ describe.skipIf(SKIP)('Driver portal contract', () => {
   it('POSITIVE: start, share location, customer sees it', async () => {
     expect((await driver.rpc('driver_start_delivery', { p_order_id: codOrder.id })).error).toBeNull()
     const stored = await driver.rpc('driver_update_location', { p_lat: -26.21, p_lng: 28.25, p_accuracy: 12 })
-    expect(stored.data).toBe(true)
+    expect(stored.data.stored).toBe(true)
 
     const seen = await anon.rpc('get_delivery_location', { p_order_number: codOrder.order_number, p_email: buyerUser.email })
     expect(seen.error).toBeNull()

@@ -7,6 +7,8 @@ import { useAuth } from '../context/useAuth'
 import { useLastOrder, useMyOrders } from '../hooks/useMyOrders'
 import { useMyMembership } from '../hooks/useMyMembership'
 import { useDiscountCode } from '../hooks/useDiscountCode'
+import { useAgeVerified, useSetDateOfBirth } from '../hooks/useAgeVerification'
+import { isAdultDob, latestAdultDob, MIN_AGE } from '../utils/age'
 import { memberPurchaseGate } from '../utils/memberGate'
 import { supabase } from '../lib/supabase'
 import CheckoutForm from '../components/checkout/CheckoutForm'
@@ -132,6 +134,16 @@ export default function Checkout() {
   // derived here rather than synced into state.
   const checkoutForm = { ...baseForm, email: user?.email ?? '' }
 
+  // Server-side 21+ check (migration 20261008120000): an account without a
+  // date of birth on record is asked for it once, here. Only shown once the
+  // query has settled false, so verified customers never see a flash.
+  const ageVerified = useAgeVerified()
+  const setDob = useSetDateOfBirth()
+  const [dob, setDobValue] = useState('')
+  const [dobError, setDobError] = useState('')
+  const [forceDob, setForceDob] = useState(false)
+  const needsDob = Boolean(user) && (forceDob || (ageVerified.isSuccess && ageVerified.data === false))
+
   const handlePlaceOrder = async () => {
     if (processing) return // guard against double-submit -> duplicate orders
     if (!user) return // render gate should prevent this; server enforces regardless
@@ -158,9 +170,30 @@ export default function Checkout() {
       toast.error('Please choose a payment method')
       return
     }
+    if (needsDob && !isAdultDob(dob)) {
+      const msg = dob ? `You must be ${MIN_AGE} or older to order.` : 'Please enter your date of birth.'
+      setDobError(msg)
+      toast.error(msg)
+      focusField('checkout-dob')
+      return
+    }
     setErrors({})
 
     setProcessing(true)
+    if (needsDob) {
+      try {
+        await setDob.mutateAsync(dob)
+        setDobError('')
+        setForceDob(false)
+      } catch (err) {
+        const msg = (err?.message ?? 'Could not save your date of birth').replace(/^Age check:\s*/i, '')
+        setDobError(msg)
+        toast.error(msg)
+        focusField('checkout-dob')
+        setProcessing(false)
+        return
+      }
+    }
     const { data, error } = await supabase.rpc('place_cod_order', {
       p_customer: {
         name: checkoutForm.name,
@@ -191,6 +224,13 @@ export default function Checkout() {
         : null
       if (/^Membership required:/i.test(error?.message ?? '')) {
         setShowJoinPrompt(true)
+      } else if (/^Age check:/i.test(error?.message ?? '')) {
+        // No 21+ date of birth on record: reveal the field and send them to it.
+        const msg = error.message.replace(/^Age check:\s*/i, '')
+        setForceDob(true)
+        setDobError(msg)
+        toast.error(msg)
+        setTimeout(() => focusField('checkout-dob'), 0)
       } else if (discountReason) {
         discount.reject(discountReason)
         setCodeInput('')
@@ -384,6 +424,29 @@ export default function Checkout() {
                   Contact & Delivery
                 </h2>
                 <CheckoutForm form={checkoutForm} onChange={handleFormChange} errors={errors} lockEmail />
+                {needsDob && (
+                  <div className="mt-4">
+                    <label htmlFor="checkout-dob" className="block text-muted text-xs uppercase tracking-widest mb-1.5">
+                      Date of Birth *
+                    </label>
+                    <input
+                      id="checkout-dob"
+                      type="date"
+                      required
+                      value={dob}
+                      min="1900-01-01"
+                      max={latestAdultDob()}
+                      onChange={(e) => { setDobValue(e.target.value); setDobError('') }}
+                      autoComplete="bday"
+                      aria-invalid={dobError ? true : undefined}
+                      aria-describedby="checkout-dob-help"
+                      className={`input-base text-sm ${dobError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                    />
+                    <p id="checkout-dob-help" className={`text-xs mt-1 ${dobError ? 'text-red-400' : 'text-muted'}`}>
+                      {dobError || `We confirm every customer is ${MIN_AGE} or older. You only need to do this once.`}
+                    </p>
+                  </div>
+                )}
               </section>
 
               <section className="bg-surface border border-border rounded-xl p-4 sm:p-6" aria-labelledby="checkout-step-2">

@@ -13,11 +13,21 @@ const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za
 const ADMIN_ALERT_EMAIL = Deno.env.get('ADMIN_ALERT_EMAIL') ?? ''
 
 interface OrderItem {
+  id?: string
   name: string
+  variant_id?: string | null
   variant_label?: string | null
   price: number
   quantity: number
 }
+
+// A line of the order that is now running low (owner alert only).
+interface LowStockLine {
+  name: string
+  left: number
+}
+
+const LOW_STOCK_THRESHOLD = 5
 
 // Shape written by place_cod_order's jsonb_build_object — see
 // supabase/migrations/*_customer_accounts_orders.sql.
@@ -102,6 +112,50 @@ interface OwnerAlert {
   shippingFee: number
   total: number
   paymentMethod?: string
+  lowStock: LowStockLine[]
+}
+
+/**
+ * Current stock for the products/options in this order that are at or below
+ * LOW_STOCK_THRESHOLD. Read AFTER place_cod_order decremented stock, so the
+ * numbers already include this order. Never throws: on any lookup problem the
+ * alert simply goes out without the block.
+ */
+async function lowStockFor(items: OrderItem[]): Promise<LowStockLine[]> {
+  try {
+    const admin = serviceClient()
+    const productIds = [...new Set(items.map(i => i.id).filter(Boolean))] as string[]
+    const variantIds = [...new Set(items.map(i => i.variant_id).filter(Boolean))] as string[]
+    const out: LowStockLine[] = []
+    if (variantIds.length) {
+      const { data } = await admin
+        .from('product_variants')
+        .select('id, label, stock_quantity, products(name)')
+        .in('id', variantIds)
+      for (const v of data ?? []) {
+        if (v.stock_quantity <= LOW_STOCK_THRESHOLD) {
+          // deno-lint-ignore no-explicit-any
+          const productName = (v as any).products?.name ?? ''
+          out.push({ name: `${productName} — ${v.label}`, left: v.stock_quantity })
+        }
+      }
+    }
+    // Plain products only: a product with options is judged per option above.
+    const plainIds = productIds.filter(id => !items.some(i => i.id === id && i.variant_id))
+    if (plainIds.length) {
+      const { data } = await admin
+        .from('products')
+        .select('name, stock_quantity')
+        .in('id', plainIds)
+      for (const p of data ?? []) {
+        if (p.stock_quantity <= LOW_STOCK_THRESHOLD) out.push({ name: p.name, left: p.stock_quantity })
+      }
+    }
+    return out.sort((a, b) => a.left - b.left)
+  } catch (e) {
+    console.error('[send-order-email] low stock lookup failed:', e)
+    return []
+  }
 }
 
 function ownerAlertHtml(alert: OwnerAlert): string {
@@ -171,6 +225,15 @@ function ownerAlertHtml(alert: OwnerAlert): string {
         </tfoot>
       </table>
 
+      ${alert.lowStock.length ? `
+      <div style="margin-top:16px; padding:12px 14px; background:#fff8e6; border:1px solid #f0d58a; border-radius:6px;">
+        <div style="font-size:12px; letter-spacing:2px; text-transform:uppercase; color:#8a6d1a; margin-bottom:6px;">Low stock</div>
+        ${alert.lowStock.map(l => `
+        <div style="font-size:14px; color:#111111; padding:2px 0;">
+          ${escapeHtml(l.name)}: <strong>${l.left <= 0 ? 'SOLD OUT' : `${escapeHtml(l.left)} left`}</strong>
+        </div>`).join('')}
+      </div>` : ''}
+
       <div style="margin-top:20px;">
         <a href="${SITE_URL}/admin/orders"
            style="display:inline-block; background:#111111; color:#ffffff; text-decoration:none; padding:12px 22px; border-radius:6px; font-size:14px; font-weight:700;">
@@ -191,9 +254,9 @@ function ownerAlertHtml(alert: OwnerAlert): string {
  * Throws on a failed send. Callers MUST swallow that: the customer's receipt is
  * the contract with the browser, the owner alert is a courtesy on top of it.
  */
-async function sendOwnerAlert(alert: OwnerAlert): Promise<void> {
+async function sendOwnerAlert(alert: OwnerAlert): Promise<string> {
   const to = ADMIN_ALERT_EMAIL.split(',').map(address => address.trim()).filter(Boolean)
-  if (to.length === 0) return // secret not set yet — a deliberate, silent no-op
+  if (to.length === 0) return 'skipped: ADMIN_ALERT_EMAIL not set'
 
   const subject = `New order ${alert.orderNumber} — ${formatZAR(alert.total)} (${paymentLabel(alert.paymentMethod).toLowerCase()})`
 
@@ -212,6 +275,8 @@ async function sendOwnerAlert(alert: OwnerAlert): Promise<void> {
   })
 
   if (!res.ok) throw new Error(await res.text())
+  const sent = await res.json().catch(() => ({}))
+  return `sent to ${to.length} address(es), id ${sent?.id ?? 'unknown'}`
 }
 
 serve(async (req) => {
@@ -413,9 +478,12 @@ serve(async (req) => {
 
     // Owner alert: strictly additive. Anything it throws (bad recipient,
     // Resend outage, malformed row) is logged and dropped here so it can never
-    // turn a delivered receipt into a 500 for the customer's browser.
+    // turn a delivered receipt into a 500 for the customer's browser. Its
+    // outcome is reported in the response body (the browser ignores it) so a
+    // missing alert can be diagnosed without function logs.
+    let ownerAlert = 'sent'
     try {
-      await sendOwnerAlert({
+      ownerAlert = await sendOwnerAlert({
         orderNumber,
         placedAt: formatPlacedAt(order.created_at),
         customerName,
@@ -429,14 +497,16 @@ serve(async (req) => {
         shippingFee,
         total,
         paymentMethod,
+        lowStock: await lowStockFor(items),
       })
     } catch (alertError) {
       console.error('[send-order-email] owner alert failed:', alertError)
+      ownerAlert = `failed: ${alertError instanceof Error ? alertError.message : String(alertError)}`
     }
 
     if (customerSendError) throw customerSendError
 
-    return jsonResponse({ success: true })
+    return jsonResponse({ success: true, ownerAlert })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return jsonResponse({ error: message }, 500)
