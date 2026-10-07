@@ -92,6 +92,10 @@ describe.skipIf(SKIP)('Driver portal contract', () => {
     expect((await buyer.rpc('is_driver')).data).toBe(false)
   })
 
+  it('admins are drivers too (20261007160000)', async () => {
+    expect((await adminClient.rpc('is_driver')).data).toBe(true)
+  })
+
   it('NEGATIVE: another driver cannot see the order', async () => {
     const { data } = await otherDriver.from('orders').select('id').eq('id', codOrder.id)
     expect(data).toEqual([])
