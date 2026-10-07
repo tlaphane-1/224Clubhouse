@@ -68,6 +68,12 @@ export default function PrivacyPolicy() {
             privacy policy.
           </li>
         </ul>
+        <p>
+          <span className="text-white">Site usage</span> — which pages are visited, roughly where
+          visitors came from (e.g. Google or Instagram) and the type of device, counted with a
+          random ID kept in your browser. It is not linked to your name, email or account, and we
+          do not store IP addresses.
+        </p>
         <p>We do not use advertising trackers and we do not buy data about you from anyone.</p>
       </LegalSection>
 
@@ -161,6 +167,9 @@ export default function PrivacyPolicy() {
             enquiry.
           </li>
           <li>
+            <span className="text-white">Site usage records</span> — deleted after 13 months.
+          </li>
+          <li>
             <span className="text-white">Saved carts</span> — deleted when you empty your cart or
             place your order, and automatically 30 days after you last changed it.
           </li>
@@ -181,6 +190,7 @@ export default function PrivacyPolicy() {
           <li>Your shopping cart contents.</li>
           <li>Your login session token, if you sign in.</li>
           <li>A short-lived record of your most recent order so the confirmation page survives a refresh.</li>
+          <li>A random visitor ID used only to count visits (see &ldquo;Site usage&rdquo; above).</li>
         </ul>
         <p>Clearing your browser data removes all of these.</p>
       </LegalSection>

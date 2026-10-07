@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/useAuth'
 import { CartProvider } from './context/CartContext'
 import AgeGate from './components/layout/AgeGate'
+import PageTracker from './components/layout/PageTracker'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -47,6 +48,7 @@ const AdminNewsletter = lazy(() => import('./pages/admin/Newsletter'))
 const AdminDiscounts = lazy(() => import('./pages/admin/Discounts'))
 const AdminReports = lazy(() => import('./pages/admin/Reports'))
 const AdminReviews = lazy(() => import('./pages/admin/Reviews'))
+const AdminAnalytics = lazy(() => import('./pages/admin/Analytics'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -100,6 +102,7 @@ export default function App() {
         <CartProvider>
           <BrowserRouter>
             <AgeGate />
+            <PageTracker />
             <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
             <ErrorBoundary>
             <Suspense fallback={<PageFallback />}>
@@ -142,6 +145,7 @@ export default function App() {
                 <Route path="/admin/newsletter" element={<ProtectedRoute><AdminNewsletter /></ProtectedRoute>} />
                 <Route path="/admin/discounts" element={<ProtectedRoute><AdminDiscounts /></ProtectedRoute>} />
                 <Route path="/admin/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
+                <Route path="/admin/analytics" element={<ProtectedRoute><AdminAnalytics /></ProtectedRoute>} />
                 <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
 
                 {/* Fallback */}

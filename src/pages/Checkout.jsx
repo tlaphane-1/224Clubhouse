@@ -24,6 +24,7 @@ import EftDetails from '../components/checkout/EftDetails'
 import { paymentLabel } from '../utils/orderStatus'
 import { formatZAR } from '../utils/formatCurrency'
 import { rememberOrder } from '../utils/recentOrders'
+import { trackEvent } from '../utils/analytics'
 import toast from 'react-hot-toast'
 
 const emptyForm = {
@@ -92,6 +93,11 @@ export default function Checkout() {
     document.title = 'Checkout | 224 Clubhouse'
     if (items.length === 0) navigate('/cart')
   }, [items, navigate])
+
+  // Funnel step, once per visit to the page (not on every cart change).
+  useEffect(() => {
+    trackEvent('checkout_start')
+  }, [])
 
   // Returning customers shouldn't retype their delivery details. Until the
   // customer touches the form, empty fields DISPLAY values from their most
@@ -223,6 +229,7 @@ export default function Checkout() {
     // The customer's order list is cached; make the new order show up on /orders.
     queryClient.invalidateQueries({ queryKey: ['my-orders'] })
 
+    trackEvent('order_placed')
     clearCart()
     navigate(`/order-confirmation/${data.order_number}`, {
       state: { order: data, items, customer: checkoutForm, paymentMethod: method },
