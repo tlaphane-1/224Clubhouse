@@ -7,6 +7,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [session, setSession] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  // Driver portal access (is_driver() — the drivers table under RLS). Like
+  // isAdmin it only drives UI; the driver RPCs enforce it server-side.
+  const [isDriver, setIsDriver] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -33,17 +36,31 @@ export function AuthProvider({ children }) {
       }
     }
 
+    async function resolveDriver(session) {
+      if (!session?.user) return false
+      try {
+        const { data, error } = await supabase.rpc('is_driver')
+        return !error && data === true
+      } catch {
+        return false
+      }
+    }
+
     // Initial load. `loading` is ALWAYS cleared (finally), and the admin check
     // is time-boxed, so the ProtectedRoute spinner can never spin forever — a
     // failed/slow check just falls back to "not admin" (bounce to login).
     async function init() {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        const admin = await withTimeout(resolveAdmin(session), 8000, false)
+        const [admin, driver] = await Promise.all([
+          withTimeout(resolveAdmin(session), 8000, false),
+          withTimeout(resolveDriver(session), 8000, false),
+        ])
         if (!active) return
         setSession(session)
         setUser(session?.user ?? null)
         setIsAdmin(admin)
+        setIsDriver(driver)
       } catch {
         if (active) setIsAdmin(false)
       } finally {
@@ -65,11 +82,15 @@ export function AuthProvider({ children }) {
       setUser(session?.user ?? null)
       if (!session?.user) {
         setIsAdmin(false)
+        setIsDriver(false)
         return
       }
       setTimeout(async () => {
-        const admin = await resolveAdmin(session)
-        if (active) setIsAdmin(admin)
+        const [admin, driver] = await Promise.all([resolveAdmin(session), resolveDriver(session)])
+        if (active) {
+          setIsAdmin(admin)
+          setIsDriver(driver)
+        }
       }, 0)
     })
 
@@ -87,18 +108,14 @@ export function AuthProvider({ children }) {
     // Resolve admin before returning so callers can navigate without racing
     // the async onAuthStateChange handler. Time-boxed + guarded so a slow/failed
     // admin check can't leave the login button hanging on "Signing In…".
-    let admin = false
-    try {
-      const res = await Promise.race([
-        supabase.rpc('is_admin'),
-        new Promise(resolve => setTimeout(() => resolve({ data: false }), 8000)),
-      ])
-      admin = res?.data === true
-    } catch {
-      admin = false
-    }
+    const timeBoxed = (rpc) => Promise.race([
+      supabase.rpc(rpc),
+      new Promise(resolve => setTimeout(() => resolve({ data: false }), 8000)),
+    ]).then(res => res?.data === true, () => false)
+    const [admin, driver] = await Promise.all([timeBoxed('is_admin'), timeBoxed('is_driver')])
     setIsAdmin(admin)
-    return data
+    setIsDriver(driver)
+    return { ...data, isAdmin: admin, isDriver: driver }
   }
 
   // Email confirmation is ON in Supabase Auth, so signUp returns NO session —
@@ -148,6 +165,7 @@ export function AuthProvider({ children }) {
   const signOut = async () => {
     await supabase.auth.signOut()
     setIsAdmin(false)
+    setIsDriver(false)
     setUser(null)
     setSession(null)
     // Shared-device privacy: the cart must not survive sign-out. Clear the
@@ -158,7 +176,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, resendConfirmation, resetPassword, updatePassword, signOut, isAdmin }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, resendConfirmation, resetPassword, updatePassword, signOut, isAdmin, isDriver }}>
       {children}
     </AuthContext.Provider>
   )

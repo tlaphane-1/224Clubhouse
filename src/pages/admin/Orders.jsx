@@ -8,11 +8,15 @@ import { useOrders, useUpdateOrderStatus } from '../../hooks/useOrders'
 import { formatZAR } from '../../utils/formatCurrency'
 import { ALL_STATUSES, statusLabel, paymentLabel, eftState, EFT_GATED_STATUSES } from '../../utils/orderStatus'
 import EftAdminPanel, { EftPill } from '../../components/admin/EftAdminPanel'
+import DriverAssign from '../../components/admin/DriverAssign'
+import { useDrivers } from '../../hooks/useDelivery'
 import toast from 'react-hot-toast'
 
 export default function Orders() {
   const { data: orders, isLoading, isError, refetch } = useOrders()
   const updateStatus = useUpdateOrderStatus()
+  const { data: drivers } = useDrivers()
+  const driverName = (id) => drivers?.find(d => d.user_id === id)?.full_name
   // ?filter=eft opens straight on the EFT payments to check (Dashboard link).
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState(searchParams.get('filter') === 'eft' ? 'eft' : 'all')
@@ -143,6 +147,7 @@ export default function Orders() {
                       <p className="text-white font-semibold text-sm">{formatZAR(order.total)}</p>
                       <div className="mt-1"><Badge variant={order.status}>{statusLabel(order.status)}</Badge></div>
                       <div className="mt-1"><EftPill order={order} /></div>
+                      {order.driver_id && <p className="text-muted text-xs mt-1">🚚 {driverName(order.driver_id) ?? 'Driver'}</p>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-3">
@@ -179,6 +184,7 @@ export default function Orders() {
                   <div className="text-center space-y-1">
                     <Badge variant={order.status}>{statusLabel(order.status)}</Badge>
                     <div><EftPill order={order} /></div>
+                    {order.driver_id && <p className="text-muted text-xs">🚚 {driverName(order.driver_id) ?? 'Driver'}</p>}
                   </div>
                   <div className="text-center">
                     <select
@@ -245,6 +251,7 @@ export default function Orders() {
                       </div>
                     </div>
                     <EftAdminPanel order={order} />
+                    <DriverAssign order={order} drivers={drivers} />
                   </div>
                 )}
               </div>

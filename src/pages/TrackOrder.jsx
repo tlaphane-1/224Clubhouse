@@ -13,6 +13,7 @@ import {
   eftAwaitingPayment,
 } from '../utils/orderStatus'
 import EftDetails from '../components/checkout/EftDetails'
+import DeliveryTracker from '../components/delivery/DeliveryTracker'
 
 export default function TrackOrder() {
   const [searchParams] = useSearchParams()
@@ -210,13 +211,13 @@ export default function TrackOrder() {
         )}
 
         {/* Found */}
-        {data && <OrderTracking order={data} />}
+        {data && <OrderTracking order={data} email={email.trim()} />}
       </div>
     </div>
   )
 }
 
-function OrderTracking({ order }) {
+function OrderTracking({ order, email }) {
   const {
     order_number,
     status,
@@ -259,6 +260,9 @@ function OrderTracking({ order }) {
           <span className="text-green-400 text-xs uppercase tracking-widest">Live tracking</span>
         </div>
       </div>
+
+      {/* Live driver map while out for delivery (same order number + email). */}
+      <DeliveryTracker orderNumber={order_number} email={email} status={status} />
 
       {/* EFT still to pay: the bank details must be reachable from here, not
           only from the one-off confirmation page. */}
