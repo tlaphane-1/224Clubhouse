@@ -12,7 +12,7 @@ export default function DriverAssign({ order, drivers }) {
     try {
       await assign.mutateAsync({ orderId: order.id, driverId })
       const name = options.find(d => d.user_id === driverId)?.full_name
-      toast.success(driverId ? `Assigned to ${name}` : 'Driver removed')
+      toast.success(driverId ? `Assigned to ${name} — tap “Send job” below to WhatsApp them` : 'Driver removed')
     } catch (err) {
       e.target.value = order.driver_id ?? ''
       toast.error(err.message || 'Could not assign the driver')

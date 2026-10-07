@@ -9,10 +9,14 @@ import { useAllProducts } from '../../hooks/useProducts'
 import { formatZAR } from '../../utils/formatCurrency'
 import { lowStockItems } from '../../utils/salesReport'
 import { eftState } from '../../utils/orderStatus'
+import { useDailySummary } from '../../hooks/useDailySummary'
+import { shareLink, dailySummaryMessage } from '../../utils/staffWhatsApp'
+import WhatsAppButton from '../../components/ui/WhatsAppButton'
 
 export default function Dashboard() {
   const { data: orders, isError, refetch } = useOrders()
   const { data: products, isError: productsError, refetch: refetchProducts } = useAllProducts()
+  const { data: summary } = useDailySummary()
 
   useEffect(() => {
     document.title = 'Dashboard | 224 Admin'
@@ -32,9 +36,14 @@ export default function Dashboard() {
 
   return (
     <AdminLayout>
-      <div className="mb-8">
-        <h1 className="font-heading text-3xl font-bold text-white">Dashboard</h1>
-        <p className="text-muted text-sm mt-1">Welcome back to 224 Clubhouse admin.</p>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-3xl font-bold text-white">Dashboard</h1>
+          <p className="text-muted text-sm mt-1">Welcome back to 224 Clubhouse admin.</p>
+        </div>
+        {summary && (
+          <WhatsAppButton href={shareLink(dailySummaryMessage(summary))}>Share today's summary</WhatsAppButton>
+        )}
       </div>
 
       {/* Stats */}

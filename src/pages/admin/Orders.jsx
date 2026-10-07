@@ -9,6 +9,7 @@ import { formatZAR } from '../../utils/formatCurrency'
 import { ALL_STATUSES, statusLabel, paymentLabel, eftState, EFT_GATED_STATUSES } from '../../utils/orderStatus'
 import EftAdminPanel, { EftPill } from '../../components/admin/EftAdminPanel'
 import DriverAssign from '../../components/admin/DriverAssign'
+import OrderWhatsAppActions from '../../components/admin/OrderWhatsAppActions'
 import { useDrivers } from '../../hooks/useDelivery'
 import toast from 'react-hot-toast'
 
@@ -252,6 +253,7 @@ export default function Orders() {
                     </div>
                     <EftAdminPanel order={order} />
                     <DriverAssign order={order} drivers={drivers} />
+                    <OrderWhatsAppActions order={order} drivers={drivers} />
                   </div>
                 )}
               </div>
