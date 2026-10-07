@@ -41,13 +41,14 @@ export function getRecentOrders() {
 }
 
 /** Record an order after a successful checkout. Re-placing the same number de-dupes. */
-export function rememberOrder({ orderNumber, email, total, itemCount }) {
+export function rememberOrder({ orderNumber, email, total, itemCount, paymentMethod }) {
   if (!orderNumber || !email) return
   const entry = {
     orderNumber: String(orderNumber).toUpperCase(),
     email: String(email).trim(),
     total: total ?? null,
     itemCount: itemCount ?? null,
+    paymentMethod: paymentMethod ?? null,
     placedAt: new Date().toISOString(),
   }
   write([entry, ...read().filter(o => o.orderNumber !== entry.orderNumber)])
