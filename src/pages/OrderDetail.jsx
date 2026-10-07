@@ -10,6 +10,7 @@ import { hasVariants, lineName, toCartItem } from '../utils/variants'
 import { formatZAR } from '../utils/formatCurrency'
 import { STATUS_STEPS, statusLabel, paymentLabel } from '../utils/orderStatus'
 import EftPaymentPanel from '../components/checkout/EftPaymentPanel'
+import DeliveryTracker from '../components/delivery/DeliveryTracker'
 
 // Customer-facing detail view for one of their own orders (/orders/:id).
 // Owner RLS + the explicit user_id filter in useMyOrder mean a signed-in user
@@ -201,6 +202,9 @@ function OrderDetailBody({ order }) {
 
       {/* EFT: bank details + proof upload while unpaid, confirmation once paid. */}
       <EftPaymentPanel order={order} />
+
+      {/* Live driver map while out for delivery. */}
+      <DeliveryTracker orderNumber={order_number} email={order.customer_email} status={status} />
 
       {/* Cancelled banner */}
       {cancelled && (

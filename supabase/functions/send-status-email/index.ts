@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
-import { callerIsAdmin, serviceClient } from '../_shared/supabaseClients.ts'
+import { callerClient, callerIsAdmin, serviceClient } from '../_shared/supabaseClients.ts'
 import { emailLogo } from '../_shared/brand.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
@@ -34,7 +34,7 @@ const STATUS_COPY: Record<string, { subject: string; heading: string; message: s
   out_for_delivery: {
     subject: 'Your 224 Clubhouse order is out for delivery 🚚',
     heading: 'Out for Delivery 🚚',
-    message: '{name}, your order is on its way to you. Have your payment ready for the driver.',
+    message: '{name}, your order is on its way to you — follow your driver live on the tracking page. If you’re paying on delivery, have your payment ready.',
   },
   delivered: {
     subject: 'Your 224 Clubhouse order has been delivered',
@@ -58,21 +58,30 @@ serve(async (req) => {
     const { orderId } = payload
     if (!orderId) return jsonResponse({ error: 'orderId is required' }, 400)
 
-    // --- Authorization: admin-triggered, so the caller must BE an admin ---
-    // Same server-side boundary the RLS policies use: is_admin() evaluated
-    // under the caller's own JWT, never a client-side claim.
     const authHeader = req.headers.get('Authorization') ?? ''
     if (!authHeader) return jsonResponse({ error: 'Not authenticated' }, 401)
-    if (!(await callerIsAdmin(authHeader))) return jsonResponse({ error: 'Not authorized' }, 403)
 
     // --- Facts come from the DB, never from the payload ------------------
     const { data: order, error: orderError } = await serviceClient()
       .from('orders')
-      .select('order_number, customer_name, customer_email, status')
+      .select('order_number, customer_name, customer_email, status, driver_id')
       .eq('id', orderId)
       .single()
 
     if (orderError || !order) return jsonResponse({ error: 'Order not found' }, 404)
+
+    // --- Authorization: an admin, or the driver assigned to this order ----
+    // (drivers move their orders to out_for_delivery / delivered from the
+    // driver portal). Both checks run under the caller's own JWT.
+    let allowed = await callerIsAdmin(authHeader)
+    if (!allowed && order.driver_id) {
+      const caller = callerClient(authHeader)
+      const jwt = authHeader.replace(/^Bearer\s+/i, '')
+      const { data: userData } = await caller.auth.getUser(jwt)
+      const { data: isDriver } = await caller.rpc('is_driver')
+      allowed = userData?.user?.id === order.driver_id && isDriver === true
+    }
+    if (!allowed) return jsonResponse({ error: 'Not authorized' }, 403)
 
     const orderNumber: string = order.order_number
     const customerName: string = order.customer_name

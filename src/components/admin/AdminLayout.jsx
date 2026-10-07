@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ChartColumn, Activity, Package, ShoppingCart, Calendar, Crown, Ticket, Star, Mail, Newspaper, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, ChartColumn, Activity, Truck, Package, ShoppingCart, Calendar, Crown, Ticket, Star, Mail, Newspaper, LogOut, Menu, X } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import BrandLogo from '../ui/BrandLogo'
 
@@ -10,6 +10,7 @@ const navItems = [
   { to: '/admin/analytics', icon: Activity, label: 'Visitors' },
   { to: '/admin/products', icon: Package, label: 'Products' },
   { to: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
+  { to: '/admin/drivers', icon: Truck, label: 'Drivers' },
   { to: '/admin/events', icon: Calendar, label: 'Events' },
   { to: '/admin/memberships', icon: Crown, label: 'Memberships' },
   { to: '/admin/discounts', icon: Ticket, label: 'Discounts' },
