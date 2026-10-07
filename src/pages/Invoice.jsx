@@ -13,7 +13,7 @@ const BUSINESS = {
   name: '224 Clubhouse',
   addressLines: ['224 Rondebult Road', 'Libradene, Boksburg', '1459, Gauteng'],
   phone: '075 086 8783',
-  email: '224clubhouse@gmail.com',
+  email: '224clubhous@gmail.com',
   web: '224clubhouse.store',
 }
 

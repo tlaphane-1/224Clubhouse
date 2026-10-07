@@ -54,8 +54,8 @@ function CartRemindersOptOut({ raw }) {
       <Shell icon={<AlertTriangle size={32} className="text-gold" />} title="This link isn't valid">
         <p className="text-muted text-sm leading-relaxed">
           We couldn't match this link. Try opening it again from the original email, or email{' '}
-          <a href="mailto:224clubhouse@gmail.com" className="text-gold underline underline-offset-2">
-            224clubhouse@gmail.com
+          <a href="mailto:224clubhous@gmail.com" className="text-gold underline underline-offset-2">
+            224clubhous@gmail.com
           </a>{' '}
           and we'll switch cart reminders off for you.
         </p>
@@ -111,8 +111,8 @@ function NewsletterUnsubscribe({ raw: rawToken }) {
         <p className="text-muted text-sm leading-relaxed">
           The unsubscribe link looks incomplete. Some email apps cut long links in half — try
           opening it again from the original email, or email us at{' '}
-          <a href="mailto:224clubhouse@gmail.com" className="text-gold hover:underline">
-            224clubhouse@gmail.com
+          <a href="mailto:224clubhous@gmail.com" className="text-gold hover:underline">
+            224clubhous@gmail.com
           </a>{' '}
           and we'll remove you.
         </p>
@@ -150,8 +150,8 @@ function NewsletterUnsubscribe({ raw: rawToken }) {
         <p className="text-muted text-sm leading-relaxed">
           We couldn't match this link to a subscription. It may already have been removed. If you
           are still receiving our newsletter, email{' '}
-          <a href="mailto:224clubhouse@gmail.com" className="text-gold hover:underline">
-            224clubhouse@gmail.com
+          <a href="mailto:224clubhous@gmail.com" className="text-gold hover:underline">
+            224clubhous@gmail.com
           </a>{' '}
           and we'll take you off the list.
         </p>
