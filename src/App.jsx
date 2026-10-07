@@ -50,6 +50,7 @@ const AdminReports = lazy(() => import('./pages/admin/Reports'))
 const AdminReviews = lazy(() => import('./pages/admin/Reviews'))
 const AdminAnalytics = lazy(() => import('./pages/admin/Analytics'))
 const AdminDrivers = lazy(() => import('./pages/admin/Drivers'))
+const AdminAlerts = lazy(() => import('./pages/admin/Alerts'))
 const DriverPortal = lazy(() => import('./pages/driver/DriverPortal'))
 
 const queryClient = new QueryClient({
@@ -149,6 +150,7 @@ export default function App() {
                 <Route path="/admin/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
                 <Route path="/admin/analytics" element={<ProtectedRoute><AdminAnalytics /></ProtectedRoute>} />
                 <Route path="/admin/drivers" element={<ProtectedRoute><AdminDrivers /></ProtectedRoute>} />
+                <Route path="/admin/alerts" element={<ProtectedRoute><AdminAlerts /></ProtectedRoute>} />
 
                 {/* Driver portal: its own phone-first layout; the page handles sign-in and access. */}
                 <Route path="/driver" element={<DriverPortal />} />

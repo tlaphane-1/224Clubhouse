@@ -3,6 +3,7 @@ import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, callerIsAdmin, serviceClient } from '../_shared/supabaseClients.ts'
 import { emailLogo } from '../_shared/brand.ts'
+import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
 
 // EFT payment emails (migration 20261007120000_eft_payment_verification):
 //   kind 'proof'    — the CUSTOMER uploaded proof of payment → alert the club.
@@ -85,6 +86,10 @@ serve(async (req) => {
       if (!order.payment_proof_uploaded_at) return jsonResponse({ error: 'No proof on this order' }, 400)
 
       const to = ADMIN_ALERT_EMAIL.split(',').map((a: string) => a.trim()).filter(Boolean)
+      await notifyTelegram('eft',
+        `🧾 <b>Proof of payment</b> for ${tg(order.order_number)} — ${tg(formatZAR(order.total))}\n`
+        + `${tg(order.customer_name)}. Check FNB for the reference <b>${tg(order.customer_name)}</b> before marking it paid.`,
+        { text: 'EFT to check', url: `${TG_SITE}/admin/orders?filter=eft` })
       if (to.length === 0) return jsonResponse({ success: false, reason: 'ADMIN_ALERT_EMAIL not set' })
       await send(
         to,

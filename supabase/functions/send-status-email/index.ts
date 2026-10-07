@@ -3,6 +3,7 @@ import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, callerIsAdmin, serviceClient } from '../_shared/supabaseClients.ts'
 import { emailLogo } from '../_shared/brand.ts'
+import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 // Interim: sends go out from a domain already verified on the Resend account until
@@ -103,6 +104,18 @@ serve(async (req) => {
     // No email for 'pending' (covered by the order receipt) or for any status
     // without copy (legacy values like 'paid'/'shipped'). Report success so the
     // caller's fire-and-forget path never treats a deliberate skip as a failure.
+    if (!nearby && (status === 'out_for_delivery' || status === 'delivered')) {
+      const { data: drv } = order.driver_id
+        ? await serviceClient().from('drivers').select('full_name').eq('user_id', order.driver_id).maybeSingle()
+        : { data: null }
+      const who = drv?.full_name ? tg(drv.full_name) : 'The driver'
+      await notifyTelegram('deliveries',
+        status === 'out_for_delivery'
+          ? `🚚 ${who} set off with <b>${tg(orderNumber)}</b> for ${tg(customerName)}`
+          : `✅ <b>${tg(orderNumber)}</b> delivered to ${tg(customerName)}${drv?.full_name ? ` by ${tg(drv.full_name)}` : ''}`,
+        { text: 'Drivers', url: `${TG_SITE}/admin/drivers` })
+    }
+
     const copy = nearby
       ? (status === 'out_for_delivery' ? NEARBY_COPY : undefined)
       : STATUS_COPY[status]

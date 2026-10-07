@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { serviceClient } from '../_shared/supabaseClients.ts'
+import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
 
 // Daily 07:00 summary to the club (migration 20261008130000_owner_alerts).
 // Called by pg_cron only — deployed with --no-verify-jwt; the shared
@@ -116,15 +117,24 @@ serve(async (req) => {
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
   const given = req.headers.get('x-cron-secret') ?? ''
   if (!CRON_SECRET || !safeEqual(given, CRON_SECRET)) return jsonResponse({ error: 'Unauthorized' }, 401)
-  if (!RESEND_API_KEY) return jsonResponse({ error: 'RESEND_API_KEY not set' }, 500)
-
-  const to = ADMIN_ALERT_EMAIL.split(',').map(a => a.trim()).filter(Boolean)
-  if (to.length === 0) return jsonResponse({ success: false, reason: 'ADMIN_ALERT_EMAIL not set' })
-
   const day = yesterdaySast()
   const { data, error } = await serviceClient().rpc('daily_summary_data', { p_day: day })
   if (error || !data) return jsonResponse({ error: error?.message ?? 'No summary data' }, 500)
   const s = data as Summary
+
+  const telegram = await notifyTelegram('daily',
+    `☀️ <b>224 daily — ${tg(s.day)}</b>\n`
+    + `👀 ${s.visitors} visitors · ${s.page_views} page views · ${s.new_accounts} new accounts\n`
+    + `🛒 ${s.orders} orders · ${tg(formatZAR(s.booked_cents))} booked · ${s.delivered} delivered (${tg(formatZAR(s.delivered_cents))})\n`
+    + `\n<b>Waiting for you</b>\n`
+    + `🧾 EFT: ${s.eft_proof} proof${s.eft_proof === 1 ? '' : 's'} to check, ${s.eft_awaiting} awaiting payment\n`
+    + `⭐ ${s.reviews_pending} review${s.reviews_pending === 1 ? '' : 's'} · 👑 ${s.memberships_pending} membership application${s.memberships_pending === 1 ? '' : 's'}`
+    + (s.low_stock.length ? `\n\n⚠️ <b>Low stock</b>\n` + s.low_stock.map(l => `• ${tg(l.name)}: ${l.left === 0 ? 'SOLD OUT' : `${l.left} left`}`).join('\n') : ''),
+    { text: 'Dashboard', url: `${TG_SITE}/admin/dashboard` })
+
+  if (!RESEND_API_KEY) return jsonResponse({ error: 'RESEND_API_KEY not set', telegram }, 500)
+  const to = ADMIN_ALERT_EMAIL.split(',').map(a => a.trim()).filter(Boolean)
+  if (to.length === 0) return jsonResponse({ success: false, reason: 'ADMIN_ALERT_EMAIL not set', telegram })
 
   const subject = `224 daily: ${s.orders} order${s.orders === 1 ? '' : 's'}, ${s.visitors} visitor${s.visitors === 1 ? '' : 's'}`
     + (s.eft_proof + s.eft_awaiting > 0 ? ` · ${s.eft_proof + s.eft_awaiting} EFT to check` : '')
@@ -136,5 +146,5 @@ serve(async (req) => {
   })
   if (!res.ok) return jsonResponse({ error: await res.text() }, 502)
   const sent = await res.json().catch(() => ({}))
-  return jsonResponse({ success: true, day, id: sent?.id ?? null })
+  return jsonResponse({ success: true, day, id: sent?.id ?? null, telegram })
 })
