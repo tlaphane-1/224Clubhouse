@@ -3,6 +3,7 @@ import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, serviceClient } from '../_shared/supabaseClients.ts'
 import { emailLogo } from '../_shared/brand.ts'
+import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 // Interim: sends go out from a domain already verified on the Resend account until
@@ -482,6 +483,15 @@ serve(async (req) => {
     // outcome is reported in the response body (the browser ignores it) so a
     // missing alert can be diagnosed without function logs.
     let ownerAlert = 'sent'
+    const lowStock = await lowStockFor(items)
+    // Telegram group alert — independent of the email (never throws).
+    const telegram = await notifyTelegram('orders',
+      `🛒 <b>New order ${tg(orderNumber)}</b> — ${tg(formatZAR(total))} (${tg(paymentLabel(paymentMethod))})\n`
+      + `${tg(customerName)} · ${tg(order.customer_phone ?? '')}\n`
+      + `${tg(formatAddress((order.shipping_address ?? null) as ShippingAddress | null))}\n\n`
+      + items.map(i => `• ${tg(i.quantity)}× ${tg(lineName(i))}`).join('\n')
+      + (lowStock.length ? `\n\n⚠️ <b>Low stock</b>\n` + lowStock.map(l => `• ${tg(l.name)}: ${l.left === 0 ? 'SOLD OUT' : `${l.left} left`}`).join('\n') : ''),
+      { text: 'Open orders', url: `${TG_SITE}/admin/orders` })
     try {
       ownerAlert = await sendOwnerAlert({
         orderNumber,
@@ -497,7 +507,7 @@ serve(async (req) => {
         shippingFee,
         total,
         paymentMethod,
-        lowStock: await lowStockFor(items),
+        lowStock,
       })
     } catch (alertError) {
       console.error('[send-order-email] owner alert failed:', alertError)
@@ -506,7 +516,7 @@ serve(async (req) => {
 
     if (customerSendError) throw customerSendError
 
-    return jsonResponse({ success: true, ownerAlert })
+    return jsonResponse({ success: true, ownerAlert, telegram })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return jsonResponse({ error: message }, 500)

@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, serviceClient } from '../_shared/supabaseClients.ts'
+import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
 
 // "A review is waiting" alert to the club (migration 20261005160000 reviews).
 // Called by the browser right after submit_product_review. Only { productId }
@@ -36,6 +37,15 @@ serve(async (req) => {
       .maybeSingle()
     if (error) return jsonResponse({ error: error.message }, 500)
     if (!review || review.status !== 'pending') return jsonResponse({ error: 'No pending review' }, 404)
+
+    {
+      // deno-lint-ignore no-explicit-any
+      const productName = (review as any).products?.name ?? 'a product'
+      await notifyTelegram('reviews',
+        `⭐ <b>Review waiting</b> — ${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)} for ${tg(productName)}\n`
+        + `“${tg(String(review.body ?? '').slice(0, 300))}” — ${tg(review.display_name)}`,
+        { text: 'Moderate', url: `${TG_SITE}/admin/reviews` })
+    }
 
     const to = ADMIN_ALERT_EMAIL.split(',').map((a: string) => a.trim()).filter(Boolean)
     if (to.length === 0) return jsonResponse({ success: false, reason: 'ADMIN_ALERT_EMAIL not set' })

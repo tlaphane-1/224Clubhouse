@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ChartColumn, Activity, Truck, Package, ShoppingCart, Calendar, Crown, Ticket, Star, Mail, Newspaper, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, ChartColumn, Activity, Truck, Bell, Package, ShoppingCart, Calendar, Crown, Ticket, Star, Mail, Newspaper, LogOut, Menu, X } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import BrandLogo from '../ui/BrandLogo'
 
@@ -17,6 +17,7 @@ const navItems = [
   { to: '/admin/reviews', icon: Star, label: 'Reviews' },
   { to: '/admin/messages', icon: Mail, label: 'Messages' },
   { to: '/admin/newsletter', icon: Newspaper, label: 'Newsletter' },
+  { to: '/admin/alerts', icon: Bell, label: 'Alerts' },
 ]
 
 export default function AdminLayout({ children }) {

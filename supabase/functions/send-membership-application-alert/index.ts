@@ -3,6 +3,7 @@ import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, serviceClient } from '../_shared/supabaseClients.ts'
 import { emailLogo } from '../_shared/brand.ts'
+import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
 
 // Tells the club a membership application is waiting for approval. Invoked by
 // the APPLICANT right after place_membership succeeds (fire-and-forget).
@@ -50,14 +51,19 @@ serve(async (req) => {
       return jsonResponse({ skipped: true })
     }
 
-    const to = ADMIN_ALERT_EMAIL.split(',').map(a => a.trim()).filter(Boolean)
-    if (to.length === 0 || !RESEND_API_KEY) return jsonResponse({ skipped: true })
-
     let tierName: string = m.tier
     const { data: tier } = m.tier_id
       ? await admin.from('membership_tiers').select('name').eq('id', m.tier_id).maybeSingle()
       : await admin.from('membership_tiers').select('name').eq('slug', m.tier).maybeSingle()
     if (tier?.name) tierName = tier.name
+
+    // Telegram: no ID number or date of birth in a group chat (POPIA).
+    await notifyTelegram('memberships',
+      `👑 <b>Membership application</b> — ${tg(tierName)}\n${tg(m.full_name)} · ${tg(m.phone ?? '')}`,
+      { text: 'Open memberships', url: `${TG_SITE}/admin/memberships` })
+
+    const to = ADMIN_ALERT_EMAIL.split(',').map(a => a.trim()).filter(Boolean)
+    if (to.length === 0 || !RESEND_API_KEY) return jsonResponse({ skipped: true })
 
     const row = (label: string, value: string) =>
       `<tr><td style="padding:6px 12px 6px 0;color:#888;font-size:13px;">${label}</td><td style="padding:6px 0;color:#fff;font-size:13px;">${escapeHtml(value)}</td></tr>`
