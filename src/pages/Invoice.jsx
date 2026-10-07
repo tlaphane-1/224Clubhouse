@@ -268,7 +268,7 @@ function InvoiceSheet({ order }) {
           </h2>
           <p className="whitespace-pre-line leading-relaxed">{BANK_DETAILS}</p>
           <p className="text-neutral-600 mt-2">
-            Reference: <span className="font-mono font-semibold text-black">{order_number}</span>
+            Reference: <span className="font-semibold text-black">{customer_name}</span>
           </p>
         </section>
       )}

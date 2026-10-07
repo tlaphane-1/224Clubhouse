@@ -3,7 +3,7 @@ import { PAYMENT_METHODS, PAYMENT_LABELS } from '../../utils/orderStatus'
 const HELPER_TEXT = {
   cash_on_delivery: 'Pay with cash when your order arrives.',
   card_on_delivery: 'Pay by card machine at your door.',
-  eft: 'Pay by bank transfer. Use your order number as the reference — we dispatch once it reflects.',
+  eft: 'Pay by bank transfer. Use your name and surname as the reference — we dispatch once it reflects.',
 }
 
 export default function PaymentMethodSelect({ value, onChange }) {

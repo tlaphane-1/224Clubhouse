@@ -263,7 +263,7 @@ function OrderTracking({ order }) {
       {/* EFT still to pay: the bank details must be reachable from here, not
           only from the one-off confirmation page. */}
       {eftAwaitingPayment(order) && (
-        <EftDetails reference={order_number} amountLabel={formatZAR(total)} />
+        <EftDetails reference="your name and surname" amountLabel={formatZAR(total)} />
       )}
 
       {/* Cancelled banner */}

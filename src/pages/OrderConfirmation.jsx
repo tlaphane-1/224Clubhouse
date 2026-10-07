@@ -34,7 +34,7 @@ export default function OrderConfirmation() {
                 {saved.paymentMethod === 'eft' && (
                   <div className="mb-6">
                     <EftDetails
-                      reference={saved.orderNumber}
+                      reference={saved.customerName || 'your name and surname'}
                       amountLabel={saved.total != null ? formatZAR(saved.total) : null}
                     />
                   </div>
@@ -133,7 +133,7 @@ export default function OrderConfirmation() {
           {/* Payment callout — EFT pays up front; cash/card pays the driver */}
           {paymentMethod === 'eft' ? (
             <div className="p-6 border-b border-border">
-              <EftDetails reference={order.order_number} amountLabel={formatZAR(order.total)} />
+              <EftDetails reference={customer.name?.trim() || 'your name and surname'} amountLabel={formatZAR(order.total)} />
               <p className="text-muted text-xs mt-3">We dispatch your order once the payment reflects.</p>
               {order.id && (
                 <Link

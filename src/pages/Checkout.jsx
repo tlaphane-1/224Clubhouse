@@ -210,6 +210,7 @@ export default function Checkout() {
       total: data.total,
       itemCount: items.reduce((n, i) => n + i.quantity, 0),
       paymentMethod: method,
+      customerName: checkoutForm.name.trim(),
     })
 
     // Receipt email — fire and forget. The order is already placed; if Resend is
@@ -248,7 +249,7 @@ export default function Checkout() {
 
   const itemCount = items.reduce((n, i) => n + i.quantity, 0)
   const paymentNote = method === 'eft'
-    ? 'No payment now — pay by EFT using your order number as the reference.'
+    ? 'No payment now — pay by EFT using your name and surname as the reference.'
     : `No payment now — you'll pay by ${method ? paymentLabel(method) : 'cash/card'} on delivery.`
 
   // One place-order control, rendered inline on desktop and in the phone's
@@ -393,11 +394,7 @@ export default function Checkout() {
                 <PaymentMethodSelect value={method} onChange={setMethod} />
                 {method === 'eft' && (
                   <div className="mt-4">
-                    <EftDetails reference="your order number" amountLabel={formatZAR(total)} />
-                    <p className="text-muted text-xs mt-2">
-                      You'll get your order number when you place the order. It's also on your
-                      order page and in your email.
-                    </p>
+                    <EftDetails reference={checkoutForm.name.trim() || 'your name and surname'} amountLabel={formatZAR(total)} />
                   </div>
                 )}
               </section>
