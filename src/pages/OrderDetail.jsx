@@ -8,8 +8,8 @@ import { useMyOrder } from '../hooks/useMyOrders'
 import { fetchProductsByIds } from '../hooks/useProducts'
 import { hasVariants, lineName, toCartItem } from '../utils/variants'
 import { formatZAR } from '../utils/formatCurrency'
-import { STATUS_STEPS, statusLabel, paymentLabel, eftAwaitingPayment } from '../utils/orderStatus'
-import EftDetails from '../components/checkout/EftDetails'
+import { STATUS_STEPS, statusLabel, paymentLabel } from '../utils/orderStatus'
+import EftPaymentPanel from '../components/checkout/EftPaymentPanel'
 
 // Customer-facing detail view for one of their own orders (/orders/:id).
 // Owner RLS + the explicit user_id filter in useMyOrder mean a signed-in user
@@ -199,11 +199,8 @@ function OrderDetailBody({ order }) {
         </div>
       </div>
 
-      {/* EFT still to pay: the bank details must be reachable from here, not
-          only from the one-off confirmation page. */}
-      {eftAwaitingPayment(order) && (
-        <EftDetails reference={order_number} amountLabel={formatZAR(total)} />
-      )}
+      {/* EFT: bank details + proof upload while unpaid, confirmation once paid. */}
+      <EftPaymentPanel order={order} />
 
       {/* Cancelled banner */}
       {cancelled && (

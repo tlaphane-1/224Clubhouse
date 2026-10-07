@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Package, ShoppingCart, DollarSign, Clock, AlertTriangle } from 'lucide-react'
+import { Package, ShoppingCart, DollarSign, Clock, AlertTriangle, Landmark } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import StatsCard from '../../components/admin/StatsCard'
 import OrdersTable from '../../components/admin/OrdersTable'
@@ -8,6 +8,7 @@ import { useOrders } from '../../hooks/useOrders'
 import { useAllProducts } from '../../hooks/useProducts'
 import { formatZAR } from '../../utils/formatCurrency'
 import { lowStockItems } from '../../utils/salesReport'
+import { eftState } from '../../utils/orderStatus'
 
 export default function Dashboard() {
   const { data: orders, isError, refetch } = useOrders()
@@ -26,6 +27,8 @@ export default function Dashboard() {
   const pendingOrders = orders?.filter(o => o.status === 'pending').length || 0
   const recentOrders = orders?.slice(0, 10) || []
   const lowStock = products ? lowStockItems(products) : []
+  const eftProofs = orders?.filter(o => eftState(o) === 'proof').length ?? 0
+  const eftAwaiting = orders?.filter(o => eftState(o) === 'awaiting').length ?? 0
 
   return (
     <AdminLayout>
@@ -46,6 +49,22 @@ export default function Dashboard() {
         />
         <StatsCard title="Pending Orders" value={pendingOrders} icon={Clock} />
       </div>
+
+      {/* EFT payments waiting for a check against the FNB account */}
+      {eftProofs + eftAwaiting > 0 && (
+        <Link
+          to="/admin/orders?filter=eft"
+          className="focus-ring bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 mb-8 flex items-center gap-3 hover:border-blue-500/40 transition-colors"
+        >
+          <Landmark size={20} className="text-blue-400 flex-shrink-0" />
+          <span className="text-white text-sm">
+            {eftProofs > 0 && <><span className="font-semibold">{eftProofs}</span> EFT proof{eftProofs === 1 ? '' : 's'} to check</>}
+            {eftProofs > 0 && eftAwaiting > 0 && ' · '}
+            {eftAwaiting > 0 && <><span className="font-semibold">{eftAwaiting}</span> EFT order{eftAwaiting === 1 ? '' : 's'} awaiting payment</>}
+          </span>
+          <span className="ml-auto text-blue-400 text-xs uppercase tracking-widest">Review</span>
+        </Link>
+      )}
 
       {productsError && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-8 flex items-center justify-between gap-3">
