@@ -1,13 +1,14 @@
 import tailwindConfig from '../../../tailwind.config.js'
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
+import { tenant } from '../../tenant'
 import { formatTierPrice } from '../../utils/tierPrice'
 import PaperCheckbox from './PaperCheckbox'
 import SignaturePad from './SignaturePad'
 import { CONSENTS, CONSUMPTION_REASONS } from './paperForm'
 
-// The club's printed "224 Clubhouse Membership Form", filled in on screen:
+// The club's printed membership form, filled in on screen:
 // same letterhead, same sections, same wording, same order. Answers are
-// "handwritten" in blue ink on ruled lines. The "224 Clubhouse use only"
+// "handwritten" in blue ink on ruled lines. The "<store name> use only"
 // block is the admin's (approved by / notes) and is not shown here.
 
 const RULE = tailwindConfig.theme.extend.colors['paper-line']
@@ -49,24 +50,23 @@ export default function PaperApplication({ form, setForm, email, tiers, selected
           className="bg-black flex items-center pl-3 pr-8 py-2.5"
           style={{ clipPath: 'polygon(0 0, 100% 0, calc(100% - 1.25rem) 100%, 0 100%)' }}
         >
-          <img src={BRAND_IMAGES.logoWide} alt="224 Clubhouse" className="h-8 sm:h-10 w-auto object-contain" />
+          <img src={BRAND_IMAGES.logoWide} alt={tenant.name} className="h-8 sm:h-10 w-auto object-contain" />
         </div>
         <div className="flex-1 px-3 py-2 text-white text-[11px] leading-tight flex flex-col justify-center">
           <span className="font-bold text-xs">Address</span>
-          <span>224 Rondebult Rd</span>
-          <span>Libradene, Boksburg</span>
-          <a href="mailto:224clubhous@gmail.com" className="mt-1 font-semibold break-all hover:underline">
-            224clubhous@gmail.com
+          <span>{tenant.content.paperForm.letterheadStreet}</span>
+          <span>{`${tenant.contact.suburb}, ${tenant.contact.city}`}</span>
+          <a href={`mailto:${tenant.contact.email}`} className="mt-1 font-semibold break-all hover:underline">
+            {tenant.contact.email}
           </a>
         </div>
       </div>
 
       <div className="px-4 sm:px-8 pt-6 pb-8">
-        <h2 className="font-bold text-lg">224 Clubhouse Membership Form</h2>
-        <p className="font-bold text-sm mt-3">Welcome to 224 Clubhouse!</p>
+        <h2 className="font-bold text-lg">{tenant.name} Membership Form</h2>
+        <p className="font-bold text-sm mt-3">Welcome to {tenant.name}!</p>
         <p className="text-sm leading-relaxed">
-          We’re excited to have you join our community of responsible cannabis users. Please complete
-          the form below to apply for membership.
+          {tenant.content.paperForm.intro}
         </p>
 
         {/* ---- Personal Information ---- */}
@@ -167,7 +167,7 @@ export default function PaperApplication({ form, setForm, email, tiers, selected
         </fieldset>
 
         <fieldset className="mt-4">
-          <legend className={FIELD_LABEL}>• Do you consume cannabis for:</legend>
+          <legend className={FIELD_LABEL}>{tenant.content.paperForm.reasonsLegend}</legend>
           <div className="pl-3">
             {CONSUMPTION_REASONS.map((r, i) => (
               <PaperCheckbox

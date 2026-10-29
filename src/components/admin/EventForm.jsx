@@ -6,8 +6,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Upload } from 'lucide-react'
 import { safeFileName } from '../../utils/safeFileName'
 import { withTimeout } from '../../utils/withTimeout'
+import { tenant } from '../../tenant'
 
-const DEFAULT_LOCATION = '224 Rondebult Road, Libradene, Boksburg'
+const { street, suburb, city } = tenant.contact
+const DEFAULT_LOCATION = `${street}, ${suburb}, ${city}`
 
 const defaultForm = {
   title: '', description: '', date: '', time: '',

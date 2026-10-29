@@ -1,4 +1,5 @@
 import { checkoutFieldId } from './checkoutFields'
+import { tenant } from '../../tenant'
 
 const SA_PROVINCES = [
   'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
@@ -70,7 +71,7 @@ export default function CheckoutForm({ form, onChange, errors, lockEmail = false
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor={checkoutFieldId('city')} className={labelCls}>City *</label>
-              <input {...field('city')} className={inputCls('city')} value={form.city} onChange={e => set('city', e.target.value)} placeholder="Boksburg" autoComplete="address-level2" />
+              <input {...field('city')} className={inputCls('city')} value={form.city} onChange={e => set('city', e.target.value)} placeholder={tenant.contact.city} autoComplete="address-level2" />
               {errorText('city')}
             </div>
             <div>

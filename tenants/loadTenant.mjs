@@ -35,6 +35,13 @@ const REQUIRED_FIELDS = [
   'theme.googleFontsUrl',
   'seo.title',
   'seo.description',
+  'content.footer.tagline',
+  'content.ageGate.heading',
+  'content.ageGate.tagline',
+  'content.paperForm.letterheadStreet',
+  'content.paperForm.intro',
+  'content.paperForm.reasonsLegend',
+  'content.paperForm.consents',
 ]
 
 export function resolveTenantSlug(env = process.env) {

@@ -4,6 +4,7 @@ import { ShoppingBag, Menu, X, User, LogOut, Package, LayoutDashboard, ChevronDo
 import { useCart } from '../../context/useCart'
 import { useAuth } from '../../context/useAuth'
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
+import { tenant } from '../../tenant'
 
 const baseLinks = [
   { to: '/', label: 'Home' },
@@ -71,7 +72,7 @@ export default function Navbar() {
             <Link to="/" className="focus-ring rounded-lg flex items-center h-11 group">
               <img
                 src={BRAND_IMAGES.logoWide}
-                alt="224 Clubhouse"
+                alt={tenant.name}
                 className="h-9 md:h-10 w-auto object-contain brightness-100 group-hover:brightness-110 transition-all"
               />
             </Link>
@@ -198,7 +199,7 @@ export default function Navbar() {
               className="fixed top-0 right-0 bottom-0 z-[70] w-72 bg-surface border-l border-border flex flex-col animate-slideInRight"
             >
               <div className="flex items-center justify-between p-6 border-b border-border">
-                <img src={BRAND_IMAGES.logoWide} alt="224 Clubhouse" className="h-8 w-auto object-contain" />
+                <img src={BRAND_IMAGES.logoWide} alt={tenant.name} className="h-8 w-auto object-contain" />
                 <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close menu" className="w-11 h-11 -mr-2 flex items-center justify-center text-muted hover:text-white">
                   <X size={24} />
                 </button>

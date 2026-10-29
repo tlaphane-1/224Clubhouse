@@ -1,11 +1,12 @@
 import { PAYSTACK_PUBLIC_KEY } from '../../lib/paystack'
 import { formatZAR } from '../../utils/formatCurrency'
+import { tenant } from '../../tenant'
 
 export default function PaystackButton({ amount, email, name, phone, metadata, onSuccess, onClose, disabled }) {
   const handlePay = () => {
     if (disabled) return
 
-    const reference = `224-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const reference = `${tenant.orderPrefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
     // @paystack/inline-js attaches PaystackPop to window
     const handler = window.PaystackPop?.setup({

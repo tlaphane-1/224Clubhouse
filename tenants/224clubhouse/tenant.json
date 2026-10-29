@@ -92,5 +92,25 @@
     "title": "224 Clubhouse | Private Cannabis Members' Club",
     "description": "224 Clubhouse — a private cannabis members' club in Boksburg, South Africa. Premium cannabis, delivered to your door. Members only.",
     "locale": "en_ZA"
+  },
+  "content": {
+    "footer": {
+      "tagline": "A private cannabis members' club. Premium cannabis, delivered to your door. Members only. Elevated always."
+    },
+    "ageGate": {
+      "heading": "Members' Club",
+      "tagline": "Premium cannabis, delivered to your door."
+    },
+    "paperForm": {
+      "letterheadStreet": "224 Rondebult Rd",
+      "intro": "We’re excited to have you join our community of responsible cannabis users. Please complete the form below to apply for membership.",
+      "reasonsLegend": "• Do you consume cannabis for:",
+      "consents": {
+        "private_club": "I understand that 224 Clubhouse is a private cannabis club operating within legal guidelines.",
+        "no_redistribution": "I will not redistribute cannabis obtained through the Club.",
+        "personal_use": "I accept that any cannabis products are for personal use only.",
+        "release_liability": "I release 224 Clubhouse from any liability related to personal use or effects of cannabis."
+      }
+    }
   }
 }

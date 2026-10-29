@@ -1,5 +1,7 @@
+import { tenant } from '../../tenant'
+
 // Wording and keys of the club's paper membership form
-// ("224 Clubhouse Membership Form"). The keys must match place_membership
+// ("<store name> Membership Form"). The keys must match place_membership
 // (migration 20261005130000_paper_membership_form.sql).
 
 export const CONSUMPTION_REASONS = [
@@ -9,13 +11,15 @@ export const CONSUMPTION_REASONS = [
   { key: 'other', label: 'Other' },
 ]
 
+const consentText = tenant.content.paperForm.consents
+
 export const CONSENTS = [
   { key: 'age_21', text: 'I confirm that I am 21 years of age or older.' },
-  { key: 'private_club', text: 'I understand that 224 Clubhouse is a private cannabis club operating within legal guidelines.' },
-  { key: 'no_redistribution', text: 'I will not redistribute cannabis obtained through the Club.' },
-  { key: 'personal_use', text: 'I accept that any cannabis products are for personal use only.' },
+  { key: 'private_club', text: consentText.private_club },
+  { key: 'no_redistribution', text: consentText.no_redistribution },
+  { key: 'personal_use', text: consentText.personal_use },
   { key: 'code_of_conduct', text: "I understand and accept the Club's code of conduct and privacy policy." },
-  { key: 'release_liability', text: 'I release 224 Clubhouse from any liability related to personal use or effects of cannabis.' },
+  { key: 'release_liability', text: consentText.release_liability },
 ]
 
 export const EMPTY_PAPER_FORM = {

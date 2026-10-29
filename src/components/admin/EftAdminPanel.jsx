@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { useSetEftPayment, proofUrl } from '../../hooks/useEftPayments'
 import { eftState } from '../../utils/orderStatus'
 import { formatZAR } from '../../utils/formatCurrency'
+import { tenant } from '../../tenant'
 
 const PILL = {
   awaiting: { label: 'Awaiting EFT', cls: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
@@ -25,7 +26,7 @@ const dateFmt = (iso) => new Date(iso).toLocaleString('en-ZA', {
 
 /**
  * Expanded-row payment controls. The proof is the customer's claim; the
- * "Payment received" button is the admin's confirmation after checking FNB.
+ * "Payment received" button is the admin's confirmation after checking the bank app.
  */
 export default function EftAdminPanel({ order }) {
   const setPayment = useSetEftPayment()
@@ -117,7 +118,7 @@ export default function EftAdminPanel({ order }) {
       ) : order.status !== 'cancelled' && (
         <div className="mt-2">
           <p className="text-muted text-xs mb-2">
-            Check the FNB app first — a proof of payment can be faked. Look for the reference{' '}
+            Check the {tenant.bank.bankName} app first — a proof of payment can be faked. Look for the reference{' '}
             <span className="text-white">{order.customer_name}</span> and {formatZAR(order.total)}.
           </p>
           <div className="flex flex-wrap items-end gap-2">
