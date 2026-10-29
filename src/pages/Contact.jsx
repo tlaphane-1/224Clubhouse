@@ -3,6 +3,8 @@ import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { HIGHLIGHT_TOAST_STYLE } from '../utils/toastTheme'
 import { supabase } from '../lib/supabase'
+import { tenant } from '../tenant'
+import { mapEmbedUrl } from '../utils/mapEmbed'
 
 function FacebookIcon({ size = 20, className = '' }) {
   return (
@@ -47,6 +49,9 @@ const INFO = [
     lines: ['Store closed until further notice', 'Delivering Monday – Sunday', '09:00 – 19:00'],
   },
 ]
+
+// Null when VITE_GOOGLE_MAPS_KEY is unset; the map block is then omitted.
+const mapSrc = mapEmbedUrl(import.meta.env.VITE_GOOGLE_MAPS_KEY, tenant.contact.mapQuery)
 
 export default function Contact() {
   useEffect(() => { document.title = 'Contact | 224 Clubhouse' }, [])
@@ -204,17 +209,19 @@ export default function Contact() {
             </div>
 
             {/* Map embed */}
-            <div className="mt-6 rounded-2xl overflow-hidden border border-border h-56">
-              <iframe
-                title="224 Clubhouse Location"
-                src="https://www.google.com/maps/embed/v1/place?key=AIzaSyD-9tSrke72FloqCDE9M7BkA6Q8rRZZlOo&q=224+Rondebult+Road,+Libradene,+Boksburg"
-                width="100%"
-                height="100%"
-                style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }}
-                allowFullScreen
-                loading="lazy"
-              />
-            </div>
+            {mapSrc && (
+              <div className="mt-6 rounded-2xl overflow-hidden border border-border h-56">
+                <iframe
+                  title={`${tenant.name} Location`}
+                  src={mapSrc}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }}
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            )}
           </div>
         </div>
       </section>
