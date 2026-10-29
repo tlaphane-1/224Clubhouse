@@ -133,7 +133,7 @@ export function useUpdateMembershipTier() {
   })
 }
 
-// The "Notes" line of the paper form's "224 Clubhouse use only" block.
+// The "Notes" line of the paper form's "<store name> use only" block.
 // Plain table update — memberships_admin_update RLS limits it to admins.
 export function useUpdateMembershipNotes() {
   const queryClient = useQueryClient()

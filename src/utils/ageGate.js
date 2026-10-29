@@ -1,4 +1,6 @@
-const AGE_GATE_KEY = 'age-verified'
+import { storageKey } from '../tenant'
+
+const AGE_GATE_KEY = storageKey('age-verified')
 
 export function isAgeVerified() {
   return localStorage.getItem(AGE_GATE_KEY) === 'true'

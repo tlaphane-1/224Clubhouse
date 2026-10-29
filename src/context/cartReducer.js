@@ -2,8 +2,9 @@
 // with AuthContext (sign-out clears the cart) and unit-tested under vitest's
 // node environment. No React, no DOM.
 import { cartLineKey } from '../utils/variants'
+import { storageKey } from '../tenant'
 
-export const CART_KEY = '224-cart'
+export const CART_KEY = storageKey('cart')
 
 // Window event dispatched by AuthContext.signOut. AuthProvider renders ABOVE
 // CartProvider (see App.jsx), so it can't call useCart — CartProvider listens

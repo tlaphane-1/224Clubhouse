@@ -13,6 +13,7 @@
  */
 import { formatZAR } from './formatCurrency'
 import { lineName } from './variants'
+import { tenant } from '../tenant'
 
 /**
  * Digits-only number -> wa.me deep link. An optional `text` prefills the
@@ -36,7 +37,7 @@ export function buildWhatsAppLink(number, text) {
 export function composeOrderMessage({ items, mode, name, address, note }) {
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
-  const out = ['*224 Clubhouse order*', '']
+  const out = [`*${tenant.name} order*`, '']
 
   for (const i of items) {
     out.push(`${i.quantity}× ${lineName(i)} — ${formatZAR(i.price * i.quantity)}`)
@@ -52,6 +53,6 @@ export function composeOrderMessage({ items, mode, name, address, note }) {
   if (name) out.push(`Name: ${name}`)
   if (note) out.push(`Note: ${note}`)
 
-  out.push('', 'sent from 224clubhouse.store')
+  out.push('', `sent from ${tenant.domain.apex}`)
   return out.join('\n')
 }
