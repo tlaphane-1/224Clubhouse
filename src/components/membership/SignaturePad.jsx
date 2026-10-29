@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import tailwindConfig from '../../../tailwind.config.js'
+import { tenant } from '../../tenant.js'
 
-const INK = tailwindConfig.theme.extend.colors.ink
+const INK = tenant.theme.colors.ink
 
 // Sign with a finger (or mouse/pen) like on paper. Reports a transparent PNG
 // data URL through onChange, or null when cleared. `touch-none` stops the page

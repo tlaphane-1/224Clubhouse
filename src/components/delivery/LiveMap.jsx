@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import tailwindConfig from '../../../tailwind.config.js'
 import { tenant } from '../../tenant'
 
 // Leaflet + OpenStreetMap tiles: free, no API key. Markers are circle markers
@@ -9,7 +8,7 @@ import { tenant } from '../../tenant'
 const MAP_CENTRE = tenant.contact.mapCentre
 // Leaflet styles markers with inline values; read the brand tokens rather than
 // repeat hex (docs/DESIGN_SYSTEM.md), as toastTheme.js does.
-const { gold, background, leaf } = tailwindConfig.theme.extend.colors
+const { gold, background, leaf } = tenant.theme.colors
 
 /**
  * @param markers [{ id, lat, lng, label, kind? }] — kind 'home' is the

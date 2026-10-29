@@ -1,9 +1,9 @@
-import tailwindConfig from '../../tailwind.config.js'
+import { tenant } from '../tenant.js'
 
 // Toasts are styled with inline JS objects, so Tailwind classes can't reach
 // them. Read the brand tokens from the Tailwind config instead of repeating
 // hex values (docs/DESIGN_SYSTEM.md: no raw hex in components).
-const { surface, border, gold, background } = tailwindConfig.theme.extend.colors
+const { surface, border, gold, background } = tenant.theme.colors
 
 export const TOAST_OPTIONS = {
   style: { background: surface, color: '#fff', border: `1px solid ${border}` },

@@ -1,4 +1,3 @@
-import tailwindConfig from '../../../tailwind.config.js'
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
 import { tenant } from '../../tenant'
 import { formatTierPrice } from '../../utils/tierPrice'
@@ -11,7 +10,7 @@ import { CONSENTS, CONSUMPTION_REASONS } from './paperForm'
 // "handwritten" in blue ink on ruled lines. The "<store name> use only"
 // block is the admin's (approved by / notes) and is not shown here.
 
-const RULE = tailwindConfig.theme.extend.colors['paper-line']
+const RULE = tenant.theme.colors['paper-line']
 
 const SECTION = 'font-bold text-print text-base mt-7 mb-3 pt-5 border-t-2 border-paper-line'
 const FIELD_LABEL = 'block font-bold text-print text-sm'

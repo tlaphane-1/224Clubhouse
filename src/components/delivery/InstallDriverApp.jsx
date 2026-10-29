@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Download, X } from 'lucide-react'
-import tailwindConfig from '../../../tailwind.config.js'
 import { tenant, storageKey } from '../../tenant'
 
 // Brand background token (no raw hex in components — docs/DESIGN_SYSTEM.md).
-const { background } = tailwindConfig.theme.extend.colors
+const { background } = tenant.theme.colors
 
 const DISMISS_KEY = storageKey('driver-install-dismissed')
 
