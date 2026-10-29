@@ -4,9 +4,9 @@ import path from 'node:path'
 import { loadTenant } from '../../tenants/loadTenant.mjs'
 
 // Ratchet: every fact that belongs to one store must live in tenant.json, not
-// in src/. The forbidden list is built from 224's own config (whatever TENANT
-// is set to) so the test still catches a 224 fact leaking back into a shared
-// component when someone is building another store.
+// in src/. The forbidden list is deliberately always built from 224's config,
+// regardless of TENANT, so it catches a 224 fact leaking into shared code even
+// while someone is building another store.
 const tenant = loadTenant('224clubhouse')
 
 const SRC = path.resolve(import.meta.dirname, '..')

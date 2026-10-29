@@ -15,7 +15,8 @@ describe('BANK_DETAILS', () => {
   })
 
   it('VITE_EFT_BANK_DETAILS overrides the default, expanding \n to newlines', async () => {
-    vi.stubEnv('VITE_EFT_BANK_DETAILS', 'Bank: X\nAcc: 1')
+    // Literal backslash + n, exactly as it sits in a .env file.
+    vi.stubEnv('VITE_EFT_BANK_DETAILS', 'Bank: X\\nAcc: 1')
     expect(await freshBankDetails()).toBe('Bank: X\nAcc: 1')
   })
 

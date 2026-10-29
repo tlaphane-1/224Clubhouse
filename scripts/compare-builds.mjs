@@ -22,8 +22,12 @@ function logicalName(rel) {
   return rel.startsWith('assets/') ? rel.replace(/-[A-Za-z0-9_-]{8}(\.[A-Za-z0-9]+)$/, '$1') : rel
 }
 
+// modulepreload tags are dropped: the chunk graph shifts as more modules import
+// tenant.js, but that changes what the browser fetches early, not what users see.
+const MODULEPRELOAD_TAG = /[ \t]*<link\b(?=[^>]*\brel=["']modulepreload["'])[^>]*>[ \t]*\n?/g
+
 function normalise(text) {
-  return text.replace(/\r\n/g, '\n').replace(HASHED_ASSET, '$1$2')
+  return text.replace(/\r\n/g, '\n').replace(MODULEPRELOAD_TAG, '').replace(HASHED_ASSET, '$1$2')
 }
 
 // Minimal LCS line diff, enough to show what moved. Inputs are small HTML files.
@@ -53,7 +57,12 @@ if (!dirA || !dirB) {
   process.exit(2)
 }
 
-const index = (root) => new Map(listFiles(root).map((rel) => [logicalName(rel), rel]))
+// JS chunks are left out of the file list: which chunks exist is the same
+// chunk-graph artefact as the modulepreload tags, and their bodies are not
+// diffed here anyway. CSS, images and everything else still count.
+const isJsChunk = (rel) => rel.startsWith('assets/') && rel.endsWith('.js')
+const index = (root) =>
+  new Map(listFiles(root).filter((rel) => !isJsChunk(rel)).map((rel) => [logicalName(rel), rel]))
 const filesA = index(dirA)
 const filesB = index(dirB)
 let differences = 0
