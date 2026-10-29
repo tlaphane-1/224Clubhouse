@@ -12,7 +12,7 @@ import { chromium } from '@playwright/test'
 
 const [urlA, urlB, ...extraRoutes] = process.argv.slice(2).map((u) => u?.replace(/\/$/, ''))
 if (!urlA || !urlB) {
-  console.error('usage: node scripts/compare-rendered.mjs <urlA> <urlB>')
+  console.error('usage: node scripts/compare-rendered.mjs <urlA> <urlB> [extraRoute ...]')
   process.exit(2)
 }
 
@@ -28,6 +28,9 @@ const normalise = (text) => text.replace(/\s+/g, ' ').trim()
 
 async function capture(context, base, route) {
   const page = await context.newPage()
+  // An uncaught error usually means a blank page; two equally blank pages must not compare as equal.
+  const errors = []
+  page.on('pageerror', (e) => errors.push(e.message))
   try {
     await page.goto(base + route, { waitUntil: 'domcontentloaded', timeout: 30000 })
     // networkidle can stall on long-lived connections; a miss is fine, the fixed wait follows.
@@ -41,7 +44,7 @@ async function capture(context, base, route) {
         font: heading ? getComputedStyle(heading).fontFamily : '(no heading)',
         iframes: document.querySelectorAll('iframe').length,
       }
-    })
+    }).then((r) => ({ ...r, errors }))
   } finally {
     await page.close()
   }
@@ -76,6 +79,7 @@ function compare(a, b) {
   if (a.font !== b.font) problems.push([`  h1/h2 font-family: ${a.font} vs ${b.font}`])
   if (normalise(a.text) !== normalise(b.text)) problems.push(['  text differs (- A, + B):', ...lineDiff(lines(a.text), lines(b.text))])
   for (const [label, side] of [['A', a], ['B', b]]) {
+    for (const message of side.errors) problems.push([`  build ${label} threw a page error: ${message}`])
     const hit = normalise(side.text).match(BAD_TEXT)
     if (hit) problems.push([`  build ${label} renders "${hit[0]}" in visible text`])
   }
