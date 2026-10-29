@@ -83,6 +83,8 @@ const REQUIRED_FIELDS = [
   'contact.mapsLink',
   'social.facebook',
   'social.instagram',
+  'legal.informationOfficer',
+  'legal.lastUpdated',
 ]
 
 export function resolveTenantSlug(env = process.env) {

@@ -8,6 +8,7 @@ import { useAdminDiscountCodes } from '../../hooks/useDiscountCode'
 import { supabase } from '../../lib/supabase'
 import { formatZAR } from '../../utils/formatCurrency'
 import toast from 'react-hot-toast'
+import { adminTitle } from '../../tenant'
 
 const emptyForm = {
   code: '',
@@ -275,7 +276,7 @@ export default function Discounts() {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    document.title = 'Discounts | 224 Admin'
+    document.title = adminTitle('Discounts')
   }, [])
 
   // Deactivate, never delete: placed orders carry discount_code as a plain

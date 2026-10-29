@@ -93,6 +93,10 @@
     "description": "224 Clubhouse — a private cannabis members' club in Boksburg, South Africa. Premium cannabis, delivered to your door. Members only.",
     "locale": "en_ZA"
   },
+  "legal": {
+    "informationOfficer": "224 Clubhouse Management",
+    "lastUpdated": "13 August 2026"
+  },
   "content": {
     "home": {
       "heroTitle": "Premium. Private. Delivered.",

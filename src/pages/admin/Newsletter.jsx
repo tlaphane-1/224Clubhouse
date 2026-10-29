@@ -5,6 +5,7 @@ import {
   useNewsletterSubscribers,
   isActiveSubscriber,
 } from '../../hooks/useNewsletterSubscribers'
+import { adminTitle } from '../../tenant'
 
 const STATUS_FILTERS = [
   { key: 'active', label: 'Active' },
@@ -63,7 +64,7 @@ export default function AdminNewsletter() {
   const [status, setStatus] = useState('active')
 
   useEffect(() => {
-    document.title = 'Newsletter | 224 Admin'
+    document.title = adminTitle('Newsletter')
   }, [])
 
   const q = search.toLowerCase()

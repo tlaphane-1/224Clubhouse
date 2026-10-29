@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Mail, Search, AlertTriangle } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { useContactMessages } from '../../hooks/useContactMessages'
+import { adminTitle } from '../../tenant'
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -19,7 +20,7 @@ export default function AdminMessages() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    document.title = 'Messages | 224 Admin'
+    document.title = adminTitle('Messages')
   }, [])
 
   const q = search.toLowerCase()

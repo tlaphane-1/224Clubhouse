@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom'
 import LegalPage, { LegalSection, ReviewNote } from './LegalPage'
+import { tenant } from '../../tenant'
+
+const { contact } = tenant
 
 /**
  * Delivery & returns policy. The fee/threshold numbers here mirror
@@ -15,12 +18,12 @@ export default function DeliveryReturns() {
     >
       <LegalSection title="1. Delivery area">
         <p>
-          We deliver from our store at 224 Rondebult Road, Libradene, Boksburg. If your address
+          We deliver from our store at {contact.street}, {contact.suburb}, {contact.city}. If your address
           falls outside our delivery area, we will contact you before confirming the order —
           orders we cannot deliver are cancelled and nothing is owed.
         </p>
         <ReviewNote>
-          the exact delivery area (suburbs / radius around Boksburg) has not been published
+          the exact delivery area (suburbs / radius around {contact.city}) has not been published
           anywhere on the site and needs to be defined here.
         </ReviewNote>
       </LegalSection>
@@ -97,9 +100,9 @@ export default function DeliveryReturns() {
             with your order number and the reason for the return, or
           </li>
           <li>
-            Message us on WhatsApp at <span className="text-white">+27 75 086 8783</span>, or
+            Message us on WhatsApp at <span className="text-white">{contact.phoneIntl}</span>, or
           </li>
-          <li>Bring the product and your order number to the store at 224 Rondebult Road, Libradene, Boksburg.</li>
+          <li>Bring the product and your order number to the store at {contact.street}, {contact.suburb}, {contact.city}.</li>
         </ul>
         <p>
           You can find your order number on your confirmation email, on the{' '}

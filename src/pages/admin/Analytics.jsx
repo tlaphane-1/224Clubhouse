@@ -3,6 +3,7 @@ import { Users, Eye, UserPlus, MousePointerClick, AlertTriangle } from 'lucide-r
 import AdminLayout from '../../components/admin/AdminLayout'
 import StatsCard from '../../components/admin/StatsCard'
 import { useSiteAnalytics } from '../../hooks/useSiteAnalytics'
+import { adminTitle } from '../../tenant'
 
 const RANGES = [
   { days: 1, label: 'Today' },
@@ -122,7 +123,7 @@ export default function Analytics() {
   const { data, isLoading, isError, refetch } = useSiteAnalytics(days)
 
   useEffect(() => {
-    document.title = 'Visitors | 224 Admin'
+    document.title = adminTitle('Visitors')
   }, [])
 
   const f = data?.funnel
