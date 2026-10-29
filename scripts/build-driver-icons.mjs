@@ -1,19 +1,23 @@
 // Renders the driver-app (PWA) icons: the white 224 logo centred on the brand
 // background. Usage: node scripts/build-driver-icons.mjs
-// Output: public/icons/driver-192.png, driver-512.png, driver-maskable-512.png
+// Output: tenants/<slug>/public/icons/driver-192.png, driver-512.png, driver-maskable-512.png
+// (the store is picked by TENANT, default 224clubhouse).
 import { chromium } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
 import { mkdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
+import { loadTenant, resolveTenantSlug, tenantDir } from '../tenants/loadTenant.mjs'
 
+const slug = resolveTenantSlug()
+const tenant = loadTenant(slug)
 const root = path.dirname(fileURLToPath(import.meta.url))
-const logo = readFileSync(path.resolve(root, '../docs/membership-form/logo.png')).toString('base64')
-const outDir = path.resolve(root, '../public/icons')
+const logo = readFileSync(path.resolve(root, '..', tenant.images.iconSource)).toString('base64')
+const outDir = path.join(tenantDir(slug), 'public', 'icons')
 mkdirSync(outDir, { recursive: true })
 
-// Brand `background` token (tailwind.config.js). Icons are raster files, not
-// components, so the value is inlined here.
-const BG = '#0a0a0a'
+// Brand `background` token. Icons are raster files, not components, so the
+// tenant's colour is baked in at render time.
+const BG = tenant.theme.colors.background
 
 // Maskable icons are cropped to a circle/squircle by the launcher: keep the
 // logo inside the central ~60% safe zone.

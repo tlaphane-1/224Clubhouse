@@ -19,11 +19,14 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { loadTenant } from '../tenants/loadTenant.mjs'
 
-const SITE = 'https://224clubhouse.store'
-const SITE_NAME = '224 Clubhouse'
-// Same fallback project as src/hooks/useStorageImages.js.
-const FALLBACK_SUPABASE_URL = 'https://aogdkqczvlffgydgxsmz.supabase.co'
+// Throws on an unknown TENANT or a tenant.json missing a field. Deliberately
+// outside main(), whose catch exits 0: a wrong store must fail the build, not
+// ship another store's (or no) SEO.
+const tenant = loadTenant()
+const SITE = tenant.domain.siteUrl
+const SITE_NAME = tenant.name
 const DESC_MAX = 155
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -65,6 +68,10 @@ function truncate(text, max = DESC_MAX) {
   return `${(lastSpace > 60 ? cut.slice(0, lastSpace) : cut).replace(/[\s,.;:!-]+$/, '')}…`
 }
 
+// Fills {token} placeholders in the tenant's description templates.
+const fillTemplate = (template, values) =>
+  template.replace(/\{(\w+)\}/g, (_, key) => values[key] ?? '')
+
 const absUrl = u => {
   if (!u) return ''
   if (/^https?:\/\//i.test(u)) return u
@@ -92,7 +99,7 @@ function headTags({ title, description, path, type = 'website', image, imageSize
   if (url) tags.push(`<link rel="canonical" href="${escAttr(url)}" />`)
   tags.push(
     `<meta property="og:site_name" content="${SITE_NAME}" />`,
-    `<meta property="og:locale" content="en_ZA" />`,
+    `<meta property="og:locale" content="${escAttr(tenant.seo.locale)}" />`,
     `<meta property="og:type" content="${escAttr(type)}" />`,
     `<meta property="og:title" content="${escAttr(title)}" />`,
     `<meta property="og:description" content="${escAttr(description)}" />`,
@@ -162,14 +169,9 @@ async function loadData(env) {
 
 // ── page definitions
 const STATIC_ROUTES = [
-  { path: '/store', title: `Shop | ${SITE_NAME}`, description: 'Shop premium cannabis flower, pre-rolls, edibles and accessories from 224 Clubhouse, Boksburg. Members-only delivery across Gauteng.' },
-  { path: '/events', title: `Events | ${SITE_NAME}`, description: 'Upcoming events, sessions and socials at 224 Clubhouse, the private cannabis members\' club in Boksburg. Reserve your seat.' },
-  { path: '/membership', title: `Membership | ${SITE_NAME}`, description: 'Join 224 Clubhouse — a private cannabis members\' club in Boksburg, South Africa. See membership tiers and how to sign up.' },
-  { path: '/about', title: `About Us | ${SITE_NAME}`, description: 'About 224 Clubhouse — a private cannabis members\' club and lounge in Boksburg, South Africa.' },
-  { path: '/contact', title: `Contact | ${SITE_NAME}`, description: 'Get in touch with 224 Clubhouse in Boksburg — questions about membership, orders, delivery or events.' },
-  { path: '/privacy', title: `Privacy Policy | ${SITE_NAME}`, description: 'How 224 Clubhouse collects, uses and protects your personal information (POPIA).' },
-  { path: '/terms', title: `Terms & Conditions | ${SITE_NAME}`, description: 'Terms and conditions for using the 224 Clubhouse website, membership and store.' },
-  { path: '/delivery-returns', title: `Delivery & Returns | ${SITE_NAME}`, description: 'Delivery areas, times and fees, and the returns policy for 224 Clubhouse orders.' },
+  ...Object.entries(tenant.seo.routes).map(([path, r]) => (
+    { path, title: `${r.title} | ${SITE_NAME}`, description: r.description }
+  )),
 ]
 
 function productMeta(p, logo) {
@@ -177,7 +179,7 @@ function productMeta(p, logo) {
   const image = absUrl(Array.isArray(p.images) ? p.images.find(Boolean) : '') || null
   const inStock = (p.stock_quantity ?? 0) > 0
   const description = truncate(p.description) ||
-    truncate(`${p.name} from 224 Clubhouse, Boksburg. Members-only cannabis delivery across Gauteng.`)
+    truncate(fillTemplate(tenant.seo.productDescription, { name: p.name }))
   const offer = {
     '@type': 'Offer',
     url: `${SITE}${path}`,
@@ -213,7 +215,7 @@ function eventMeta(e, logo) {
   const path = `/events/${encodeURIComponent(e.id)}`
   const image = absUrl(e.image_url) || null
   const description = truncate(e.description) ||
-    truncate(`${e.title} at 224 Clubhouse, Boksburg. Reserve your seat.`)
+    truncate(fillTemplate(tenant.seo.eventDescription, { name: e.title }))
   return {
     path,
     meta: {
@@ -234,7 +236,12 @@ function eventMeta(e, logo) {
         location: {
           '@type': 'Place',
           name: SITE_NAME,
-          address: { '@type': 'PostalAddress', addressLocality: 'Boksburg', addressRegion: 'Gauteng', addressCountry: 'ZA' },
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: tenant.contact.city,
+            addressRegion: tenant.contact.province,
+            addressCountry: tenant.contact.country,
+          },
         },
         ...(image ? { image: [image] } : {}),
         organizer: { '@type': 'Organization', name: SITE_NAME, url: SITE },
@@ -272,9 +279,11 @@ async function main() {
   }
   const template = readFileSync(templatePath, 'utf-8')
   const env = loadEnv()
+  // Without a Supabase URL there is no public storage root, so pages carry no
+  // og:image rather than a broken relative one.
   const logo = {
-    url: `${env.url || FALLBACK_SUPABASE_URL}/storage/v1/object/public/brand-assets/224-logo-fav-1-480x142.png`,
-    size: [480, 142],
+    url: env.url ? `${env.url}/storage/v1/object/public/${tenant.images.logoWide}` : '',
+    size: tenant.images.logoWideSize,
   }
   const today = new Date().toISOString().slice(0, 10)
 
@@ -282,8 +291,8 @@ async function main() {
   // route (/track, /cart, …), so it carries defaults but no canonical/og:url —
   // a canonical pointing at "/" would tell Google those pages are the home page.
   writeFileSync(templatePath, render(template, {
-    title: `${SITE_NAME} | Private Cannabis Members' Club`,
-    description: '224 Clubhouse — a private cannabis members\' club in Boksburg, South Africa. Premium cannabis, delivered to your door. Members only.',
+    title: tenant.seo.title,
+    description: tenant.seo.description,
     path: null,
     image: logo.url,
     imageSize: logo.size,
@@ -292,7 +301,7 @@ async function main() {
       '@type': 'Organization',
       name: SITE_NAME,
       url: SITE,
-      logo: logo.url,
+      ...(logo.url ? { logo: logo.url } : {}),
     },
   }))
 

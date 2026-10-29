@@ -64,6 +64,7 @@
       "brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm-2.jpeg",
       "brand-assets/whatsapp-image-2026-02-24-at-10.03.56-pm.jpeg"
     ],
+    "logoWideSize": [480, 142],
     "iconSource": "docs/membership-form/logo.png"
   },
   "theme": {
@@ -91,7 +92,43 @@
   "seo": {
     "title": "224 Clubhouse | Private Cannabis Members' Club",
     "description": "224 Clubhouse — a private cannabis members' club in Boksburg, South Africa. Premium cannabis, delivered to your door. Members only.",
-    "locale": "en_ZA"
+    "locale": "en_ZA",
+    "routes": {
+      "/store": {
+        "title": "Shop",
+        "description": "Shop premium cannabis flower, pre-rolls, edibles and accessories from 224 Clubhouse, Boksburg. Members-only delivery across Gauteng."
+      },
+      "/events": {
+        "title": "Events",
+        "description": "Upcoming events, sessions and socials at 224 Clubhouse, the private cannabis members' club in Boksburg. Reserve your seat."
+      },
+      "/membership": {
+        "title": "Membership",
+        "description": "Join 224 Clubhouse — a private cannabis members' club in Boksburg, South Africa. See membership tiers and how to sign up."
+      },
+      "/about": {
+        "title": "About Us",
+        "description": "About 224 Clubhouse — a private cannabis members' club and lounge in Boksburg, South Africa."
+      },
+      "/contact": {
+        "title": "Contact",
+        "description": "Get in touch with 224 Clubhouse in Boksburg — questions about membership, orders, delivery or events."
+      },
+      "/privacy": {
+        "title": "Privacy Policy",
+        "description": "How 224 Clubhouse collects, uses and protects your personal information (POPIA)."
+      },
+      "/terms": {
+        "title": "Terms & Conditions",
+        "description": "Terms and conditions for using the 224 Clubhouse website, membership and store."
+      },
+      "/delivery-returns": {
+        "title": "Delivery & Returns",
+        "description": "Delivery areas, times and fees, and the returns policy for 224 Clubhouse orders."
+      }
+    },
+    "productDescription": "{name} from 224 Clubhouse, Boksburg. Members-only cannabis delivery across Gauteng.",
+    "eventDescription": "{name} at 224 Clubhouse, Boksburg. Reserve your seat."
   },
   "legal": {
     "informationOfficer": "224 Clubhouse Management",
