@@ -1,10 +1,22 @@
 import { defineConfig } from 'vite'
 import { configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { loadTenant, resolveTenantSlug, tenantDir } from './tenants/loadTenant.mjs'
+import path from 'node:path'
+
+// Resolved once at config load so an unknown TENANT or an incomplete
+// tenant.json fails the build here, before any bundling.
+const slug = resolveTenantSlug()
+loadTenant(slug)
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Each store's tenant.json and static files live in tenants/<slug>/.
+  publicDir: path.join(tenantDir(slug), 'public'),
+  resolve: {
+    alias: { '@tenant': tenantDir(slug) },
+  },
   build: {
     rollupOptions: {
       output: {

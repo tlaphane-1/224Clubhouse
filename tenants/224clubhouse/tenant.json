@@ -1,0 +1,96 @@
+{
+  "slug": "224clubhouse",
+  "name": "224 Clubhouse",
+  "shortName": "224",
+  "legalName": "224 Clubhouse",
+  "orderPrefix": "224",
+  "storagePrefix": "224",
+  "legacyStorageKeys": {
+    "age-verified": "age-verified",
+    "recent-orders": "224:recent-orders"
+  },
+  "domain": {
+    "siteUrl": "https://224clubhouse.store",
+    "apex": "224clubhouse.store",
+    "liveHosts": ["224clubhouse.store", "www.224clubhouse.store", "224clubhouse.web.app"]
+  },
+  "contact": {
+    "street": "224 Rondebult Road",
+    "suburb": "Libradene",
+    "city": "Boksburg",
+    "postalCode": "1459",
+    "province": "Gauteng",
+    "country": "ZA",
+    "phoneDisplay": "075 086 8783",
+    "phoneTel": "0750868783",
+    "phoneIntl": "+27 75 086 8783",
+    "email": "224clubhous@gmail.com",
+    "mapsLink": "https://maps.google.com/?q=224+Rondebult+Road+Libradene+Boksburg",
+    "mapQuery": "224 Rondebult Road, Libradene, Boksburg",
+    "mapCentre": [-26.2125, 28.2625]
+  },
+  "hours": {
+    "status": "Closed until further notice",
+    "delivery": "Delivering Monday – Sunday, 09:00 – 19:00",
+    "contactPage": ["Store closed until further notice", "Delivering Monday – Sunday", "09:00 – 19:00"]
+  },
+  "social": {
+    "facebook": "https://www.facebook.com/224clubhouse",
+    "instagram": "https://www.instagram.com/224clubhouse"
+  },
+  "bank": {
+    "bankName": "FNB",
+    "details": "Bank: FNB\nAccount holder: 224 Clubhouse\nAccount type: Gold Business Account\nAccount number: 63228491138\nBranch code: 250655"
+  },
+  "images": {
+    "logo": "brand-assets/224-logo-fav-1.png",
+    "logoWide": "brand-assets/224-logo-fav-1-480x142.png",
+    "favicon": "brand-assets/224-logo-fav.png",
+    "header": "brand-assets/224-header-1.jpg",
+    "gallery": [
+      "brand-assets/224-square-images.jpg",
+      "brand-assets/224-square-images-1.jpg",
+      "brand-assets/224-square-images-2.jpg",
+      "brand-assets/1-1.jpg",
+      "brand-assets/2.jpg",
+      "brand-assets/3.jpg",
+      "brand-assets/5.jpg",
+      "brand-assets/6.jpg",
+      "brand-assets/7.jpg",
+      "brand-assets/whatsapp-image-2026-02-24-at-10.03.48-pm.jpeg",
+      "brand-assets/whatsapp-image-2026-02-24-at-10.03.51-pm.jpeg",
+      "brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm.jpeg",
+      "brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm-1.jpeg",
+      "brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm-2.jpeg",
+      "brand-assets/whatsapp-image-2026-02-24-at-10.03.56-pm.jpeg"
+    ],
+    "iconSource": "docs/membership-form/logo.png"
+  },
+  "theme": {
+    "colors": {
+      "background": "#0a0a0a",
+      "surface": "#111111",
+      "gold": "#C9A84C",
+      "gold-light": "#e2c074",
+      "muted": "#888888",
+      "border": "#222222",
+      "leaf": "#7CC242",
+      "leaf-deep": "#1B2E12",
+      "paper": "#FBF8F1",
+      "paper-line": "#CFC8B8",
+      "print": "#1C1C1C",
+      "ink": "#1D3D8F"
+    },
+    "fonts": {
+      "heading": ["\"Playfair Display\"", "serif"],
+      "body": ["Inter", "sans-serif"],
+      "hand": ["Caveat", "cursive"]
+    },
+    "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap"
+  },
+  "seo": {
+    "title": "224 Clubhouse | Private Cannabis Members' Club",
+    "description": "224 Clubhouse — a private cannabis members' club in Boksburg, South Africa. Premium cannabis, delivered to your door. Members only.",
+    "locale": "en_ZA"
+  }
+}
