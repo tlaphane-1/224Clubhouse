@@ -3,6 +3,8 @@ import LegalPage, { LegalSection } from './LegalPage'
 import { tenant } from '../../tenant'
 
 const { contact } = tenant
+// rulesShortTitle is the form used mid-sentence ("the Commandments").
+const { rulesTitle, rulesShortTitle } = tenant.content.membership
 
 /**
  * Terms of service for the storefront + membership. The checkout agreement
@@ -18,7 +20,7 @@ export default function Terms() {
     >
       <LegalSection title="1. Who may use this site (21+ only)">
         <p>
-          {tenant.name} is a private, members-based cannabis lifestyle lounge operating within the
+          {tenant.legalName} is a private, members-based cannabis lifestyle lounge operating within the
           framework of the Cannabis for Private Purposes Act. Our products and services are
           strictly for adults aged <span className="text-white font-semibold">21 years or older</span>.
           By using this site, placing an order, or applying for membership you confirm that you are
@@ -112,8 +114,8 @@ export default function Terms() {
           <li>
             Members agree to conduct themselves in accordance with the{' '}
             <Link to="/membership" className="text-gold hover:text-gold-light transition-colors">
-              12 Club Commandments
-            </Link>. Membership may be suspended or revoked for breach of the Commandments or of
+              {rulesTitle}
+            </Link>. Membership may be suspended or revoked for breach of the {rulesShortTitle} or of
             these terms.
           </li>
           <li>Products obtained through the club are for personal use only and may not be resold.</li>

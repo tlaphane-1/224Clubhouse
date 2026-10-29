@@ -78,15 +78,19 @@ Customers find past orders on `/orders` (`MyOrders.jsx` + `useMyOrders`, owner-s
 
 ### Images
 
-Public Supabase Storage buckets: `product-images`, `event-images`, `brand-assets`. `src/hooks/useStorageImages.js` reads the build-time `scripts/image-manifest.json` and a **hardcoded** Supabase project URL (`BASE`). If the Supabase project changes, that `BASE` constant must be updated too.
+Public Supabase Storage buckets: `product-images`, `event-images`, `brand-assets`. `src/hooks/useStorageImages.js` reads the build-time `scripts/image-manifest.json`; the store's brand image paths (logo, header, gallery) live in `tenants/<slug>/tenant.json` and URLs are built from `VITE_SUPABASE_URL` (via `storagePublicUrl` in `src/tenant.js`), the same variable the Supabase client uses. There is no hard-coded project URL.
 
 ### Routing & age gate
 
 `react-router-dom` v7 in `App.jsx`. Public routes wrapped in `PublicLayout` (Navbar/Footer); `/admin/*` wrapped in `ProtectedRoute`. `AgeGate` (21+) renders globally and is gated by `localStorage` key `age-verified` (`src/utils/ageGate.js`).
 
+### Multi-store (tenants)
+
+Each store is a folder `tenants/<slug>/` holding `tenant.json` (every store-specific fact: name, contact, bank details, images, theme, SEO, copy) and `public/` (favicon, driver manifest and icons — required, checked at config load). `TENANT=<slug>` selects the store (default `224clubhouse`); `tenants/loadTenant.mjs` validates `tenant.json` against 224's as the reference shape. `src/tenant.js` is the only browser reader of `tenant.json` — never import `tailwind.config.js` or `tenants/*.mjs` from `src/` (Node-only; `browserImports.unit.test.js` guards it). Keep store facts out of `src/` (`brandLiterals.unit.test.js` guards it).
+
 ## Styling
 
-Tailwind v3 (config in `tailwind.config.js`). Dark theme with a fixed brand palette — use the named tokens, not hex literals: `background` `#0a0a0a`, `surface` `#111`, `gold` `#C9A84C`, `gold-light`, `muted`, `border`. Fonts: `font-heading` (Playfair Display), `font-body` (Inter). Reusable component classes (`.btn-gold`, `.btn-outline`, `.input-base`, `.card-hover`, `.section-heading`, `.text-gold-gradient`) are defined in `src/index.css` `@layer components` — prefer these over re-rolling styles.
+Tailwind v3 (config in `tailwind.config.js`). Dark theme with a fixed brand palette — use the named tokens, not hex literals: `background`, `surface`, `gold`, `gold-light`, `muted`, `border`. Fonts: `font-heading`, `font-body`. The colour and font *values* live in `theme` in `tenants/<slug>/tenant.json` (for 224: background `#0a0a0a`, surface `#111`, gold `#C9A84C`; Playfair Display / Inter); the token names are unchanged. Reusable component classes (`.btn-gold`, `.btn-outline`, `.input-base`, `.card-hover`, `.section-heading`, `.text-gold-gradient`) are defined in `src/index.css` `@layer components` — prefer these over re-rolling styles.
 
 ## Environment variables
 

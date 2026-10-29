@@ -76,7 +76,7 @@ export default function CheckoutForm({ form, onChange, errors, lockEmail = false
             </div>
             <div>
               <label htmlFor={checkoutFieldId('postalCode')} className={labelCls}>Postal Code *</label>
-              <input {...field('postalCode')} inputMode="numeric" className={inputCls('postalCode')} value={form.postalCode} onChange={e => set('postalCode', e.target.value)} placeholder="1459" autoComplete="postal-code" maxLength={4} />
+              <input {...field('postalCode')} inputMode="numeric" className={inputCls('postalCode')} value={form.postalCode} onChange={e => set('postalCode', e.target.value)} placeholder={tenant.contact.postalCode} autoComplete="postal-code" maxLength={4} />
               {errorText('postalCode')}
             </div>
           </div>

@@ -68,9 +68,14 @@ function truncate(text, max = DESC_MAX) {
   return `${(lastSpace > 60 ? cut.slice(0, lastSpace) : cut).replace(/[\s,.;:!-]+$/, '')}…`
 }
 
-// Fills {token} placeholders in the tenant's description templates.
+// Fills {token} placeholders in the tenant's description templates. An unknown
+// token throws rather than blanking, so a typo can't ship a description with a
+// hole in it (validateTenant also rejects these before the build starts).
 const fillTemplate = (template, values) =>
-  template.replace(/\{(\w+)\}/g, (_, key) => values[key] ?? '')
+  template.replace(/\{(\w+)\}/g, (_, key) => {
+    if (!(key in values)) throw new Error(`Unknown placeholder {${key}} in "${template}"`)
+    return values[key] ?? ''
+  })
 
 const absUrl = u => {
   if (!u) return ''

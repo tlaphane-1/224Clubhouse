@@ -25,6 +25,10 @@ const FORBIDDEN = [
   // No contact.whatsapp field exists yet, so the digits are pinned here.
   '27750868783',
   tenant.contact.email,
+  tenant.contact.postalCode,
+  tenant.contact.suburb,
+  tenant.legal.informationOfficer,
+  tenant.content.membership.rulesTitle,
   accountNumber,
   'aogdkqczvlffgydgxsmz',
   'facebook.com/224clubhouse',
