@@ -35,8 +35,7 @@ export default function About() {
     <div className="min-h-screen bg-background">
       {/* Hero */}
       <section className="relative pt-32 pb-24 px-4 overflow-hidden">
-        <div className="absolute inset-0"
-          style={{ background: 'radial-gradient(ellipse at 60% 50%, rgba(201,168,76,0.06) 0%, transparent 60%)' }} />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_60%_50%,theme(colors.gold/0.06)_0%,transparent_60%)]" />
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="animate-fadeIn">
             <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Our Story</p>

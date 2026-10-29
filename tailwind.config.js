@@ -1,22 +1,9 @@
-// Brand palette. Glow shadows below are derived from it so they can't drift.
-const colors = {
-  background: '#0a0a0a',
-  surface: '#111111',
-  gold: '#C9A84C',
-  'gold-light': '#e2c074',
-  muted: '#888888',
-  border: '#222222',
-  // Botanical accent, taken from the club letterhead. Accent only
-  // (chips, glows, delivery/member highlights) — gold stays the CTA colour.
-  leaf: '#7CC242',
-  'leaf-deep': '#1B2E12',
-  // The paper membership form only: off-white sheet, printed black text,
-  // ruled lines, and blue pen ink for what the applicant "writes".
-  paper: '#FBF8F1',
-  'paper-line': '#CFC8B8',
-  print: '#1C1C1C',
-  ink: '#1D3D8F',
-}
+import { loadTenant } from './tenants/loadTenant.mjs'
+
+// Brand palette and fonts come from the active store's tenant.json
+// (tenants/<TENANT>/). Glow shadows below are derived from the palette so they
+// can't drift.
+const { colors, fonts } = loadTenant().theme
 
 const rgba = (hex, alpha) => {
   const n = parseInt(hex.slice(1), 16)
@@ -39,10 +26,10 @@ export default {
     extend: {
       colors,
       fontFamily: {
-        heading: ['"Playfair Display"', 'serif'],
-        body: ['Inter', 'sans-serif'],
+        heading: fonts.heading,
+        body: fonts.body,
         // Handwriting for answers on the paper membership form.
-        hand: ['Caveat', 'cursive'],
+        hand: fonts.hand,
       },
       aspectRatio: {
         // Product photos: taller than square so two fit side by side on a phone
