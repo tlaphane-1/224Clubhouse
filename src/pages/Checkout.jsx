@@ -28,6 +28,7 @@ import { formatZAR } from '../utils/formatCurrency'
 import { rememberOrder } from '../utils/recentOrders'
 import { trackEvent } from '../utils/analytics'
 import toast from 'react-hot-toast'
+import { tenant, pageTitle } from '../tenant'
 
 const emptyForm = {
   name: '', email: '', phone: '',
@@ -92,7 +93,7 @@ export default function Checkout() {
   const [showJoinPrompt, setShowJoinPrompt] = useState(false)
 
   useEffect(() => {
-    document.title = 'Checkout | 224 Clubhouse'
+    document.title = pageTitle('Checkout')
     if (items.length === 0) navigate('/cart')
   }, [items, navigate])
 
@@ -487,7 +488,7 @@ export default function Checkout() {
                       </Link>{' '}
                       or{' '}
                       <Link to="/membership" className="text-gold hover:text-gold-light underline transition-colors">
-                        join 224
+                        join {tenant.shortName}
                       </Link>{' '}
                       to place this order.
                     </p>
@@ -517,8 +518,7 @@ export default function Checkout() {
         <div className="text-center">
           <Crown size={36} className="text-gold mx-auto mb-4" />
           <p className="text-muted text-sm leading-relaxed mb-2">
-            Thanks for your first order! 224 Clubhouse is a private members' club, so
-            from your second order onwards you need a membership.
+            {tenant.content.checkout.joinPrompt}
           </p>
           <p className="text-muted text-sm leading-relaxed mb-6">
             Apply in a minute — pay by EFT or with your next delivery. Members also get{' '}

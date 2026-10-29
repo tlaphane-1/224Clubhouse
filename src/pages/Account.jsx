@@ -4,6 +4,7 @@ import { LogOut, Package, Search, BadgeCheck, ChevronRight } from 'lucide-react'
 import { useAuth } from '../context/useAuth'
 import { useMyMembership } from '../hooks/useMyMembership'
 import CustomerAuth from '../components/auth/CustomerAuth'
+import { pageTitle } from '../tenant'
 
 const STATUS_STYLES = {
   active: 'bg-gold/10 text-gold border-gold/30',
@@ -33,7 +34,7 @@ export default function Account() {
   const { latest, effectiveStatus, isLoading: membershipLoading } = useMyMembership()
 
   useEffect(() => {
-    document.title = 'My Account | 224 Clubhouse'
+    document.title = pageTitle('My Account')
   }, [])
 
   if (authLoading) {

@@ -14,6 +14,7 @@ import toast from 'react-hot-toast'
 import EftDetails from '../components/checkout/EftDetails'
 import PaperApplication from '../components/membership/PaperApplication'
 import { CONSENTS, EMPTY_PAPER_FORM, paperDob } from '../components/membership/paperForm'
+import { tenant, pageTitle } from '../tenant'
 
 // Tiers are data now (membership_tiers table) — only the presentation layer
 // stays client-side. Unknown future slugs fall back to the Star icon.
@@ -37,20 +38,7 @@ function formatDate(value) {
   })
 }
 
-const COMMANDMENTS = [
-  'Respect the space — treat it as your own home.',
-  'Respect each other — no judgement, no drama.',
-  'Consume responsibly — know your limits.',
-  'Keep it private — what happens at 224 stays at 224.',
-  'No underage consumption. Strictly 21+.',
-  'No dealing or soliciting on the premises.',
-  'Support the culture — buy local, think global.',
-  'Give back — uplift the community around you.',
-  'Be present — people over phones.',
-  'Keep the vibe — leave negativity at the door.',
-  'Honour the plant — consume with intention.',
-  'Hold each other accountable — we are family.',
-]
+const { intro, requirements, rulesTitle, rules } = tenant.content.membership
 
 export default function Membership() {
   const { user, loading: authLoading } = useAuth()
@@ -73,7 +61,7 @@ export default function Membership() {
   // Per-field problems, shown on the paper form after a submit attempt.
   const [errors, setErrors] = useState({})
 
-  useEffect(() => { document.title = 'Membership | 224 Clubhouse' }, [])
+  useEffect(() => { document.title = pageTitle('Membership') }, [])
 
   // Paystack's script is fetched only when online payment is switched on.
   // It used to sit in index.html, render-blocking every page for every
@@ -205,7 +193,7 @@ export default function Membership() {
     const keys = Object.keys(found)
     setErrors(Object.fromEntries(keys.map(k => [k, k === 'dob' && dob ? 'age' : true])))
     if (keys.length) {
-      toast.error(found.dob && dob ? 'You must be 21 or older to join 224 Clubhouse.' : 'Please complete the highlighted parts of the form.')
+      toast.error(found.dob && dob ? `You must be 21 or older to join ${tenant.name}.` : 'Please complete the highlighted parts of the form.')
       focusField(found[keys[0]])
       return
     }
@@ -225,7 +213,7 @@ export default function Membership() {
       return
     }
 
-    const reference = `224-mem-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const reference = `${tenant.orderPrefix}-mem-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     setLoading(true)
 
     const handler = window.PaystackPop.setup({
@@ -307,7 +295,7 @@ export default function Membership() {
   const showForm = Boolean(user) && membershipResolved && !myMembership
   const sheetTitle = authLoading
     ? 'Membership'
-    : !user ? 'Join 224 Clubhouse'
+    : !user ? `Join ${tenant.name}`
       : !membershipResolved ? (membershipError ? 'Something went wrong' : 'One moment')
         : myMembership ? "You're already a member"
           : `${tier?.name} Application`
@@ -322,7 +310,7 @@ export default function Membership() {
           <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4">Membership</h1>
           <div className="w-16 h-px bg-gold mx-auto mb-5 md:mb-6" />
           <p className="text-muted max-w-xl mx-auto text-base md:text-lg leading-relaxed">
-            224 Clubhouse is a private members' club. Members get free delivery, members-only products and first access to new drops and events. Pick the pass that suits you.
+            {intro}
           </p>
         </div>
       </section>
@@ -330,7 +318,7 @@ export default function Membership() {
       {/* Requirements Banner */}
       <div className="bg-gold/5 border-y border-gold/20 py-3 md:py-4 px-4 text-center">
         <p className="text-gold text-xs sm:text-sm">
-          <span className="font-semibold">Requirements:</span> Must be 21 years or older · Personal use only · Agreement to the 12 Club Commandments
+          <span className="font-semibold">Requirements:</span> {requirements}
         </p>
       </div>
 
@@ -630,7 +618,7 @@ export default function Membership() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-6 md:mb-12">
             <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">The Code</p>
-            <h2 className="section-heading text-white">12 Club Commandments</h2>
+            <h2 className="section-heading text-white">{rulesTitle}</h2>
           </div>
           <button
             type="button"
@@ -640,14 +628,14 @@ export default function Membership() {
             className="focus-ring md:hidden w-full flex items-center justify-between gap-3 h-12 px-4 bg-background
                        border border-border rounded-xl text-sm text-white"
           >
-            {showRules ? 'Hide' : 'Read'} the 12 Club Commandments
+            {showRules ? 'Hide' : 'Read'} the {rulesTitle}
             <ChevronDown size={16} className={`text-gold transition-transform ${showRules ? 'rotate-180' : ''}`} />
           </button>
           <div
             id="commandments-list"
             className={`${showRules ? 'grid mt-3' : 'hidden'} md:grid md:mt-0 grid-cols-1 md:grid-cols-2 gap-3 md:gap-4`}
           >
-            {COMMANDMENTS.map((c, i) => (
+            {rules.map((c, i) => (
               <div key={i} className="flex items-start gap-4 bg-background border border-border rounded-xl p-4 md:p-5">
                 <span className="font-heading text-2xl font-bold text-gold/30 leading-none">{String(i + 1).padStart(2, '0')}</span>
                 <p className="text-white/80 text-sm leading-relaxed">{c}</p>

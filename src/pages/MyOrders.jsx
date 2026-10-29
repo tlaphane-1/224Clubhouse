@@ -6,6 +6,7 @@ import { useMyOrders } from '../hooks/useMyOrders'
 import CustomerAuth from '../components/auth/CustomerAuth'
 import { formatZAR } from '../utils/formatCurrency'
 import { statusLabel } from '../utils/orderStatus'
+import { pageTitle } from '../tenant'
 
 // Customer-facing order history ("Orders" in the navbar). The admin order
 // manager is a different page (pages/admin/Orders.jsx).
@@ -14,7 +15,7 @@ export default function MyOrders() {
   const { data: orders, isLoading, isError } = useMyOrders()
 
   useEffect(() => {
-    document.title = 'My Orders | 224 Clubhouse'
+    document.title = pageTitle('My Orders')
   }, [])
 
   if (authLoading) {

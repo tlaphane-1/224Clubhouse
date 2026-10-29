@@ -13,6 +13,7 @@ import WhatsAppOrderPanel from '../components/store/WhatsAppOrderPanel'
 import StickyActionBar from '../components/ui/StickyActionBar'
 import BrandLogo from '../components/ui/BrandLogo'
 import { cartLineKey, lineName } from '../utils/variants'
+import { tenant, pageTitle } from '../tenant'
 
 const STEPPER_BTN = `focus-ring w-11 h-11 flex items-center justify-center text-lg text-muted hover:text-white
                      active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all rounded-lg`
@@ -37,7 +38,7 @@ export default function Cart() {
   const itemCount = items.reduce((s, i) => s + i.quantity, 0)
 
   useEffect(() => {
-    document.title = 'Cart | 224 Clubhouse'
+    document.title = pageTitle('Cart')
   }, [])
 
   if (items.length === 0) {
@@ -73,7 +74,7 @@ export default function Cart() {
     <p className="text-muted text-xs text-center mt-3 leading-relaxed">
       Remove the members-only {lockedItems.length > 1 ? 'items' : 'item'} above, or{' '}
       <Link to="/membership" className="text-gold underline underline-offset-2 hover:text-gold-light transition-colors">
-        join 224
+        join {tenant.shortName}
       </Link>{' '}
       to buy {lockedItems.length > 1 ? 'them' : 'it'}.
     </p>

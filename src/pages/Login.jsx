@@ -4,6 +4,7 @@ import { useAuth } from '../context/useAuth'
 import ForgotPasswordForm from '../components/auth/ForgotPasswordForm'
 import toast from 'react-hot-toast'
 import BrandLogo from '../components/ui/BrandLogo'
+import { tenant, pageTitle } from '../tenant'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -14,7 +15,7 @@ export default function Login() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    document.title = 'Admin Login | 224 Clubhouse'
+    document.title = pageTitle('Admin Login')
     if (user && isAdmin) navigate('/admin/dashboard')
   }, [user, isAdmin, navigate])
 
@@ -59,7 +60,7 @@ export default function Login() {
                 className="input-base"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="admin@224clubhouse.co.za"
+                placeholder={tenant.content.login.emailPlaceholder}
                 required
               />
             </div>

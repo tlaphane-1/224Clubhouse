@@ -4,6 +4,7 @@ import { Search, AlertTriangle } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import ProductGrid from '../components/store/ProductGrid'
 import CategoryFilter from '../components/store/CategoryFilter'
+import { tenant, pageTitle } from '../tenant'
 
 export default function Store() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -17,7 +18,7 @@ export default function Store() {
   )
 
   useEffect(() => {
-    document.title = 'The Store | 224 Clubhouse'
+    document.title = pageTitle('The Store')
   }, [])
 
   const handleCategoryChange = (value) => {
@@ -36,7 +37,7 @@ export default function Store() {
         <div className="mb-5 md:mb-8 animate-fadeIn">
           <p className="text-gold text-xs uppercase tracking-[0.4em] mb-2">Shop</p>
           <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-1 md:mb-2">The Store</h1>
-          <p className="text-muted text-sm md:text-base">Members' selection, delivered to your door</p>
+          <p className="text-muted text-sm md:text-base">{tenant.content.store.subtitle}</p>
         </div>
 
         {/* Search */}

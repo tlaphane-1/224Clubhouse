@@ -6,12 +6,13 @@ import { formatZAR } from '../utils/formatCurrency'
 import { paymentLabel } from '../utils/orderStatus'
 import { getLastOrder } from '../utils/recentOrders'
 import EftDetails from '../components/checkout/EftDetails'
+import { pageTitle } from '../tenant'
 
 export default function OrderConfirmation() {
   const { state } = useLocation()
 
   useEffect(() => {
-    document.title = 'Order Confirmed | 224 Clubhouse'
+    document.title = pageTitle('Order Confirmed')
   }, [])
 
   // No navigation state (e.g. the user refreshed the page). We can't query the
