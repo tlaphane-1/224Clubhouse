@@ -92,7 +92,7 @@ Tailwind v3 (config in `tailwind.config.js`). Dark theme with a fixed brand pale
 
 All client vars are `VITE_`-prefixed (see `.env.example`). `SUPABASE_SERVICE_ROLE_KEY` is **server/script-only** — never import it into `src/`. Live secrets go in `.env.local` (gitignored), which the `scripts/` files read directly.
 
-# EFF Election Monitoring App — Claude Rules
+# Account & deploy rules
 
 ## MANDATORY: Account Check Before Push or Deploy
 
@@ -105,7 +105,7 @@ gh auth status
 # 2. Firebase — must show tlaphane@gmail.com
 firebase login:list
 
-# 3. Supabase — must show tlaphane's Project (jqxzhgjazvftgobfqjox)
+# 3. Supabase — must show the 224 Clubhouse project (aogdkqczvlffgydgxsmz)
 supabase projects list
 ```
 
