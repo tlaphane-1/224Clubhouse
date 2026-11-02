@@ -114,9 +114,18 @@ const env = localEnv(readStatus())
 unscheduleHttpCronJobs()
 
 const vitestBin = resolve(ROOT, 'node_modules/vitest/vitest.mjs')
+// The local stack serves https with a self-signed certificate ([api.tls] in
+// supabase/config.toml), which the contract suites need (they assert https
+// signed URLs). NODE_TLS_REJECT_UNAUTHORIZED=0 covers that self-signed local
+// cert only: it is set here, after localEnv() has confirmed the API host is
+// 127.0.0.1/localhost, and only in the child's env, never for any other run.
 const run = spawnSync(
   process.execPath,
   [vitestBin, 'run', ...expandGlobs(process.argv.slice(2))],
-  { cwd: ROOT, stdio: 'inherit', env: { ...process.env, ...env } },
+  {
+    cwd: ROOT,
+    stdio: 'inherit',
+    env: { ...process.env, ...env, NODE_TLS_REJECT_UNAUTHORIZED: '0' },
+  },
 )
 process.exit(run.status ?? 1)

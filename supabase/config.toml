@@ -1,3 +1,4 @@
+# NOTE: ports are moved to 563xx because other projects' local Supabase stacks hold the defaults.
 # For detailed configuration reference documentation, visit:
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
@@ -19,7 +20,7 @@ max_rows = 1000
 
 [api.tls]
 # Enable HTTPS endpoints locally using a self-signed certificate.
-enabled = false
+enabled = true
 # Paths to self-signed certificate pair.
 # cert_path = "../certs/my-cert.pem"
 # key_path = "../certs/my-key.pem"

@@ -128,8 +128,7 @@ describe.skipIf(SKIP)('EFT verification contract', () => {
   it('POSITIVE: the admin can open the proof', async () => {
     const { data, error } = await adminClient.storage.from('payment-proofs').createSignedUrl(proofPath, 60)
     expect(error).toBeNull()
-    // http locally (supabase start), https against the hosted project.
-    expect(data.signedUrl).toMatch(/^https?:\/\//)
+    expect(data.signedUrl).toMatch(/^https:/)
   })
 
   it('NEGATIVE: a customer cannot mark their own order paid', async () => {
