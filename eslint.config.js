@@ -7,7 +7,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   globalIgnores(['dist']),
   {
-    files: ['**/*.{js,jsx}'],
+    files: ['**/*.{js,jsx,mjs}'],
     extends: [
       js.configs.recommended,
       reactHooks.configs.flat.recommended,
@@ -39,6 +39,7 @@ export default defineConfig([
       'playwright.config.js',
       'test/**/*.{js,mjs}',
       'scripts/**/*.{js,mjs}',
+      'tenants/**/*.mjs',
     ],
     languageOptions: {
       globals: { ...globals.node },

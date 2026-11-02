@@ -1,16 +1,17 @@
 import { supabase } from '../lib/supabase'
+import { tenant, storageKey } from '../tenant'
 
 // First-party, cookie-free visitor analytics (migration 20261007140000).
 // A random visitor id lives in localStorage and a session id in
 // sessionStorage; neither is tied to an account. Events go to the track_event
 // RPC fire-and-forget — analytics must never slow down or break the shop.
 
-const VISITOR_KEY = '224-vid'
-const SESSION_KEY = '224-sid'
-const SOURCE_KEY = '224-src'
+const VISITOR_KEY = storageKey('vid')
+const SESSION_KEY = storageKey('sid')
+const SOURCE_KEY = storageKey('src')
 
 // Only the real site counts: not local dev, not Firebase preview channels.
-const LIVE_HOSTS = ['224clubhouse.store', 'www.224clubhouse.store', '224clubhouse.web.app']
+const LIVE_HOSTS = tenant.domain.liveHosts
 const BOT_UA = /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|headless|lighthouse/i
 
 let optedOut = false
@@ -41,7 +42,7 @@ export function classifySource(search, referrer, ownHost) {
   if (params.has('gclid')) return 'google'
   let host = ''
   try { host = referrer ? new URL(referrer).hostname.toLowerCase() : '' } catch { host = '' }
-  if (!host || host === ownHost || host.endsWith('224clubhouse.store')) return 'direct'
+  if (!host || host === ownHost || host.endsWith(tenant.domain.apex)) return 'direct'
   const known = [
     ['google', /(^|\.)google\./], ['bing', /(^|\.)bing\.com$/], ['facebook', /facebook\.com$|fb\.me$/],
     ['instagram', /instagram\.com$/], ['whatsapp', /whatsapp\.(com|net)$|wa\.me$/],

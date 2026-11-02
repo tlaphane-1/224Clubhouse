@@ -1,0 +1,258 @@
+{
+  "slug": "224clubhouse",
+  "name": "224 Clubhouse",
+  "shortName": "224",
+  "legalName": "224 Clubhouse",
+  "orderPrefix": "224",
+  "storagePrefix": "224",
+  "legacyStorageKeys": {
+    "age-verified": "age-verified",
+    "recent-orders": "224:recent-orders"
+  },
+  "domain": {
+    "siteUrl": "https://224clubhouse.store",
+    "apex": "224clubhouse.store",
+    "liveHosts": ["224clubhouse.store", "www.224clubhouse.store", "224clubhouse.web.app"]
+  },
+  "contact": {
+    "street": "224 Rondebult Road",
+    "suburb": "Libradene",
+    "city": "Boksburg",
+    "postalCode": "1459",
+    "province": "Gauteng",
+    "country": "ZA",
+    "phoneDisplay": "075 086 8783",
+    "phoneTel": "0750868783",
+    "phoneIntl": "+27 75 086 8783",
+    "email": "224clubhous@gmail.com",
+    "mapsLink": "https://maps.google.com/?q=224+Rondebult+Road+Libradene+Boksburg",
+    "mapQuery": "224 Rondebult Road, Libradene, Boksburg",
+    "mapCentre": [-26.2125, 28.2625]
+  },
+  "hours": {
+    "status": "Closed until further notice",
+    "delivery": "Delivering Monday – Sunday, 09:00 – 19:00",
+    "contactPage": ["Store closed until further notice", "Delivering Monday – Sunday", "09:00 – 19:00"]
+  },
+  "social": {
+    "facebook": "https://www.facebook.com/224clubhouse",
+    "instagram": "https://www.instagram.com/224clubhouse"
+  },
+  "bank": {
+    "bankName": "FNB",
+    "details": "Bank: FNB\nAccount holder: 224 Clubhouse\nAccount type: Gold Business Account\nAccount number: 63228491138\nBranch code: 250655"
+  },
+  "images": {
+    "logo": "brand-assets/224-logo-fav-1.png",
+    "logoWide": "brand-assets/224-logo-fav-1-480x142.png",
+    "favicon": "brand-assets/224-logo-fav.png",
+    "header": "brand-assets/224-header-1.jpg",
+    "gallery": [
+      "brand-assets/224-square-images.jpg",
+      "brand-assets/224-square-images-1.jpg",
+      "brand-assets/224-square-images-2.jpg",
+      "brand-assets/1-1.jpg",
+      "brand-assets/2.jpg",
+      "brand-assets/3.jpg",
+      "brand-assets/5.jpg",
+      "brand-assets/6.jpg",
+      "brand-assets/7.jpg",
+      "brand-assets/whatsapp-image-2026-02-24-at-10.03.48-pm.jpeg",
+      "brand-assets/whatsapp-image-2026-02-24-at-10.03.51-pm.jpeg",
+      "brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm.jpeg",
+      "brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm-1.jpeg",
+      "brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm-2.jpeg",
+      "brand-assets/whatsapp-image-2026-02-24-at-10.03.56-pm.jpeg"
+    ],
+    "logoWideSize": [480, 142],
+    "iconSource": "docs/membership-form/logo.png"
+  },
+  "theme": {
+    "colors": {
+      "background": "#0a0a0a",
+      "surface": "#111111",
+      "gold": "#C9A84C",
+      "gold-light": "#e2c074",
+      "muted": "#888888",
+      "border": "#222222",
+      "leaf": "#7CC242",
+      "leaf-deep": "#1B2E12",
+      "paper": "#FBF8F1",
+      "paper-line": "#CFC8B8",
+      "print": "#1C1C1C",
+      "ink": "#1D3D8F"
+    },
+    "fonts": {
+      "heading": ["\"Playfair Display\"", "serif"],
+      "body": ["Inter", "sans-serif"],
+      "hand": ["Caveat", "cursive"]
+    },
+    "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap"
+  },
+  "seo": {
+    "title": "224 Clubhouse | Private Cannabis Members' Club",
+    "description": "224 Clubhouse — a private cannabis members' club in Boksburg, South Africa. Premium cannabis, delivered to your door. Members only.",
+    "locale": "en_ZA",
+    "routes": {
+      "/store": {
+        "title": "Shop",
+        "description": "Shop premium cannabis flower, pre-rolls, edibles and accessories from 224 Clubhouse, Boksburg. Members-only delivery across Gauteng."
+      },
+      "/events": {
+        "title": "Events",
+        "description": "Upcoming events, sessions and socials at 224 Clubhouse, the private cannabis members' club in Boksburg. Reserve your seat."
+      },
+      "/membership": {
+        "title": "Membership",
+        "description": "Join 224 Clubhouse — a private cannabis members' club in Boksburg, South Africa. See membership tiers and how to sign up."
+      },
+      "/about": {
+        "title": "About Us",
+        "description": "About 224 Clubhouse — a private cannabis members' club and lounge in Boksburg, South Africa."
+      },
+      "/contact": {
+        "title": "Contact",
+        "description": "Get in touch with 224 Clubhouse in Boksburg — questions about membership, orders, delivery or events."
+      },
+      "/privacy": {
+        "title": "Privacy Policy",
+        "description": "How 224 Clubhouse collects, uses and protects your personal information (POPIA)."
+      },
+      "/terms": {
+        "title": "Terms & Conditions",
+        "description": "Terms and conditions for using the 224 Clubhouse website, membership and store."
+      },
+      "/delivery-returns": {
+        "title": "Delivery & Returns",
+        "description": "Delivery areas, times and fees, and the returns policy for 224 Clubhouse orders."
+      }
+    },
+    "productDescription": "{name} from 224 Clubhouse, Boksburg. Members-only cannabis delivery across Gauteng.",
+    "eventDescription": "{name} at 224 Clubhouse, Boksburg. Reserve your seat."
+  },
+  "legal": {
+    "informationOfficer": "224 Clubhouse Management",
+    "lastUpdated": "13 August 2026"
+  },
+  "content": {
+    "home": {
+      "heroTitle": "Premium. Private. Delivered.",
+      "heroSubtitle": "Order online and pay on delivery. We bring it to your door.",
+      "reviews": [
+        {
+          "name": "Chané Harris",
+          "rating": 5,
+          "text": "Absolutely love this place! The vibe is unmatched and the products are always top quality. The staff are friendly and knowledgeable. 224 is truly a lifestyle experience.",
+          "date": "via Google"
+        },
+        {
+          "name": "Phathutshedzo Mutwanamba",
+          "rating": 5,
+          "text": "Best lounge in Boksburg by far. Great atmosphere, premium selection and the community events are always fire. If you're not a member yet, what are you waiting for?",
+          "date": "via Google"
+        }
+      ],
+      "galleryHeading": "Life at 224",
+      "newsletter": {
+        "eyebrow": "Join The Fam",
+        "heading": "Never Miss a Beat",
+        "blurb": "Subscribe for stock drops, events & updates.",
+        "offer": "Get 10% OFF",
+        "offerSuffix": "your first purchase.",
+        "cta": "Subscribe & Get 10% Off",
+        "welcomeToast": "Welcome to the 224 family! Check your email for your discount code."
+      }
+    },
+    "about": {
+      "heroLines": ["Built on Experience,", "Authenticity & Love", "for the Culture."],
+      "heroIntro": "224 Clubhouse represents the evolution of cannabis culture in South Africa — a space where community, connection, and intentional living converge.",
+      "founderHeading": "George's Story",
+      "founderParagraphs": [
+        "George's relationship with cannabis isn't just professional — it's deeply personal. Watching his father use the plant to manage PTSD planted a seed that never stopped growing. He saw firsthand what responsible, intentional cannabis use could do for someone's quality of life.",
+        "That experience became the foundation of everything he would build. Not just a retail space, but a community. A place where the stigma falls away and the culture is celebrated for what it truly is — healing, creativity, connection.",
+        "From Dank Monkey in 2021 to Herbally in 2022, each iteration brought him closer to the vision that would become 224 Clubhouse. In April 2025, that vision became reality at 224 Rondebult Road, Boksburg — the address that gave the clubhouse its name."
+      ],
+      "timeline": [
+        {
+          "year": "2021",
+          "title": "Dank Monkey",
+          "description": "George opens his first cannabis retail space in the East Rand, driven by a passion for the plant and a belief in its healing potential. The community responds immediately."
+        },
+        {
+          "year": "2022",
+          "title": "Herbally",
+          "description": "Rebranding to Herbally, the focus shifts toward education, wellness, and building a more intentional community around cannabis culture in South Africa."
+        },
+        {
+          "year": "2025",
+          "title": "224 Clubhouse",
+          "description": "April 2025. The culmination of years of experience and community building — 224 Clubhouse opens its doors as a private, members-based club at 224 Rondebult Road, Boksburg."
+        }
+      ],
+      "values": [
+        { "title": "Community", "desc": "We are built on people. Every member, every session, every event strengthens the foundation of what 224 represents." },
+        { "title": "Authenticity", "desc": "No pretence. We are exactly what we say we are — a space for real people who love the culture and live with intention." },
+        { "title": "Wellness", "desc": "The plant has always been about healing. We honour that by promoting responsible, informed, and intentional consumption." },
+        { "title": "Excellence", "desc": "From the products we carry to the experience we create — average is not an option. Everything at 224 is curated with care." }
+      ],
+      "cta": {
+        "heading": "Ready to Join the Family?",
+        "text": "Become a member and be part of something real."
+      }
+    },
+    "membership": {
+      "intro": "224 Clubhouse is a private members' club. Members get free delivery, members-only products and first access to new drops and events. Pick the pass that suits you.",
+      "requirements": "Must be 21 years or older · Personal use only · Agreement to the 12 Club Commandments",
+      "rulesTitle": "12 Club Commandments",
+      "rulesShortTitle": "Commandments",
+      "rules": [
+        "Respect the space — treat it as your own home.",
+        "Respect each other — no judgement, no drama.",
+        "Consume responsibly — know your limits.",
+        "Keep it private — what happens at 224 stays at 224.",
+        "No underage consumption. Strictly 21+.",
+        "No dealing or soliciting on the premises.",
+        "Support the culture — buy local, think global.",
+        "Give back — uplift the community around you.",
+        "Be present — people over phones.",
+        "Keep the vibe — leave negativity at the door.",
+        "Honour the plant — consume with intention.",
+        "Hold each other accountable — we are family."
+      ]
+    },
+    "checkout": {
+      "joinPrompt": "Thanks for your first order! 224 Clubhouse is a private members' club, so from your second order onwards you need a membership."
+    },
+    "memberOnly": {
+      "event": "This night is reserved for active 224 Clubhouse members. Memberships start at R10 — apply online and pay at the club.",
+      "product": "This product is reserved for active 224 Clubhouse members."
+    },
+    "store": {
+      "subtitle": "Members' selection, delivered to your door"
+    },
+    "events": {
+      "intro": "We don't just throw events. We host moments."
+    },
+    "login": {
+      "emailPlaceholder": "admin@224clubhouse.co.za"
+    },
+    "footer": {
+      "tagline": "A private cannabis members' club. Premium cannabis, delivered to your door. Members only. Elevated always."
+    },
+    "ageGate": {
+      "heading": "Members' Club",
+      "tagline": "Premium cannabis, delivered to your door."
+    },
+    "paperForm": {
+      "letterheadStreet": "224 Rondebult Rd",
+      "intro": "We’re excited to have you join our community of responsible cannabis users. Please complete the form below to apply for membership.",
+      "reasonsLegend": "• Do you consume cannabis for:",
+      "consents": {
+        "private_club": "I understand that 224 Clubhouse is a private cannabis club operating within legal guidelines.",
+        "no_redistribution": "I will not redistribute cannabis obtained through the Club.",
+        "personal_use": "I accept that any cannabis products are for personal use only.",
+        "release_liability": "I release 224 Clubhouse from any liability related to personal use or effects of cannabis."
+      }
+    }
+  }
+}

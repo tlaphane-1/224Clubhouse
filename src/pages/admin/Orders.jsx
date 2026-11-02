@@ -12,6 +12,7 @@ import DriverAssign from '../../components/admin/DriverAssign'
 import OrderWhatsAppActions from '../../components/admin/OrderWhatsAppActions'
 import { useDrivers } from '../../hooks/useDelivery'
 import toast from 'react-hot-toast'
+import { adminTitle } from '../../tenant'
 
 export default function Orders() {
   const { data: orders, isLoading, isError, refetch } = useOrders()
@@ -24,7 +25,7 @@ export default function Orders() {
   const [expandedId, setExpandedId] = useState(null)
 
   useEffect(() => {
-    document.title = 'Orders | 224 Admin'
+    document.title = adminTitle('Orders')
   }, [])
 
   // `selectEl` is the <select> that fired the change: a controlled select whose

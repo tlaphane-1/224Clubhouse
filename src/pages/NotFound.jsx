@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { pageTitle } from '../tenant'
 
 export default function NotFound() {
-  useEffect(() => { document.title = 'Page Not Found | 224 Clubhouse' }, [])
+  useEffect(() => { document.title = pageTitle('Page Not Found') }, [])
   return (
     <div className="min-h-screen pt-28 pb-20 flex flex-col items-center justify-center text-center px-4 animate-fadeIn">
       <div className="font-heading text-7xl font-bold text-gold/30 mb-4">404</div>

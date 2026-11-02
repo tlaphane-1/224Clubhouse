@@ -1,4 +1,5 @@
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
+import { tenant } from '../../tenant'
 
 // The club's real logo (the white "224 · CLUBHOUSE" mark from the letterhead).
 // Use it wherever the brand is shown — never re-type "224" as a stand-in.
@@ -9,7 +10,7 @@ export default function BrandLogo({ className = '', decorative = false }) {
   return (
     <img
       src={BRAND_IMAGES.logo}
-      alt={decorative ? '' : '224 Clubhouse'}
+      alt={decorative ? '' : tenant.name}
       aria-hidden={decorative || undefined}
       draggable={false}
       className={`object-contain select-none ${className}`}

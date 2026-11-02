@@ -11,8 +11,9 @@ import { buildWhatsAppLink } from './whatsappOrder'
 import { formatZAR } from './formatCurrency'
 import { lineName } from './variants'
 import { paymentLabel } from './orderStatus'
+import { tenant } from '../tenant'
 
-const SITE = 'https://224clubhouse.store'
+const SITE = tenant.domain.siteUrl
 
 /** SA numbers as WhatsApp wants them: digits, country code, no leading 0. */
 export function toWhatsAppNumber(phone) {
@@ -58,12 +59,12 @@ export function orderMessage(order) {
   ].join('\n')
 }
 
-/** EFT proof uploaded — check FNB before marking it paid. */
+/** EFT proof uploaded — check the bank account before marking it paid. */
 export function eftCheckMessage(order) {
   return [
     `🧾 *EFT to check* — ${order.order_number}, ${formatZAR(order.total)}`,
     `Reference should be: *${order.customer_name}*`,
-    order.payment_proof_uploaded_at ? 'Customer uploaded proof of payment (check FNB — proofs can be faked).' : 'No proof uploaded yet.',
+    order.payment_proof_uploaded_at ? `Customer uploaded proof of payment (check ${tenant.bank.bankName} — proofs can be faked).` : 'No proof uploaded yet.',
     `${SITE}/admin/orders?filter=eft`,
   ].join('\n')
 }
@@ -97,7 +98,7 @@ export function deliveryUpdateMessage(order, driverName) {
 /** Today-so-far summary for the staff group (from admin_daily_summary). */
 export function dailySummaryMessage(s) {
   const lines = [
-    `☀️ *224 summary — ${s.day}*`,
+    `☀️ *${tenant.shortName} summary — ${s.day}*`,
     `👀 ${s.visitors} visitors · ${s.page_views} page views · ${s.new_accounts} new accounts`,
     `🛒 ${s.orders} orders · ${formatZAR(s.booked_cents)} booked · ${s.delivered} delivered (${formatZAR(s.delivered_cents)})`,
     '',

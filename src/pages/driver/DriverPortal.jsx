@@ -10,6 +10,7 @@ import { lineName } from '../../utils/variants'
 import BrandLogo from '../../components/ui/BrandLogo'
 import Badge from '../../components/ui/Badge'
 import InstallDriverApp from '../../components/delivery/InstallDriverApp'
+import { pageTitle } from '../../tenant'
 
 // /driver — the driver's phone is the target device. Big tap targets, one job
 // per screen: see your deliveries, call, navigate, start, deliver.
@@ -141,7 +142,7 @@ export default function DriverPortal() {
   const { data: orders, isLoading, isError, refetch } = useDriverOrders()
 
   useEffect(() => {
-    document.title = 'Driver | 224 Clubhouse'
+    document.title = pageTitle('Driver')
   }, [])
 
   const enRoute = (orders ?? []).some(o => o.status === 'out_for_delivery')

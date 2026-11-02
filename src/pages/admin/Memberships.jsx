@@ -15,6 +15,7 @@ import {
 import { CONSENTS, CONSUMPTION_REASONS } from '../../components/membership/paperForm'
 import { formatZAR } from '../../utils/formatCurrency'
 import toast from 'react-hot-toast'
+import { tenant, adminTitle } from '../../tenant'
 
 const STATUS_STYLES = {
   active:    'bg-green-500/10 text-green-400 border border-green-500/20',
@@ -71,7 +72,7 @@ export default function AdminMemberships() {
   const [linkEmail, setLinkEmail] = useState('')
 
   useEffect(() => {
-    document.title = 'Memberships | 224 Admin'
+    document.title = adminTitle('Memberships')
   }, [])
 
   const tierName = (slug) => tiers?.find(t => t.slug === slug)?.name ?? slug
@@ -553,7 +554,7 @@ function PaperFormDetails({ m }) {
   )
 }
 
-// The paper form's "224 Clubhouse Use Only" block.
+// The paper form's "<store name> Use Only" block.
 function ClubUseOnly({ m }) {
   const updateNotes = useUpdateMembershipNotes()
   const [notes, setNotes] = useState(m.admin_notes ?? '')
@@ -570,7 +571,7 @@ function ClubUseOnly({ m }) {
 
   return (
     <div>
-      <h4 className="text-gold text-xs uppercase tracking-widest mb-3">224 Clubhouse Use Only</h4>
+      <h4 className="text-gold text-xs uppercase tracking-widest mb-3">{tenant.name} Use Only</h4>
       <div className="space-y-1 text-sm mb-3">
         <p className="text-muted">Membership ID: <span className="font-mono text-white text-xs">{m.id}</span></p>
         <p className="text-muted">Date Approved: <span className="text-white">{fmtDate(m.approved_at)}</span></p>

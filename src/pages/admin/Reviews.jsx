@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { Stars } from '../../components/store/StarRating'
 import { useAdminReviews, useModerateReview, useDeleteReview } from '../../hooks/useProductReviews'
+import { adminTitle } from '../../tenant'
 
 const FILTERS = [
   { key: 'pending', label: 'Waiting' },
@@ -33,7 +34,7 @@ export default function AdminReviews() {
   const remove = useDeleteReview()
 
   useEffect(() => {
-    document.title = 'Reviews | 224 Admin'
+    document.title = adminTitle('Reviews')
   }, [])
 
   const setStatus = async (id, status) => {

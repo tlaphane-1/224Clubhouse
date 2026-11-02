@@ -5,35 +5,18 @@
  */
 
 import manifest from '../../scripts/image-manifest.json'
+import { tenant, storagePublicUrl } from '../tenant'
 
-// Derive from the same env var the Supabase client uses, so images and data
-// never point at different projects. Falls back to the known project URL.
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://aogdkqczvlffgydgxsmz.supabase.co'
-const BASE = `${SUPABASE_URL}/storage/v1/object/public`
-
+// Brand image paths (bucket/file) come from tenant.json; storagePublicUrl
+// builds them off the same VITE_SUPABASE_URL the Supabase client uses, so
+// images and data never point at different projects.
 // Named references to key brand assets
 export const BRAND_IMAGES = {
-  logo: `${BASE}/brand-assets/224-logo-fav-1.png`,
-  logoWide: `${BASE}/brand-assets/224-logo-fav-1-480x142.png`,
-  favicon: `${BASE}/brand-assets/224-logo-fav.png`,
-  header: `${BASE}/brand-assets/224-header-1.jpg`,
-  gallery: [
-    `${BASE}/brand-assets/224-square-images.jpg`,
-    `${BASE}/brand-assets/224-square-images-1.jpg`,
-    `${BASE}/brand-assets/224-square-images-2.jpg`,
-    `${BASE}/brand-assets/1-1.jpg`,
-    `${BASE}/brand-assets/2.jpg`,
-    `${BASE}/brand-assets/3.jpg`,
-    `${BASE}/brand-assets/5.jpg`,
-    `${BASE}/brand-assets/6.jpg`,
-    `${BASE}/brand-assets/7.jpg`,
-    `${BASE}/brand-assets/whatsapp-image-2026-02-24-at-10.03.48-pm.jpeg`,
-    `${BASE}/brand-assets/whatsapp-image-2026-02-24-at-10.03.51-pm.jpeg`,
-    `${BASE}/brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm.jpeg`,
-    `${BASE}/brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm-1.jpeg`,
-    `${BASE}/brand-assets/whatsapp-image-2026-02-24-at-10.03.54-pm-2.jpeg`,
-    `${BASE}/brand-assets/whatsapp-image-2026-02-24-at-10.03.56-pm.jpeg`,
-  ],
+  logo: storagePublicUrl(tenant.images.logo),
+  logoWide: storagePublicUrl(tenant.images.logoWide),
+  favicon: storagePublicUrl(tenant.images.favicon),
+  header: storagePublicUrl(tenant.images.header),
+  gallery: tenant.images.gallery.map(storagePublicUrl),
 }
 
 /**
@@ -42,7 +25,7 @@ export const BRAND_IMAGES = {
  * @param {string} filename - e.g. 'og-kush.jpg'
  */
 export function storageUrl(bucket, filename) {
-  return `${BASE}/${bucket}/${filename}`
+  return storagePublicUrl(`${bucket}/${filename}`)
 }
 
 /**

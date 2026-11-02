@@ -3,6 +3,7 @@ import { Calendar, AlertTriangle } from 'lucide-react'
 import { useEvents } from '../hooks/useEvents'
 import { useMyEventReservations, isLiveReservation } from '../hooks/useEventReservations'
 import EventCard from '../components/events/EventCard'
+import { tenant, pageTitle } from '../tenant'
 
 export default function Events() {
   const { data: events, isLoading, isError, refetch } = useEvents()
@@ -19,7 +20,7 @@ export default function Events() {
   }, [reservations])
 
   useEffect(() => {
-    document.title = 'Events | 224 Clubhouse'
+    document.title = pageTitle('Events')
   }, [])
 
   return (
@@ -32,7 +33,7 @@ export default function Events() {
           <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">What's On</p>
           <h1 className="font-heading text-4xl md:text-5xl font-bold text-white mb-3">Events</h1>
           <p className="text-muted max-w-xl">
-            We don't just throw events. We host moments.
+            {tenant.content.events.intro}
           </p>
         </div>
 

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import AdminLayout from '../../components/admin/AdminLayout'
 import Checkbox from '../../components/ui/Checkbox'
 import { useAlertSettings, useUpdateAlertSettings, telegramAction } from '../../hooks/useAlertSettings'
+import { tenant, adminTitle } from '../../tenant'
 
 const KINDS = [
   { key: 'orders', label: 'New orders (with low stock)' },
@@ -39,7 +40,7 @@ export default function Alerts() {
   const [chats, setChats] = useState(null)
 
   useEffect(() => {
-    document.title = 'Alerts | 224 Admin'
+    document.title = adminTitle('Alerts')
   }, [])
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['alert-settings'] })
@@ -105,7 +106,7 @@ export default function Alerts() {
           <Step n={1} done={s.has_token} title="Create the bot">
             <ol className="list-decimal pl-5 space-y-1.5 text-sm text-muted mb-4">
               <li>In Telegram, open <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-gold underline underline-offset-2">@BotFather</a> and send <span className="font-mono text-white">/newbot</span>.</li>
-              <li>Give it a name (e.g. <span className="text-white">224 Clubhouse Alerts</span>) and a username ending in <span className="font-mono text-white">bot</span>.</li>
+              <li>Give it a name (e.g. <span className="text-white">{tenant.name} Alerts</span>) and a username ending in <span className="font-mono text-white">bot</span>.</li>
               <li>BotFather replies with a token like <span className="font-mono text-white">123456:ABC…</span>. Paste it below.</li>
             </ol>
             <form onSubmit={saveToken} className="flex flex-col sm:flex-row gap-2">
@@ -168,7 +169,7 @@ export default function Alerts() {
               ))}
             </div>
             <p className="text-muted text-xs mt-4">
-              Group messages never include ID numbers or dates of birth. Email alerts to 224clubhous@gmail.com carry on as before.
+              Group messages never include ID numbers or dates of birth. Email alerts to {tenant.contact.email} carry on as before.
             </p>
           </Step>
         </div>

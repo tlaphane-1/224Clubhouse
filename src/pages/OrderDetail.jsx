@@ -11,6 +11,7 @@ import { formatZAR } from '../utils/formatCurrency'
 import { STATUS_STEPS, statusLabel, paymentLabel } from '../utils/orderStatus'
 import EftPaymentPanel from '../components/checkout/EftPaymentPanel'
 import DeliveryTracker from '../components/delivery/DeliveryTracker'
+import { pageTitle } from '../tenant'
 
 // Customer-facing detail view for one of their own orders (/orders/:id).
 // Owner RLS + the explicit user_id filter in useMyOrder mean a signed-in user
@@ -21,7 +22,7 @@ export default function OrderDetail() {
   const { data: order, isLoading, isError } = useMyOrder(id)
 
   useEffect(() => {
-    document.title = 'Order Details | 224 Clubhouse'
+    document.title = pageTitle('Order Details')
   }, [])
 
   if (authLoading || (user && isLoading)) {

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import AdminLayout from '../../components/admin/AdminLayout'
 import Modal from '../../components/ui/Modal'
 import { useDrivers, useCreateDriver, useSetDriverActive, useDriverLocations } from '../../hooks/useDelivery'
+import { tenant, adminTitle } from '../../tenant'
 
 const LiveMap = lazy(() => import('../../components/delivery/LiveMap'))
 
@@ -48,7 +49,7 @@ function AddDriverForm({ onDone }) {
       <div>
         <label htmlFor="drv-password" className={field}>Password * (8+ characters)</label>
         <input id="drv-password" type="text" minLength={8} className="input-base" value={form.password} onChange={set('password')} autoComplete="new-password" />
-        <p className="text-muted text-xs mt-1">They sign in at 224clubhouse.store/driver. Not needed if the email already has an account.</p>
+        <p className="text-muted text-xs mt-1">They sign in at {tenant.domain.apex}/driver. Not needed if the email already has an account.</p>
       </div>
       <button type="submit" disabled={create.isPending} className="btn-gold w-full py-3">
         {create.isPending ? 'Adding…' : 'Add driver'}
@@ -64,7 +65,7 @@ export default function Drivers() {
   const [adding, setAdding] = useState(false)
 
   useEffect(() => {
-    document.title = 'Drivers | 224 Admin'
+    document.title = adminTitle('Drivers')
   }, [])
 
   const markers = useMemo(
@@ -87,7 +88,7 @@ export default function Drivers() {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
         <div>
           <h1 className="font-heading text-3xl font-bold text-white">Drivers</h1>
-          <p className="text-muted text-sm mt-1">Drivers sign in at <span className="text-white">224clubhouse.store/driver</span>. Assign orders on the Orders page.</p>
+          <p className="text-muted text-sm mt-1">Drivers sign in at <span className="text-white">{tenant.domain.apex}/driver</span>. Assign orders on the Orders page.</p>
         </div>
         <button type="button" onClick={() => setAdding(true)} className="btn-gold flex items-center gap-2 text-sm">
           <Plus size={16} /> Add driver

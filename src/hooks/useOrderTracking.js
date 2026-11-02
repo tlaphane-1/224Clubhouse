@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase'
  *
  * Returns the tracking object, or `null` when nothing matches.
  *
- * @param {string} orderNumber  e.g. "224-ABC123"
+ * @param {string} orderNumber  e.g. "<PREFIX>-ABC123"
  * @param {string} email        the email used at checkout
  * @param {boolean} enabled     only run once the lookup form is submitted
  */

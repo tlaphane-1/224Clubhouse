@@ -13,8 +13,10 @@ import Badge from '../components/ui/Badge'
 import { formatZAR } from '../utils/formatCurrency'
 import toast from 'react-hot-toast'
 import BrandLogo from '../components/ui/BrandLogo'
+import { tenant, pageTitle } from '../tenant'
 
-const ADDRESS = '224 Rondebult Road, Libradene, Boksburg, 1459'
+const { street, suburb, city, postalCode } = tenant.contact
+const ADDRESS = `${street}, ${suburb}, ${city}, ${postalCode}`
 const MAX_PER_RESERVATION = 10
 
 function formatLongDate(value) {
@@ -45,7 +47,7 @@ export default function EventDetail() {
   const [justReserved, setJustReserved] = useState(null)
 
   useEffect(() => {
-    document.title = event ? `${event.title} | 224 Clubhouse` : 'Event | 224 Clubhouse'
+    document.title = event ? pageTitle(event.title) : pageTitle('Event')
   }, [event])
 
   if (isLoading) {
@@ -203,8 +205,7 @@ export default function EventDetail() {
             <div>
               <p className="text-white font-semibold text-sm mb-1">Members only</p>
               <p className="text-muted text-sm leading-relaxed">
-                This night is reserved for active 224 Clubhouse members. Memberships start at R10
-                — apply online and pay at the club.
+                {tenant.content.memberOnly.event}
               </p>
             </div>
           </div>

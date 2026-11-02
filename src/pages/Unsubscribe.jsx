@@ -4,6 +4,7 @@ import { MailCheck, MailX, AlertTriangle } from 'lucide-react'
 import { useNewsletterUnsubscribe } from '../hooks/useNewsletterSubscribers'
 import { useStopCartReminders } from '../hooks/useSavedCart'
 import BrandLogo from '../components/ui/BrandLogo'
+import { tenant, pageTitle } from '../tenant'
 
 // The token is a uuid straight from the DB. Checking the shape here means a
 // mangled link (truncated by a mail client, or someone poking at the URL)
@@ -26,7 +27,7 @@ function Shell({ icon, title, children }) {
         </div>
 
         <Link to="/" className="btn-outline text-sm inline-block mt-8">
-          Back to 224 Clubhouse
+          Back to {tenant.name}
         </Link>
       </div>
     </div>
@@ -46,7 +47,7 @@ function CartRemindersOptOut({ raw }) {
   const { data, isLoading, isError, refetch } = useStopCartReminders(token)
 
   useEffect(() => {
-    document.title = 'Cart reminders | 224 Clubhouse'
+    document.title = pageTitle('Cart reminders')
   }, [])
 
   if (!token || (!isLoading && !isError && data === false)) {
@@ -54,8 +55,8 @@ function CartRemindersOptOut({ raw }) {
       <Shell icon={<AlertTriangle size={32} className="text-gold" />} title="This link isn't valid">
         <p className="text-muted text-sm leading-relaxed">
           We couldn't match this link. Try opening it again from the original email, or email{' '}
-          <a href="mailto:224clubhous@gmail.com" className="text-gold underline underline-offset-2">
-            224clubhous@gmail.com
+          <a href={`mailto:${tenant.contact.email}`} className="text-gold underline underline-offset-2">
+            {tenant.contact.email}
           </a>{' '}
           and we'll switch cart reminders off for you.
         </p>
@@ -101,7 +102,7 @@ function NewsletterUnsubscribe({ raw: rawToken }) {
   const { data, isLoading, isError, refetch } = useNewsletterUnsubscribe(token)
 
   useEffect(() => {
-    document.title = 'Unsubscribe | 224 Clubhouse'
+    document.title = pageTitle('Unsubscribe')
   }, [])
 
   // Malformed or missing token — never hit the network for this.
@@ -111,8 +112,8 @@ function NewsletterUnsubscribe({ raw: rawToken }) {
         <p className="text-muted text-sm leading-relaxed">
           The unsubscribe link looks incomplete. Some email apps cut long links in half — try
           opening it again from the original email, or email us at{' '}
-          <a href="mailto:224clubhous@gmail.com" className="text-gold hover:underline">
-            224clubhous@gmail.com
+          <a href={`mailto:${tenant.contact.email}`} className="text-gold hover:underline">
+            {tenant.contact.email}
           </a>{' '}
           and we'll remove you.
         </p>
@@ -150,8 +151,8 @@ function NewsletterUnsubscribe({ raw: rawToken }) {
         <p className="text-muted text-sm leading-relaxed">
           We couldn't match this link to a subscription. It may already have been removed. If you
           are still receiving our newsletter, email{' '}
-          <a href="mailto:224clubhous@gmail.com" className="text-gold hover:underline">
-            224clubhous@gmail.com
+          <a href={`mailto:${tenant.contact.email}`} className="text-gold hover:underline">
+            {tenant.contact.email}
           </a>{' '}
           and we'll take you off the list.
         </p>
@@ -164,11 +165,11 @@ function NewsletterUnsubscribe({ raw: rawToken }) {
       <p className="text-muted text-sm leading-relaxed">
         {data.email ? (
           <>
-            <span className="text-white break-all">{data.email}</span> has been removed from the
-            224 Clubhouse newsletter. You won't receive further newsletters from us.
+            <span className="text-white break-all">{data.email}</span> has been removed from
+            the {tenant.name} newsletter. You won't receive further newsletters from us.
           </>
         ) : (
-          <>You have been removed from the 224 Clubhouse newsletter and won't receive further
+          <>You have been removed from the {tenant.name} newsletter and won't receive further
             newsletters from us.</>
         )}
       </p>

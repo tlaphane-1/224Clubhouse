@@ -6,15 +6,17 @@ import { useInvoiceOrder } from '../hooks/useInvoiceOrder'
 import { formatZAR } from '../utils/formatCurrency'
 import { statusLabel, paymentLabel } from '../utils/orderStatus'
 import { BANK_DETAILS } from '../utils/bankDetails'
+import { tenant, pageTitle } from '../tenant'
 
 // Seller details printed on every invoice. Same facts as Contact.jsx / Footer.jsx
-// (there is no shared constant yet — keep these in step if the club moves).
+// (from tenant.json, the same facts Contact.jsx / Footer.jsx print).
+const { contact } = tenant
 const BUSINESS = {
-  name: '224 Clubhouse',
-  addressLines: ['224 Rondebult Road', 'Libradene, Boksburg', '1459, Gauteng'],
-  phone: '075 086 8783',
-  email: '224clubhous@gmail.com',
-  web: '224clubhouse.store',
+  name: tenant.legalName,
+  addressLines: [contact.street, `${contact.suburb}, ${contact.city}`, `${contact.postalCode}, ${contact.province}`],
+  phone: contact.phoneDisplay,
+  email: contact.email,
+  web: tenant.domain.apex,
 }
 
 // Printable invoice for one order (/orders/:id/invoice, :id = order UUID like
@@ -27,8 +29,8 @@ export default function Invoice() {
 
   useEffect(() => {
     document.title = order?.order_number
-      ? `Invoice ${order.order_number} | 224 Clubhouse`
-      : 'Invoice | 224 Clubhouse'
+      ? pageTitle(`Invoice ${order.order_number}`)
+      : pageTitle('Invoice')
   }, [order?.order_number])
 
   if (authLoading || (user && isLoading)) {

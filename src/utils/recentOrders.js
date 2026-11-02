@@ -13,7 +13,9 @@
  * tracking on a laptop, needs the order number or a signed-in session.
  */
 
-const KEY = '224:recent-orders'
+import { storageKey } from '../tenant'
+
+const KEY = storageKey('recent-orders')
 const MAX = 10
 
 function read() {

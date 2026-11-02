@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Download, X } from 'lucide-react'
-import tailwindConfig from '../../../tailwind.config.js'
+import { tenant, storageKey } from '../../tenant'
 
 // Brand background token (no raw hex in components — docs/DESIGN_SYSTEM.md).
-const { background } = tailwindConfig.theme.extend.colors
+const { background } = tenant.theme.colors
 
-const DISMISS_KEY = '224-driver-install-dismissed'
+const DISMISS_KEY = storageKey('driver-install-dismissed')
 
 // Head tags that make /driver installable as its own app (public/driver.webmanifest).
 // Added only while the driver portal is mounted, so the shop itself is not
@@ -15,7 +15,7 @@ const HEAD_TAGS = [
   ['link', { rel: 'apple-touch-icon', href: '/icons/driver-192.png' }],
   ['meta', { name: 'apple-mobile-web-app-capable', content: 'yes' }],
   ['meta', { name: 'mobile-web-app-capable', content: 'yes' }],
-  ['meta', { name: 'apple-mobile-web-app-title', content: '224 Driver' }],
+  ['meta', { name: 'apple-mobile-web-app-title', content: `${tenant.shortName} Driver` }],
   ['meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'black' }],
   ['meta', { name: 'theme-color', content: background }],
 ]

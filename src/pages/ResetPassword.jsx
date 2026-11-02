@@ -4,6 +4,7 @@ import { KeyRound, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/useAuth'
 import { validateNewPassword, MIN_PASSWORD_LENGTH } from '../utils/passwordValidation'
+import { pageTitle } from '../tenant'
 
 /**
  * Landing page for the password-recovery email (customers and admins).
@@ -31,7 +32,7 @@ export default function ResetPassword() {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    document.title = 'Reset Password | 224 Clubhouse'
+    document.title = pageTitle('Reset Password')
   }, [])
 
   const handleSubmit = async (e) => {

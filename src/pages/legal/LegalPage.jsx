@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { tenant, pageTitle } from '../../tenant'
 
 /**
  * Shared shell for the legal/compliance pages (Privacy, Terms,
@@ -6,14 +7,14 @@ import { useEffect } from 'react'
  * dark background, gold eyebrow + heading, narrow readable prose column.
  */
 
-export const LAST_UPDATED = '13 August 2026'
+const LAST_UPDATED = tenant.legal.lastUpdated
 
 /** Removable once management has signed off on the wording. */
 export function DraftBanner() {
   return (
     <div className="bg-gold/10 border border-gold/40 rounded-xl px-5 py-4 mb-10">
       <p className="text-gold text-sm font-semibold">
-        Draft — under review by 224 Clubhouse management
+        Draft — under review by {tenant.name} management
       </p>
       <p className="text-muted text-xs mt-1 leading-relaxed">
         This document has not yet been finalised. Please contact us if anything here is unclear.
@@ -41,7 +42,7 @@ export function LegalSection({ title, children }) {
 }
 
 export default function LegalPage({ eyebrow, title, intro, children }) {
-  useEffect(() => { document.title = `${title} | 224 Clubhouse` }, [title])
+  useEffect(() => { document.title = pageTitle(title) }, [title])
 
   return (
     <div className="min-h-screen bg-background">

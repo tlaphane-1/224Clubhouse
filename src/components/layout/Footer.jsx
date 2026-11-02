@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
+import { tenant } from '../../tenant'
 
 function FacebookIcon({ size = 20, className = '' }) {
   return (
@@ -24,13 +25,13 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Brand */}
           <div>
-            <img src={BRAND_IMAGES.logoWide} alt="224 Clubhouse" className="h-10 w-auto object-contain mb-4" />
+            <img src={BRAND_IMAGES.logoWide} alt={tenant.name} className="h-10 w-auto object-contain mb-4" />
             <p className="text-muted text-sm leading-relaxed max-w-xs">
-              A private cannabis members' club. Premium cannabis, delivered to your door. Members only. Elevated always.
+              {tenant.content.footer.tagline}
             </p>
             <div className="flex gap-4 mt-6">
               <a
-                href="https://www.facebook.com/224clubhouse"
+                href={tenant.social.facebook}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted hover:text-gold transition-colors"
@@ -39,7 +40,7 @@ export default function Footer() {
                 <FacebookIcon size={20} />
               </a>
               <a
-                href="https://www.instagram.com/224clubhouse"
+                href={tenant.social.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted hover:text-gold transition-colors"
@@ -102,15 +103,15 @@ export default function Footer() {
             <div className="space-y-4">
               <div>
                 <p className="text-gold text-xs uppercase tracking-widest mb-1.5">Store</p>
-                <p className="text-white text-sm">Closed until further notice</p>
-                <p className="text-muted text-sm">Delivering Monday – Sunday, 09:00 – 19:00</p>
+                <p className="text-white text-sm">{tenant.hours.status}</p>
+                <p className="text-muted text-sm">{tenant.hours.delivery}</p>
               </div>
               <div>
                 <p className="text-gold text-xs uppercase tracking-widest mb-1.5">Address</p>
                 <address className="text-muted text-sm not-italic leading-relaxed">
-                  224 Rondebult Road<br />
-                  Libradene, Boksburg<br />
-                  1459
+                  {tenant.contact.street}<br />
+                  {`${tenant.contact.suburb}, ${tenant.contact.city}`}<br />
+                  {tenant.contact.postalCode}
                 </address>
               </div>
             </div>
@@ -119,7 +120,7 @@ export default function Footer() {
 
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-muted text-xs">
-            © {new Date().getFullYear()} 224 Clubhouse. All rights reserved.
+            © {new Date().getFullYear()} {tenant.name}. All rights reserved.
           </p>
           <p className="text-muted text-xs text-center">
             🔞 No sales to persons under 21 years of age. Not for sale to minors.

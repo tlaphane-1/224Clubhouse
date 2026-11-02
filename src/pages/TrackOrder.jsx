@@ -14,6 +14,7 @@ import {
 } from '../utils/orderStatus'
 import EftDetails from '../components/checkout/EftDetails'
 import DeliveryTracker from '../components/delivery/DeliveryTracker'
+import { tenant, pageTitle } from '../tenant'
 
 export default function TrackOrder() {
   const [searchParams] = useSearchParams()
@@ -25,7 +26,7 @@ export default function TrackOrder() {
   const [recent, setRecent] = useState(() => getRecentOrders())
 
   useEffect(() => {
-    document.title = 'Track Your Order | 224 Clubhouse'
+    document.title = pageTitle('Track Your Order')
   }, [])
 
   // Orders placed on this device track themselves — one tap, no order number needed.
@@ -152,7 +153,7 @@ export default function TrackOrder() {
               id="order-number"
               type="text"
               className="input-base"
-              placeholder="224-XXXXXX"
+              placeholder={`${tenant.orderPrefix}-XXXXXX`}
               required
               autoCapitalize="characters"
               value={orderNumber}

@@ -12,6 +12,7 @@ import { eftState } from '../../utils/orderStatus'
 import { useDailySummary } from '../../hooks/useDailySummary'
 import { shareLink, dailySummaryMessage } from '../../utils/staffWhatsApp'
 import WhatsAppButton from '../../components/ui/WhatsAppButton'
+import { tenant, adminTitle } from '../../tenant'
 
 export default function Dashboard() {
   const { data: orders, isError, refetch } = useOrders()
@@ -19,7 +20,7 @@ export default function Dashboard() {
   const { data: summary } = useDailySummary()
 
   useEffect(() => {
-    document.title = 'Dashboard | 224 Admin'
+    document.title = adminTitle('Dashboard')
   }, [])
 
   // COD business: money isn't collected until delivery, so revenue counts
@@ -39,7 +40,7 @@ export default function Dashboard() {
       <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-heading text-3xl font-bold text-white">Dashboard</h1>
-          <p className="text-muted text-sm mt-1">Welcome back to 224 Clubhouse admin.</p>
+          <p className="text-muted text-sm mt-1">Welcome back to {tenant.name} admin.</p>
         </div>
         {summary && (
           <WhatsAppButton href={shareLink(dailySummaryMessage(summary))}>Share today's summary</WhatsAppButton>
@@ -59,7 +60,7 @@ export default function Dashboard() {
         <StatsCard title="Pending Orders" value={pendingOrders} icon={Clock} />
       </div>
 
-      {/* EFT payments waiting for a check against the FNB account */}
+      {/* EFT payments waiting for a check against the bank account */}
       {eftProofs + eftAwaiting > 0 && (
         <Link
           to="/admin/orders?filter=eft"

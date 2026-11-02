@@ -11,21 +11,9 @@ import toast from 'react-hot-toast'
 import { HIGHLIGHT_TOAST_STYLE } from '../utils/toastTheme'
 import { BRAND_IMAGES } from '../hooks/useStorageImages'
 import BrandLogo from '../components/ui/BrandLogo'
+import { tenant } from '../tenant'
 
-const reviews = [
-  {
-    name: 'Chané Harris',
-    rating: 5,
-    text: 'Absolutely love this place! The vibe is unmatched and the products are always top quality. The staff are friendly and knowledgeable. 224 is truly a lifestyle experience.',
-    date: 'via Google',
-  },
-  {
-    name: 'Phathutshedzo Mutwanamba',
-    rating: 5,
-    text: 'Best lounge in Boksburg by far. Great atmosphere, premium selection and the community events are always fire. If you\'re not a member yet, what are you waiting for?',
-    date: 'via Google',
-  },
-]
+const { reviews, newsletter: newsletterCopy } = tenant.content.home
 
 export default function Home() {
   const { data: products, isLoading, isError, refetch } = useProducts()
@@ -37,7 +25,7 @@ export default function Home() {
   const [subLoading, setSubLoading] = useState(false)
 
   useEffect(() => {
-    document.title = "224 Clubhouse | Private Cannabis Members' Club"
+    document.title = tenant.seo.title
   }, [])
 
   const handleSubscribe = async (e) => {
@@ -65,7 +53,7 @@ export default function Home() {
         body: { email },
       })
 
-      toast.success('Welcome to the 224 family! Check your email for your discount code.', {
+      toast.success(newsletterCopy.welcomeToast, {
         duration: 5000,
         style: HIGHLIGHT_TOAST_STYLE,
       })
@@ -107,10 +95,10 @@ export default function Home() {
             <div className="w-24 h-px bg-gold mx-auto mb-6 md:mb-8" />
 
             <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-semibold text-white mb-3 md:mb-4 tracking-wide">
-              Premium. Private. Delivered.
+              {tenant.content.home.heroTitle}
             </h1>
             <p className="text-muted text-base md:text-lg max-w-xl mx-auto mb-8 md:mb-10 leading-relaxed">
-              Order online and pay on delivery. We bring it to your door.
+              {tenant.content.home.heroSubtitle}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
@@ -264,7 +252,7 @@ export default function Home() {
       <section className="py-14 md:py-24 px-4 max-w-7xl mx-auto">
         <div className="text-center mb-8 md:mb-14 reveal">
           <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">The Experience</p>
-          <h2 className="section-heading text-white">Life at 224</h2>
+          <h2 className="section-heading text-white">{tenant.content.home.galleryHeading}</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {BRAND_IMAGES.gallery.slice(0, 8).map((url, i) => (
@@ -274,7 +262,7 @@ export default function Home() {
             >
               <img
                 src={url}
-                alt={`224 Clubhouse gallery ${i + 1}`}
+                alt={`${tenant.name} gallery ${i + 1}`}
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-cover aspect-square hover:scale-105 transition-transform duration-500"
@@ -291,11 +279,11 @@ export default function Home() {
             <div className="bg-gold/10 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-6">
               <Mail size={24} className="text-gold" />
             </div>
-            <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Join The Fam</p>
-            <h2 className="font-heading text-2xl md:text-3xl font-bold text-white mb-3">Never Miss a Beat</h2>
+            <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">{newsletterCopy.eyebrow}</p>
+            <h2 className="font-heading text-2xl md:text-3xl font-bold text-white mb-3">{newsletterCopy.heading}</h2>
             <p className="text-muted text-sm mb-8 leading-relaxed">
-              Subscribe for stock drops, events & updates.<br />
-              <span className="text-gold font-semibold">Get 10% OFF</span> your first purchase.
+              {newsletterCopy.blurb}<br />
+              <span className="text-gold font-semibold">{newsletterCopy.offer}</span> {newsletterCopy.offerSuffix}
             </p>
 
             <form onSubmit={handleSubscribe} className="space-y-3">
@@ -330,7 +318,7 @@ export default function Home() {
                 disabled={subLoading}
                 className="btn-gold w-full py-4 text-sm uppercase tracking-widest disabled:opacity-50"
               >
-                {subLoading ? 'Subscribing...' : 'Subscribe & Get 10% Off'}
+                {subLoading ? 'Subscribing...' : newsletterCopy.cta}
               </button>
             </form>
           </div>

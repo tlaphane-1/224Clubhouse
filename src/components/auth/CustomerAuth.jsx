@@ -6,6 +6,7 @@ import { validateNewPassword } from '../../utils/passwordValidation'
 import { isAdultDob, latestAdultDob, MIN_AGE } from '../../utils/age'
 import ForgotPasswordForm from './ForgotPasswordForm'
 import toast from 'react-hot-toast'
+import { tenant } from '../../tenant'
 
 /**
  * Inline sign-in / create-account card for customers, shown wherever a page
@@ -59,7 +60,7 @@ export default function CustomerAuth({ title = 'Sign in to continue', subtitle }
       return
     }
     if (!isAdultDob(dob)) {
-      toast.error(dob ? `Sorry — you must be ${MIN_AGE} or older to join 224 Clubhouse.` : 'Please enter your date of birth.')
+      toast.error(dob ? `Sorry — you must be ${MIN_AGE} or older to join ${tenant.name}.` : 'Please enter your date of birth.')
       return
     }
     setBusy(true)

@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom'
 import LegalPage, { LegalSection } from './LegalPage'
+import { tenant } from '../../tenant'
+
+const { contact } = tenant
 
 /**
  * POPIA-oriented privacy policy. Content is specific to what this app
@@ -11,17 +14,17 @@ export default function PrivacyPolicy() {
     <LegalPage
       eyebrow="Legal"
       title="Privacy Policy"
-      intro="How 224 Clubhouse collects, uses, stores and protects your personal information, and the rights you have under the Protection of Personal Information Act, 2013 (POPIA)."
+      intro={`How ${tenant.name} collects, uses, stores and protects your personal information, and the rights you have under the Protection of Personal Information Act, 2013 (POPIA).`}
     >
       <LegalSection title="1. Who we are">
         <p>
-          224 Clubhouse is a private cannabis lifestyle lounge at 224 Rondebult Road, Libradene,
-          Boksburg, 1459, South Africa. For the purposes of POPIA, 224 Clubhouse is the
+          {tenant.legalName} is a private cannabis lifestyle lounge at {contact.street}, {contact.suburb},{' '}
+          {contact.city}, {contact.postalCode}, South Africa. For the purposes of POPIA, {tenant.legalName} is the
           &ldquo;responsible party&rdquo; for the personal information described in this policy.
         </p>
         <p>
-          <span className="text-white font-semibold">Information Officer:</span> 224 Clubhouse
-          Management. You can reach the Information Officer through the{' '}
+          <span className="text-white font-semibold">Information Officer:</span> {tenant.legal.informationOfficer}. You can reach the
+          Information Officer through the{' '}
           <Link to="/contact" className="text-gold hover:text-gold-light transition-colors">contact form</Link>{' '}
           on this site or in person at the store.
         </p>

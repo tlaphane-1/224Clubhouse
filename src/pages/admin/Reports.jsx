@@ -12,6 +12,7 @@ import {
   RANGES, bestSellers, buildBuckets, getRange, lowStockItems, niceMax, ordersToCsv, paymentSplit, sastDayKey,
   summarize,
 } from '../../utils/salesReport'
+import { adminTitle } from '../../tenant'
 
 function downloadCsv(orders, rangeKey) {
   const blob = new Blob([ordersToCsv(orders)], { type: 'text/csv;charset=utf-8' })
@@ -330,7 +331,7 @@ export default function Reports() {
   const { data: orders, isLoading, isError, refetch } = useSalesOrders(rangeKey)
 
   useEffect(() => {
-    document.title = 'Reports | 224 Admin'
+    document.title = adminTitle('Reports')
   }, [])
 
   const report = useMemo(() => {

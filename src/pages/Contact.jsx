@@ -3,6 +3,8 @@ import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { HIGHLIGHT_TOAST_STYLE } from '../utils/toastTheme'
 import { supabase } from '../lib/supabase'
+import { tenant, pageTitle } from '../tenant'
+import { mapEmbedUrl } from '../utils/mapEmbed'
 
 function FacebookIcon({ size = 20, className = '' }) {
   return (
@@ -22,34 +24,39 @@ function InstagramIcon({ size = 20, className = '' }) {
   )
 }
 
+const { contact } = tenant
+
 const INFO = [
   {
     icon: MapPin,
     label: 'Address',
-    lines: ['224 Rondebult Road', 'Libradene, Boksburg', '1459, Gauteng'],
-    action: { label: 'Get Directions', href: 'https://maps.google.com/?q=224+Rondebult+Road+Libradene+Boksburg' },
+    lines: [contact.street, `${contact.suburb}, ${contact.city}`, `${contact.postalCode}, ${contact.province}`],
+    action: { label: 'Get Directions', href: contact.mapsLink },
   },
   {
     icon: Phone,
     label: 'Phone',
-    lines: ['075 086 8783'],
-    action: { label: 'Call Us', href: 'tel:0750868783' },
+    lines: [contact.phoneDisplay],
+    action: { label: 'Call Us', href: `tel:${contact.phoneTel}` },
   },
   {
     icon: Mail,
     label: 'Email',
-    lines: ['224clubhous@gmail.com'],
-    action: { label: 'Send Email', href: 'mailto:224clubhous@gmail.com' },
+    lines: [contact.email],
+    action: { label: 'Send Email', href: `mailto:${contact.email}` },
   },
   {
     icon: Clock,
     label: 'Hours',
-    lines: ['Store closed until further notice', 'Delivering Monday – Sunday', '09:00 – 19:00'],
+    lines: tenant.hours.contactPage,
   },
 ]
 
+// Null when VITE_GOOGLE_MAPS_KEY is unset; the map block is then omitted.
+const mapSrc = mapEmbedUrl(import.meta.env.VITE_GOOGLE_MAPS_KEY, tenant.contact.mapQuery)
+
 export default function Contact() {
-  useEffect(() => { document.title = 'Contact | 224 Clubhouse' }, [])
+  useEffect(() => { document.title = pageTitle('Contact') }, [])
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' })
   const [loading, setLoading] = useState(false)
 
@@ -74,7 +81,7 @@ export default function Contact() {
       })
 
       if (error) {
-        toast.error('Something went wrong. Please email us directly at 224clubhous@gmail.com')
+        toast.error(`Something went wrong. Please email us directly at ${contact.email}`)
       } else {
         toast.success('Message sent! We\'ll get back to you within 1–2 business days.', {
           duration: 5000,
@@ -83,7 +90,7 @@ export default function Contact() {
         setForm({ name: '', email: '', subject: '', message: '' })
       }
     } catch {
-      toast.error('Something went wrong. Please email us directly at 224clubhous@gmail.com')
+      toast.error(`Something went wrong. Please email us directly at ${contact.email}`)
     } finally {
       setLoading(false)
     }
@@ -143,7 +150,7 @@ export default function Contact() {
               <p className="text-gold text-xs uppercase tracking-widest mb-4">Follow Us</p>
               <div className="flex gap-4">
                 <a
-                  href="https://www.facebook.com/224clubhouse"
+                  href={tenant.social.facebook}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-muted hover:text-gold transition-colors text-sm"
@@ -151,7 +158,7 @@ export default function Contact() {
                   <FacebookIcon size={18} /> Facebook
                 </a>
                 <a
-                  href="https://www.instagram.com/224clubhouse"
+                  href={tenant.social.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-muted hover:text-gold transition-colors text-sm"
@@ -204,17 +211,19 @@ export default function Contact() {
             </div>
 
             {/* Map embed */}
-            <div className="mt-6 rounded-2xl overflow-hidden border border-border h-56">
-              <iframe
-                title="224 Clubhouse Location"
-                src="https://www.google.com/maps/embed/v1/place?key=AIzaSyD-9tSrke72FloqCDE9M7BkA6Q8rRZZlOo&q=224+Rondebult+Road,+Libradene,+Boksburg"
-                width="100%"
-                height="100%"
-                style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }}
-                allowFullScreen
-                loading="lazy"
-              />
-            </div>
+            {mapSrc && (
+              <div className="mt-6 rounded-2xl overflow-hidden border border-border h-56">
+                <iframe
+                  title={`${tenant.name} Location`}
+                  src={mapSrc}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }}
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            )}
           </div>
         </div>
       </section>

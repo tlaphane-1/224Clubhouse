@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabase'
 import { formatZAR } from '../../utils/formatCurrency'
 import { useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
+import { adminTitle } from '../../tenant'
 
 // Reservation statuses reuse the existing Badge palette rather than adding
 // variants: reserved reads as "booked" (blue), attended as done (green).
@@ -220,7 +221,7 @@ export default function AdminEvents() {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    document.title = 'Events | 224 Admin'
+    document.title = adminTitle('Events')
   }, [])
 
   const handleDelete = async (id) => {

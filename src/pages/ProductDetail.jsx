@@ -15,6 +15,7 @@ import { SHIPPING_FEE } from '../utils/shipping'
 import { toastAddedToCart } from '../utils/cartToast'
 import BrandLogo from '../components/ui/BrandLogo'
 import { purchasableVariants, hasVariants, toCartItem } from '../utils/variants'
+import { tenant, pageTitle } from '../tenant'
 
 export default function ProductDetail() {
   const { slug } = useParams()
@@ -29,7 +30,7 @@ export default function ProductDetail() {
   const [chosenVariantId, setChosenVariantId] = useState(null)
 
   useEffect(() => {
-    if (product) document.title = `${product.name} | 224 Clubhouse`
+    if (product) document.title = pageTitle(product.name)
   }, [product])
 
   if (isLoading) {
@@ -237,7 +238,7 @@ export default function ProductDetail() {
                 <div>
                   <p className="text-white font-semibold text-sm mb-1">Members only</p>
                   <p className="text-muted text-sm leading-relaxed">
-                    This product is reserved for active 224 Clubhouse members.
+                    {tenant.content.memberOnly.product}
                   </p>
                 </div>
               </div>

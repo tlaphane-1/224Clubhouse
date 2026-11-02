@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import tailwindConfig from '../../../tailwind.config.js'
+import { tenant } from '../../tenant'
 
 // Leaflet + OpenStreetMap tiles: free, no API key. Markers are circle markers
 // (no image assets, which bundlers otherwise break in Leaflet).
-const BOKSBURG = [-26.2125, 28.2625]
+const MAP_CENTRE = tenant.contact.mapCentre
 // Leaflet styles markers with inline values; read the brand tokens rather than
 // repeat hex (docs/DESIGN_SYSTEM.md), as toastTheme.js does.
-const { gold, background, leaf } = tailwindConfig.theme.extend.colors
+const { gold, background, leaf } = tenant.theme.colors
 
 /**
  * @param markers [{ id, lat, lng, label, kind? }] — kind 'home' is the
@@ -25,7 +25,7 @@ export default function LiveMap({ markers, className = 'h-64', ariaLabel = 'Map'
   const fittedCount = useRef(0)
 
   useEffect(() => {
-    const map = L.map(elRef.current, { zoomControl: true, attributionControl: true }).setView(BOKSBURG, 13)
+    const map = L.map(elRef.current, { zoomControl: true, attributionControl: true }).setView(MAP_CENTRE, 13)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors',

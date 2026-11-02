@@ -10,6 +10,7 @@ import { formatZAR } from '../../utils/formatCurrency'
 import { useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import BrandLogo from '../../components/ui/BrandLogo'
+import { adminTitle } from '../../tenant'
 
 export default function Products() {
   const { data: products, isLoading, isError, refetch } = useAllProducts()
@@ -19,7 +20,7 @@ export default function Products() {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    document.title = 'Products | 224 Admin'
+    document.title = adminTitle('Products')
   }, [])
 
   const handleToggleAvailable = async (product) => {
