@@ -38,10 +38,12 @@ is an ordinary deploy that can be rolled back in one command.
 
 ### Non-goals (explicitly out of scope)
 - Per-tenant feature toggles. Both tenants run the same features.
-- Per-tenant product categories, age limit (21), delivery fee (R30, free
-  from R500 and for members), timezone or currency. These stay as shared
-  constants. If a future tenant needs different rules, that is a new
-  project.
+- Per-tenant product categories, delivery fee (R30, free from R500 and for
+  members), timezone or currency. These stay as shared constants. If a
+  future tenant needs different rules, that is a new project.
+  **Exception (2026-11-02):** the minimum age is per tenant
+  (`tenants.min_age`; 224 = 21, Explosive 420 = 18), because the owner's
+  second store is 18+ (§9).
 - One admin login that switches between tenants (owner chose separate
   admins per tenant).
 - Allowing one email address to hold accounts at both tenants.
@@ -529,3 +531,44 @@ done deliberately.
 - Approval of the Resend paid plan cost (one account, all stores) and DNS
   access to the store's domain.
 - First admin email address.
+
+## 11. Phase 2 amendments (2026-11-02, from the schema inventory)
+
+Builder rulings made while planning phase 2. Each one keeps 224 unchanged.
+
+- **Minimum age per tenant.** `tenants.min_age` (224 = 21). Every SQL age
+  rule reads it: `place_cod_order`, `place_membership`,
+  `admin_create_membership`, `set_date_of_birth`, `my_age_verified` and the
+  `profile_from_signup` writer. Messages keep the form
+  "Must be <n> or older", so 224's text is unchanged. The consent key
+  `age_21` stays accepted; `age_min` is the new key that phase 4 sends.
+  Frontend age copy moves to config in phase 4.
+- **User-keyed tables keep `user_id` as their primary key.** These are
+  saved_carts, customer_profiles, customer_email_prefs, drivers,
+  driver_locations and admin_users. A user belongs to exactly one tenant
+  (§4), so one row per user is still correct. The tables still get
+  `tenant` so admin policies and service jobs can scope them.
+- **`orders.order_number` stays globally unique.** Prefixes differ per
+  tenant, and `get_order_tracking` also requires the tenant to match.
+- **Auth backfill runs inside the migration** (`update auth.users set
+  raw_app_meta_data = … || '{"tenant":"224clubhouse"}'`). This replaces the
+  service-role script in §5.3: it is atomic and can be rehearsed locally.
+- **The `tenants` table starts minimal:** slug, name, order_prefix,
+  min_age, active and created_at. Phase 3 adds the mail columns. Contact
+  and brand JSON go in `store_settings` later, as per §4.
+- **Storage folder scoping (`<slug>/` uploads) moves to phase 4**, together
+  with the frontend change that uploads there. Phase 2 storage changes:
+  `is_admin()` becomes tenant-aware (so it scopes uploads by itself), and
+  `payment-proofs` gets the `orders.tenant` check.
+- **Telegram vault secret name:** `telegram_bot_token` stays as 224's
+  name. Other tenants use `telegram_bot_token__<slug>`, resolved by one
+  helper function.
+- **Edge Functions are untouched in phase 2.** They run as the service
+  role with no header, so `current_tenant()` resolves to `default_tenant()`
+  (224). Phase 3 makes them send `x-tenant` per store.
+- **Rehearsal database.** Every phase-2 migration is applied and tested
+  first on a local Supabase stack (Docker). It is pushed to production
+  only after the owner's go-ahead.
+- **Security fix carried in phase 2:** `decrement_stock` (unused,
+  SECURITY DEFINER) is still executable by every signed-in user. It is
+  dropped.
