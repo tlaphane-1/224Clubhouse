@@ -425,6 +425,90 @@ export async function signInAs(client, email) {
   mustSucceed(`sign in as ${email}`, result)
 }
 
+// ---------------------------------------------------------------------------
+// Tenancy helpers (phase 2)
+// ---------------------------------------------------------------------------
+
+/**
+ * The second tenant every phase-2 suite uses to prove isolation. It is created
+ * by tests, never by a migration, and stays `active: false` so it can never
+ * serve real traffic. Rows in later suites reference it by FK, so nothing
+ * deletes it afterwards.
+ */
+export const TEST_TENANT = 'vitest-b'
+
+/**
+ * Idempotent: several describes call it. Upserts on the slug so a second call
+ * (or a leftover row from an earlier run) converges on the same values.
+ */
+export async function ensureTestTenant(admin) {
+  mustSucceed('ensure test tenant', await withRetry('ensureTestTenant', () =>
+    admin.from('tenants').upsert({
+      slug: TEST_TENANT,
+      name: 'Vitest B',
+      order_prefix: 'VTB',
+      min_age: 18,
+      active: false,
+    }, { onConflict: 'slug' }),
+  ))
+}
+
+/** An anonymous client that sends `x-tenant: <slug>` on every request. */
+export const tenantClient = (slug) =>
+  createClient(URL, ANON, {
+    ...liveClientOptions,
+    global: { ...liveClientOptions.global, headers: { 'x-tenant': slug } },
+  })
+
+/**
+ * Like createTestUser, but the account's `app_metadata.tenant` is set, so the
+ * JWT it signs in with carries the claim `current_tenant()` trusts over any
+ * header. Gets the same adult profile as createTestUser.
+ */
+export async function createTenantUser(admin, label, tenant) {
+  const email = testEmail(label)
+  let attempts = 0
+  const result = await withRetry(`createUser ${email}`, () => {
+    attempts++
+    return admin.auth.admin.createUser({
+      email,
+      password: TEST_PASSWORD,
+      email_confirm: true,
+      app_metadata: { tenant },
+    })
+  })
+  if (attempts > 1 && result.error?.code === 'email_exists') {
+    // Same adoption rule as createTestUser: a retry that finds our own
+    // RUN_TAG address means the first attempt landed and only its reply was lost.
+    const id = await findUserIdByEmail(admin, email)
+    if (id) {
+      await giveAdultProfile(admin, id)
+      return { id, email }
+    }
+  }
+  const data = mustSucceed(`create tenant account ${email}`, result)
+  await giveAdultProfile(admin, data.user.id)
+  return { id: data.user.id, email }
+}
+
+/**
+ * A new client signed in as `email`, optionally sending `x-tenant` on every
+ * request (a signed-in user's JWT claim still wins over the header).
+ */
+export async function signInClient(email, password, { tenant } = {}) {
+  const client = createClient(URL, ANON, {
+    ...liveClientOptions,
+    global: {
+      ...liveClientOptions.global,
+      ...(tenant ? { headers: { 'x-tenant': tenant } } : {}),
+    },
+  })
+  mustSucceed(`sign in as ${email}`, await withRetry(`signIn ${email}`, () =>
+    client.auth.signInWithPassword({ email, password }),
+  ))
+  return client
+}
+
 /** Delete a run's accounts. Safe to call with nulls. */
 export async function deleteTestUsers(admin, ...ids) {
   for (const id of ids) {
