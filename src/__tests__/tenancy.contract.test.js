@@ -119,10 +119,15 @@ describe.skipIf(CORE_SKIP)('Tenancy contract — tenancy core', () => {
 
   beforeAll(async () => {
     await ensureTestTenant(admin)
-    // No app_metadata.tenant: stands in for every pre-backfill 224 account.
+    // No app_metadata.tenant: stands in for a 224 session issued before the
+    // backfill. Since 20261102160000 every new account is stamped with a claim
+    // at creation, so it is cleared here (Ruling 1's pattern). Without this the
+    // forged-header test below would only prove "the claim beats the header".
     const plain = await createTestUser(admin, 'tenancy-core-plain')
     plainUserId = plain.id
     plainUserEmail = plain.email
+    mustSucceed('clear plain claim', await admin.auth.admin
+      .updateUserById(plainUserId, { app_metadata: { tenant: null } }))
     const user = await createTenantUser(admin, 'tenancy-core', TEST_TENANT)
     userId = user.id
     userEmail = user.email
@@ -154,6 +159,9 @@ describe.skipIf(CORE_SKIP)('Tenancy contract — tenancy core', () => {
 
   it('a signed-in user with NO tenant claim ignores a forged x-tenant header', async () => {
     const client = await signInClient(plainUserEmail, TEST_PASSWORD, { tenant: TEST_TENANT })
+    // Precondition: the session really is claimless (jwtPayload is a
+    // module-scope const below; tests run after the module has loaded).
+    expect((await jwtPayload(client)).app_metadata?.tenant ?? null).toBeNull()
     const { data, error } = await client.rpc('current_tenant')
     expect(error).toBeNull()
     expect(data).toBe('224clubhouse')
