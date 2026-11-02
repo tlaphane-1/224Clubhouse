@@ -384,7 +384,8 @@ export async function giveAdultProfile(admin, userId) {
   }
 }
 
-async function findUserIdByEmail(admin, email) {
+/** The id of the auth user with exactly this email, or null. Pages through listUsers. */
+export async function findUserIdByEmail(admin, email) {
   for (let page = 1; ; page++) {
     const data = mustSucceed(`look up ${email}`, await withRetry(`listUsers ${page}`, () =>
       admin.auth.admin.listUsers({ page, perPage: 1000 }),
@@ -488,6 +489,15 @@ export const yearsAgoIso = (n) => {
  * Like createTestUser, but the account's `app_metadata.tenant` is set, so the
  * JWT it signs in with carries the claim `current_tenant()` trusts over any
  * header. Gets an adult profile in that same tenant (giveTenantProfile).
+ *
+ * The tenant goes in BOTH metadata objects. GoTrue's admin createUser inserts
+ * the auth.users row with user_metadata but without the custom app_metadata
+ * (that arrives in a later UPDATE), so the BEFORE INSERT stamp
+ * (20261102160000) and profile_from_signup only see the store through
+ * user_metadata.tenant. app_metadata must carry the tenant as well: when
+ * createUser is given app_metadata at all, its later UPDATE rewrites the
+ * column from GoTrue's own copy (which never saw the stamp) plus what was
+ * passed, so a stamp the passed object does not repeat is lost.
  */
 export async function createTenantUser(admin, label, tenant) {
   const email = testEmail(label)
@@ -498,6 +508,7 @@ export async function createTenantUser(admin, label, tenant) {
       email,
       password: TEST_PASSWORD,
       email_confirm: true,
+      user_metadata: { tenant },
       app_metadata: { tenant },
     })
   })

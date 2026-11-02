@@ -26,7 +26,7 @@ import {
   probeMigration, describeGate, ensureTestTenant, tenantClient,
   createTenantUser, signInClient, TEST_TENANT, TEST_PASSWORD, testCode, testEmail,
   URL, SERVICE, liveClientOptions, giveTenantProfile, yearsAgoIso,
-  RUN_TAG, testEventTitle,
+  RUN_TAG, testEventTitle, findUserIdByEmail,
 } from './helpers/liveFixtures.js'
 
 // ---------------------------------------------------------------------------
@@ -1128,5 +1128,124 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — members
     const mem = await ghost.rpc('place_membership', application('1990-01-01'))
     expect(mem.error?.message).toBe('Unknown store')
     expect(await membershipsOf(u.ghost.email)).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Task 8 — signup tenant stamp
+//
+// 20261102160000_tenant_signup_stamp adds a BEFORE INSERT trigger on
+// auth.users (stamp_user_tenant) that writes app_metadata.tenant on every new
+// account, so every JWT carries the claim current_tenant() trusts. The store
+// comes from, in order: an app_metadata.tenant already on the row, the
+// user_metadata.tenant a signup sends (public signUp options.data, or admin
+// createUser user_metadata), then default_tenant(). A tenant with no tenants
+// row is refused, so the account is not created. Nothing re-stamps on UPDATE:
+// a user editing their own user_metadata.tenant later moves nothing.
+//
+// Public signups here need no email confirmation (local enable_confirmations
+// is false), so signUp returns a session straight away.
+// ---------------------------------------------------------------------------
+describe.skipIf(CORE_SKIP)('Tenancy contract — signup tenant stamp', () => {
+  const admin = CORE_SKIP ? null : serviceClient()
+  const ids = []
+
+  const claimOf = async (id) => {
+    const { data, error } = await admin.auth.admin.getUserById(id)
+    expect(error).toBeNull()
+    return data.user.app_metadata?.tenant
+  }
+  const profileOf = async (id) => {
+    const { data, error } = await admin.from('customer_profiles')
+      .select('tenant, date_of_birth').eq('user_id', id)
+    expect(error).toBeNull()
+    return data
+  }
+  // Public signup, as the storefront does it. Never retried: a signup is a
+  // write, and GoTrue reports the trigger's refusal as a 500.
+  const signUp = async (label, data) => {
+    const client = anonClient()
+    const result = await client.auth.signUp({
+      email: testEmail(label),
+      password: TEST_PASSWORD,
+      ...(data ? { options: { data } } : {}),
+    })
+    if (result.data?.user?.id) ids.push(result.data.user.id)
+    return { client, result }
+  }
+
+  beforeAll(async () => {
+    await ensureTestTenant(admin)
+  })
+
+  afterAll(async () => {
+    if (!admin) return
+    await deleteTestUsers(admin, ...ids)
+  })
+
+  it('a public signup with tenant vitest-b gets app_metadata.tenant vitest-b, and its JWT resolves to vitest-b', async () => {
+    const { client, result } = await signUp('tstamp-b', { tenant: TEST_TENANT })
+    const user = mustSucceed('signup vitest-b', result).user
+    // Read back from the database: proves GoTrue's own post-insert writes do
+    // not overwrite the BEFORE-trigger stamp (spec §5.3).
+    expect(await claimOf(user.id)).toBe(TEST_TENANT)
+    expect((await jwtPayload(client)).app_metadata?.tenant).toBe(TEST_TENANT)
+    const { data, error } = await client.rpc('current_tenant')
+    expect(error).toBeNull()
+    expect(data).toBe(TEST_TENANT)
+  })
+
+  it('a public signup with no tenant gets 224clubhouse (as today)', async () => {
+    const { client, result } = await signUp('tstamp-none')
+    const user = mustSucceed('signup no tenant', result).user
+    expect(await claimOf(user.id)).toBe('224clubhouse')
+    expect((await jwtPayload(client)).app_metadata?.tenant).toBe('224clubhouse')
+  })
+
+  it('a public signup with an empty tenant gets 224clubhouse', async () => {
+    const { result } = await signUp('tstamp-empty', { tenant: '' })
+    const user = mustSucceed('signup empty tenant', result).user
+    expect(await claimOf(user.id)).toBe('224clubhouse')
+  })
+
+  it('NEGATIVE: a public signup naming an unknown tenant is refused and no account is created', async () => {
+    const { result } = await signUp('tstamp-nope', { tenant: 'nope' })
+    expect(result.error).not.toBeNull()
+    expect(result.data?.user ?? null).toBeNull()
+    expect(await findUserIdByEmail(admin, testEmail('tstamp-nope'))).toBeNull()
+  })
+
+  it('a vitest-b signup with a date of birth 19 years ago gets a vitest-b profile (min age 18)', async () => {
+    const dob = yearsAgoIso(19)
+    const { result } = await signUp('tstamp-b-dob', { tenant: TEST_TENANT, date_of_birth: dob })
+    const user = mustSucceed('signup vitest-b dob', result).user
+    expect(await claimOf(user.id)).toBe(TEST_TENANT)
+    expect(await profileOf(user.id)).toEqual([{ tenant: TEST_TENANT, date_of_birth: dob }])
+  })
+
+  it('an admin-API createUser with user_metadata.tenant vitest-b gets the vitest-b claim and a vitest-b profile', async () => {
+    // GoTrue's admin create inserts the row WITHOUT the custom app_metadata
+    // (it arrives in a later UPDATE), so user_metadata is how the store
+    // reaches the INSERT triggers on this path (Ruling 15).
+    const dob = yearsAgoIso(19)
+    const res = await admin.auth.admin.createUser({
+      email: testEmail('tstamp-admin-b'), password: TEST_PASSWORD, email_confirm: true,
+      user_metadata: { tenant: TEST_TENANT, date_of_birth: dob },
+    })
+    const user = mustSucceed('admin create vitest-b', res).user
+    ids.push(user.id)
+    expect(await claimOf(user.id)).toBe(TEST_TENANT)
+    expect(await profileOf(user.id)).toEqual([{ tenant: TEST_TENANT, date_of_birth: dob }])
+  })
+
+  it('NEGATIVE: a user changing their own user_metadata.tenant does not move their store', async () => {
+    const { client, result } = await signUp('tstamp-move', { tenant: TEST_TENANT })
+    const user = mustSucceed('signup move', result).user
+    mustSucceed('edit own user_metadata', await client.auth.updateUser({ data: { tenant: '224clubhouse' } }))
+    expect(await claimOf(user.id)).toBe(TEST_TENANT)
+    mustSucceed('refresh session', await client.auth.refreshSession())
+    const { data, error } = await client.rpc('current_tenant')
+    expect(error).toBeNull()
+    expect(data).toBe(TEST_TENANT)
   })
 })
