@@ -141,6 +141,13 @@ pre-change build: 20/20 routes identical, Contact map present. No DB change. Nex
 (tenant columns + RLS), which needs `SUPABASE_SERVICE_ROLE_KEY` reachable so the 39 live
 contract tests actually run. Rollback: `firebase hosting:rollback --site 224clubhouse`.
 
+### Multi-store: must fix before a second store has an admin
+(Phase-2 final review, 2026-11-03. Harmless while 224 is the only store with admins.)
+- `product-images` / `event-images` admin upload/delete is cross-store until phase 4 store-prefixes the object paths.
+- Child rows can point at another store's parent (e.g. a store-B `product_variants` row on a 224 product id): add composite FKs or check triggers before phase 5.
+- `supabase/functions/telegram-connect` calls `store_telegram_token`/`set_telegram_chat` as the service role with no `x-tenant`, so a store-B admin would overwrite 224's Telegram token/chat: phase 3 must forward the tenant.
+- A service-role `auth.admin.createUser` that passes any `app_metadata` must include `tenant` (GoTrue replaces the stamp): phase 3/5 callers `admin-create-driver`, `scripts/provision-admin.mjs`.
+
 ## 8. Resolved
 
 - **2026-10-07 — Supabase outstanding invoices** (was §1.1 ⚠️): paid by the owner.

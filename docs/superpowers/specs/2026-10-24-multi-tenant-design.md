@@ -558,8 +558,11 @@ Builder rulings made while planning phase 2. Each one keeps 224 unchanged.
   and brand JSON go in `store_settings` later, as per §4.
 - **Storage folder scoping (`<slug>/` uploads) moves to phase 4**, together
   with the frontend change that uploads there. Phase 2 storage changes:
-  `is_admin()` becomes tenant-aware (so it scopes uploads by itself), and
-  `payment-proofs` gets the `orders.tenant` check.
+  `is_admin()` becomes tenant-aware, and `payment-proofs` gets the
+  `orders.tenant` check. `is_admin()` does NOT scope image uploads: it only
+  proves the caller is an admin of the caller's own store, and image object
+  paths are not store-prefixed, so any store's admin can still upload or
+  delete any product/event image until phase 4 (see the list below).
 - **Telegram vault secret name:** `telegram_bot_token` stays as 224's
   name. Other tenants use `telegram_bot_token__<slug>`, resolved by one
   helper function.
@@ -577,3 +580,17 @@ Builder rulings made while planning phase 2. Each one keeps 224 unchanged.
   `default_tenant()`, never the `x-tenant` header; an empty claim counts as
   absent. The header applies only when `auth.uid()` is null (anon and the
   service role). This amends §5.1.
+- **Must fix before a second store has an admin** (found in the phase-2
+  final review; also tracked in `OPEN_ITEMS.md` §7a):
+  - `product-images` / `event-images` admin upload and delete are
+    cross-store until phase 4 store-prefixes the object paths.
+  - A child row can point at another store's parent (e.g. a store-B
+    `product_variants` row on a 224 product id). Add composite FKs or check
+    triggers before phase 5.
+  - `supabase/functions/telegram-connect` calls `store_telegram_token` /
+    `set_telegram_chat` as the service role with no `x-tenant`, so a store-B
+    admin would overwrite 224's Telegram token and chat. Phase 3 must forward
+    the tenant.
+  - A service-role `auth.admin.createUser` that passes any `app_metadata`
+    must include `tenant` in it (GoTrue replaces the stamp). Applies to the
+    phase 3/5 callers `admin-create-driver` and `scripts/provision-admin.mjs`.

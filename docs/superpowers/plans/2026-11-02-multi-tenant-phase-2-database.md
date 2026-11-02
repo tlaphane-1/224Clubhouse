@@ -342,10 +342,12 @@ Do not start without an explicit "go" from the owner in chat.
 - [ ] **Step 1:** Prerequisites:
   - The owner has added `SUPABASE_SERVICE_ROLE_KEY` to `.env.local`. Check with `npx vitest run src/__tests__/api.contract.test.js`: it must run, not skip.
   - The account gate from CLAUDE.md passes: `gh auth status`, `firebase login:list`, `supabase projects list`.
+  - Use the working CLI `C:/Users/azgcl/bin/supabase.exe.old-2.98.2` for every supabase command (the PATH shim is broken).
 - [ ] **Step 2:** Backup:
   - Run `supabase db dump --linked -f <outside repo>/pre-phase2-schema.sql`.
   - The owner confirms whether the project has daily backups (Dashboard → Database → Backups). If not, also take a data dump (`--data-only`), stored outside the repo. It contains personal data: delete it after phase 6.
-- [ ] **Step 3:** Run `supabase migration list --linked` (shows 7 pending), then `supabase db push`.
-- [ ] **Step 4:** Run `npm run predeploy`, now including the tenancy suite and audit, against production. Expected: all PASS, none skipped.
+  - Read production row counts read-only (`select relname, n_live_tup from pg_stat_user_tables where schemaname='public' order by 2 desc`) and record them. If `site_events` is large, decide whether to split it out of `20261102120000` before pushing (that file locks and scans every table in one transaction).
+- [ ] **Step 3:** Run `supabase migration list --linked` (shows 7 pending), then `supabase db push`. `20261102120000` and `20261102130000` each print "WARNING: SET LOCAL can only be used in transaction blocks"; that is expected (the lock_timeout still applies). If a migration fails on lock_timeout (55P03), wait and re-run `db push`: it resumes from the failed file.
+- [ ] **Step 4:** Run `npm run predeploy`, now including the tenancy suite and audit, against production. Expected: all PASS, none skipped except the tenancy public-signUp block, which is local-only by design (it would email confirmations from production).
 - [ ] **Step 5:** Live smoke: run `node scripts/compare-rendered.mjs` against the stage 1 baseline and 224clubhouse.store (expect 20/20). The owner places one real order on their phone; it must show `224-…`.
-- [ ] **Step 6:** Rollback note: migrations are additive, so the live frontend needs no rollback. If an RPC misbehaves, a follow-up migration restores that function's previous body from the inventory file:line. Record the outcome in `OPEN_ITEMS.md` §7a.
+- [ ] **Step 6:** Rollback: follow `docs/superpowers/plans/2026-11-02-phase-2-rollback.md` (levers rehearsed locally). Migrations are additive, so the live frontend needs no rollback. Record the outcome in `OPEN_ITEMS.md` §7a.
