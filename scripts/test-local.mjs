@@ -119,13 +119,17 @@ const vitestBin = resolve(ROOT, 'node_modules/vitest/vitest.mjs')
 // signed URLs). NODE_TLS_REJECT_UNAUTHORIZED=0 covers that self-signed local
 // cert only: it is set here, after localEnv() has confirmed the API host is
 // 127.0.0.1/localhost, and only in the child's env, never for any other run.
+// SUPABASE_LOCAL_STACK=1 tells suites they are on this throwaway stack, so
+// tests that only make sense locally (public signUp with email confirmation
+// off, which on production would mail a real confirmation) can run here and
+// skip everywhere else.
 const run = spawnSync(
   process.execPath,
   [vitestBin, 'run', ...expandGlobs(process.argv.slice(2))],
   {
     cwd: ROOT,
     stdio: 'inherit',
-    env: { ...process.env, ...env, NODE_TLS_REJECT_UNAUTHORIZED: '0' },
+    env: { ...process.env, ...env, NODE_TLS_REJECT_UNAUTHORIZED: '0', SUPABASE_LOCAL_STACK: '1' },
   },
 )
 process.exit(run.status ?? 1)

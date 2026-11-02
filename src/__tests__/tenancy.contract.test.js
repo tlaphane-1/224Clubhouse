@@ -21,13 +21,26 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import {
-  KEYS_MISSING, anonClient, serviceClient, testSlug, createTestUser,
+  anonClient, serviceClient, testSlug, createTestUser,
   signInAs, deleteTestUsers, mustSucceed,
   probeMigration, describeGate, ensureTestTenant, tenantClient,
   createTenantUser, signInClient, TEST_TENANT, TEST_PASSWORD, testCode, testEmail,
   URL, SERVICE, liveClientOptions, giveTenantProfile, yearsAgoIso,
-  RUN_TAG, testEventTitle, findUserIdByEmail,
+  RUN_TAG, testEventTitle, findUserIdByEmail, grantPendingMembership,
 } from './helpers/liveFixtures.js'
+
+// Every block below is gated on a migration probe, so a deploy that runs this
+// file before the phase-2 DB push skips it rather than failing. Task 2's block
+// uses the tenancy_core probe: 20261102110000 ships in the same push as the
+// drop (20261102100000) and lands after it.
+const coreGate = await probeMigration({
+  migration: '20261102110000_tenancy_core',
+  label: 'tenancy_applied()',
+  probe: () => anonClient().rpc('tenancy_applied'),
+})
+const CORE_SKIP = !coreGate.applied
+
+describeGate('Tenancy core contract', coreGate)
 
 // ---------------------------------------------------------------------------
 // Task 2 — decrement_stock is gone
@@ -40,11 +53,11 @@ import {
 // PostgREST answers PGRST202 ("could not find the function in the schema
 // cache") and no stock moves.
 // ---------------------------------------------------------------------------
-describe.skipIf(KEYS_MISSING)('Tenancy contract — decrement_stock is gone', () => {
+describe.skipIf(CORE_SKIP)('Tenancy contract — decrement_stock is gone', () => {
   const START_STOCK = 5
   const PRODUCT_SLUG = testSlug('tenancy-decrement')
-  const admin = KEYS_MISSING ? null : serviceClient()
-  const userClient = KEYS_MISSING ? null : anonClient()
+  const admin = CORE_SKIP ? null : serviceClient()
+  const userClient = CORE_SKIP ? null : anonClient()
   let productId = null
   let userId = null
 
@@ -101,15 +114,6 @@ describe.skipIf(KEYS_MISSING)('Tenancy contract — decrement_stock is gone', ()
 // keeps working unchanged. The tenants table is world-readable and has no write
 // policy: only the service role writes.
 // ---------------------------------------------------------------------------
-const coreGate = await probeMigration({
-  migration: '20261102110000_tenancy_core',
-  label: 'tenancy_applied()',
-  probe: () => anonClient().rpc('tenancy_applied'),
-})
-const CORE_SKIP = !coreGate.applied
-
-describeGate('Tenancy core contract', coreGate)
-
 describe.skipIf(CORE_SKIP)('Tenancy contract — tenancy core', () => {
   const admin = CORE_SKIP ? null : serviceClient()
   let userId = null
@@ -473,6 +477,7 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — tables'
     }
     const emails = users.map((x) => x.email)
     if (emails.length) await admin.from('orders').delete().in('customer_email', emails)
+    if (emails.length) await admin.from('memberships').delete().in('email', emails)
     await admin.from('products').delete().like('slug', `${SLUG}%`)
     await admin.from('contact_messages').delete().eq('email', CONTACT_EMAIL)
     await admin.from('newsletter_subscribers').delete().eq('email', NEWS_EMAIL)
@@ -598,6 +603,30 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — tables'
     expect(own.error).toBeNull()
     const other = await c.admin224.storage.from('payment-proofs').createSignedUrl(proof.custB, 60)
     expect(other.error).not.toBeNull()
+  })
+
+  // Last in this block: it moves the 224 product's stock, which the negative
+  // control above asserts is unchanged.
+  it('a 224 user with no tenant claim (old session) can still check out and gets a 224- order (Review Focus 1)', async () => {
+    expect((await jwtPayload(c.old)).app_metadata?.tenant ?? null).toBeNull()
+    // u.old already has order.old, and a second order needs a membership
+    // application (20261001120000). Pending: active would change the fees.
+    await grantPendingMembership(admin, u.old)
+    const res = await c.old.rpc('place_cod_order', {
+      p_customer: {
+        name: 'Vitest Tenancy old', email: u.old.email, phone: '0000000000', street: '1 Test St',
+        apartment: '', city: 'Boksburg', province: 'Gauteng', postalCode: '1459',
+      },
+      p_items: [{ id: product['224clubhouse'], quantity: 1 }],
+      p_payment_method: 'cash_on_delivery',
+    })
+    expect(res.error).toBeNull()
+    expect(res.data.order_number).toMatch(/^224-/)
+    // Removed in afterAll with the other orders (place_cod_order stamps the
+    // account email).
+    const { data: row } = await admin.from('orders').select('tenant, user_id, customer_email')
+      .eq('id', res.data.id).single()
+    expect(row).toEqual({ tenant: '224clubhouse', user_id: u.old.id, customer_email: u.old.email })
   })
 })
 
@@ -799,7 +828,6 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — members
   const DOB_AGE_224 = 'Age check: you must be 21 or older to order'
   const B_DAILY_PRICE = 4321
   const B_DAILY_DAYS = 3
-  const CHAT_224 = -1000000000000 - Math.floor(Math.random() * 1e9)
   const NEWS_EMAIL = testEmail('tmem-news')
   const CREATED_EMAIL_224 = testEmail('tmem-created224')
   const CREATED_EMAIL_B = testEmail('tmem-createdb')
@@ -831,7 +859,9 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — members
   const tier = {} // tenant -> { id, price_cents } of its daily tier
   const event = {} // tenant -> event id
   const state = {} // ids created by earlier tests
-  let original224Alerts = null
+  // 224's alert_settings row exactly as found. Read only, never written: on
+  // production it is the owner's live Telegram config.
+  let alerts224 = null
 
   const dropBDailyTier = async () => {
     const { data } = await admin.from('membership_tiers').select('id')
@@ -877,13 +907,9 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — members
     mustSucceed('admin b', await admin.from('admin_users')
       .insert({ id: u.adminB.id, email: u.adminB.email, tenant: TEST_TENANT }))
 
-    // 224 gets a recognisable chat id for the alert tests; restored in afterAll.
-    original224Alerts = mustSucceed('read 224 alerts', await admin.from('alert_settings')
+    alerts224 = mustSucceed('read 224 alerts', await admin.from('alert_settings')
       .select('telegram_chat_id, telegram_chat_title, telegram_enabled, telegram_kinds')
       .eq('tenant', '224clubhouse').single())
-    mustSucceed('mark 224 alerts', await admin.from('alert_settings')
-      .update({ telegram_chat_id: CHAT_224, telegram_chat_title: 'Vitest 224 group' })
-      .eq('tenant', '224clubhouse'))
 
     for (const label of Object.keys(u)) {
       c[label] = await signInClient(u[label].email, TEST_PASSWORD)
@@ -892,9 +918,6 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — members
 
   afterAll(async () => {
     if (!admin) return
-    if (original224Alerts) {
-      await admin.from('alert_settings').update(original224Alerts).eq('tenant', '224clubhouse')
-    }
     await admin.from('alert_settings').delete().eq('tenant', TEST_TENANT)
     const emails = [...Object.values(u).map((x) => x.email), CREATED_EMAIL_224, CREATED_EMAIL_B]
     await admin.from('memberships').delete().in('email', emails)
@@ -991,7 +1014,12 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — members
   it('admin_get_alert_settings: 224\'s admin gets 224\'s settings; vitest-b\'s admin gets the defaults, never 224\'s chat', async () => {
     const own = await c.admin224.rpc('admin_get_alert_settings')
     expect(own.error).toBeNull()
-    expect(own.data).toMatchObject({ chat_id: CHAT_224, chat_title: 'Vitest 224 group' })
+    expect(own.data).toMatchObject({
+      chat_id: alerts224.telegram_chat_id,
+      chat_title: alerts224.telegram_chat_title,
+      enabled: alerts224.telegram_enabled,
+      kinds: alerts224.telegram_kinds,
+    })
 
     const b = await c.adminB.rpc('admin_get_alert_settings')
     expect(b.error).toBeNull()
@@ -1026,7 +1054,12 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — members
     // No header: exactly what 224's Edge Functions send today.
     const cfg224 = await admin.rpc('telegram_config')
     expect(cfg224.error).toBeNull()
-    expect(cfg224.data.chat_id).toBe(CHAT_224)
+    // vitest-b's set_telegram_chat above left 224's chat exactly as found.
+    expect(cfg224.data).toMatchObject({
+      chat_id: alerts224.telegram_chat_id,
+      enabled: alerts224.telegram_enabled,
+      kinds: alerts224.telegram_kinds,
+    })
   })
 
   it('site_analytics and admin_daily_summary count only the caller\'s store (one track_event per tenant)', async () => {
@@ -1151,24 +1184,39 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — members
 // row is refused, so the account is not created. Nothing re-stamps on UPDATE:
 // a user editing their own user_metadata.tenant later moves nothing.
 //
-// Public signups here need no email confirmation (local enable_confirmations
-// is false), so signUp returns a session straight away.
+// The public-signUp block runs ONLY on the local stack (scripts/test-local.mjs
+// sets SUPABASE_LOCAL_STACK=1). Locally enable_confirmations is false, so
+// signUp returns a session straight away. On production confirmation is on:
+// signUp returns no session (the tests could not pass) and GoTrue would email a
+// confirmation link to every vitest+…@example.com address. The admin-API block
+// sends no mail (email_confirm: true) and runs everywhere.
 // ---------------------------------------------------------------------------
-describe.skipIf(CORE_SKIP)('Tenancy contract — signup tenant stamp', () => {
-  const admin = CORE_SKIP ? null : serviceClient()
-  const ids = []
+const LOCAL_STACK = Boolean(process.env.SUPABASE_LOCAL_STACK)
+const LOCAL_ONLY_REASON =
+  'local stack only: needs enable_confirmations=false, and on production a public signUp would email a confirmation'
 
-  const claimOf = async (id) => {
+const stampReaders = (admin) => ({
+  claimOf: async (id) => {
     const { data, error } = await admin.auth.admin.getUserById(id)
     expect(error).toBeNull()
     return data.user.app_metadata?.tenant
-  }
-  const profileOf = async (id) => {
+  },
+  profileOf: async (id) => {
     const { data, error } = await admin.from('customer_profiles')
       .select('tenant, date_of_birth').eq('user_id', id)
     expect(error).toBeNull()
     return data
-  }
+  },
+})
+
+describe.skipIf(CORE_SKIP || LOCAL_STACK)(`Tenancy contract — signup tenant stamp (public signUp) skipped (${LOCAL_ONLY_REASON})`, () => {
+  it('reminds devs why the public-signUp block did not run', () => {})
+})
+
+describe.skipIf(CORE_SKIP || !LOCAL_STACK)(`Tenancy contract — signup tenant stamp (public signUp; ${LOCAL_ONLY_REASON})`, () => {
+  const admin = CORE_SKIP || !LOCAL_STACK ? null : serviceClient()
+  const ids = []
+  const { claimOf, profileOf } = admin ? stampReaders(admin) : {}
   // Public signup, as the storefront does it. Never retried: a signup is a
   // write, and GoTrue reports the trigger's refusal as a 500.
   const signUp = async (label, data) => {
@@ -1231,6 +1279,32 @@ describe.skipIf(CORE_SKIP)('Tenancy contract — signup tenant stamp', () => {
     expect(await profileOf(user.id)).toEqual([{ tenant: TEST_TENANT, date_of_birth: dob }])
   })
 
+  it('NEGATIVE: a user changing their own user_metadata.tenant does not move their store', async () => {
+    const { client, result } = await signUp('tstamp-move', { tenant: TEST_TENANT })
+    const user = mustSucceed('signup move', result).user
+    mustSucceed('edit own user_metadata', await client.auth.updateUser({ data: { tenant: '224clubhouse' } }))
+    expect(await claimOf(user.id)).toBe(TEST_TENANT)
+    mustSucceed('refresh session', await client.auth.refreshSession())
+    const { data, error } = await client.rpc('current_tenant')
+    expect(error).toBeNull()
+    expect(data).toBe(TEST_TENANT)
+  })
+})
+
+describe.skipIf(CORE_SKIP)('Tenancy contract — signup tenant stamp (admin API)', () => {
+  const admin = CORE_SKIP ? null : serviceClient()
+  const ids = []
+  const { claimOf, profileOf } = admin ? stampReaders(admin) : {}
+
+  beforeAll(async () => {
+    await ensureTestTenant(admin)
+  })
+
+  afterAll(async () => {
+    if (!admin) return
+    await deleteTestUsers(admin, ...ids)
+  })
+
   it('an admin-API createUser with user_metadata.tenant vitest-b gets the vitest-b claim and a vitest-b profile', async () => {
     // GoTrue's admin create inserts the row WITHOUT the custom app_metadata
     // (it arrives in a later UPDATE), so user_metadata is how the store
@@ -1244,16 +1318,5 @@ describe.skipIf(CORE_SKIP)('Tenancy contract — signup tenant stamp', () => {
     ids.push(user.id)
     expect(await claimOf(user.id)).toBe(TEST_TENANT)
     expect(await profileOf(user.id)).toEqual([{ tenant: TEST_TENANT, date_of_birth: dob }])
-  })
-
-  it('NEGATIVE: a user changing their own user_metadata.tenant does not move their store', async () => {
-    const { client, result } = await signUp('tstamp-move', { tenant: TEST_TENANT })
-    const user = mustSucceed('signup move', result).user
-    mustSucceed('edit own user_metadata', await client.auth.updateUser({ data: { tenant: '224clubhouse' } }))
-    expect(await claimOf(user.id)).toBe(TEST_TENANT)
-    mustSucceed('refresh session', await client.auth.refreshSession())
-    const { data, error } = await client.rpc('current_tenant')
-    expect(error).toBeNull()
-    expect(data).toBe(TEST_TENANT)
   })
 })

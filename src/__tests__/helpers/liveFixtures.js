@@ -125,7 +125,12 @@ export const testCode = (label) => `${CODE_PREFIX}${label}-${RUN_TAG}`.toUpperCa
 const READ_TIMEOUT_MS = 8000
 const WRITE_TIMEOUT_MS = 90000
 const READ_ATTEMPTS = 3
-const READ_ONLY_RPCS = new Set(['get_order_tracking', 'discount_newsletter_fixes_applied'])
+const READ_ONLY_RPCS = new Set([
+  'get_order_tracking', 'discount_newsletter_fixes_applied',
+  // Phase-2 tenancy helpers, all STABLE/IMMUTABLE (20261102110000, 20261102130000).
+  'current_tenant', 'default_tenant', 'tenant_min_age', 'tenant_order_prefix',
+  'tenancy_applied', 'is_admin',
+])
 const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'PUT', 'PATCH', 'DELETE'])
 
 const safeToRepeat = (url, method) => {
