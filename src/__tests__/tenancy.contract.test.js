@@ -18,11 +18,13 @@
  *   npm run test:local -- src/__tests__/tenancy.contract.test.js
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { createClient } from '@supabase/supabase-js'
 import {
   KEYS_MISSING, anonClient, serviceClient, testSlug, createTestUser,
   signInAs, deleteTestUsers, mustSucceed,
   probeMigration, describeGate, ensureTestTenant, tenantClient,
   createTenantUser, signInClient, TEST_TENANT, TEST_PASSWORD,
+  URL, SERVICE, liveClientOptions,
 } from './helpers/liveFixtures.js'
 
 // ---------------------------------------------------------------------------
@@ -110,9 +112,15 @@ describe.skipIf(CORE_SKIP)('Tenancy contract — tenancy core', () => {
   const admin = CORE_SKIP ? null : serviceClient()
   let userId = null
   let userEmail = null
+  let plainUserId = null
+  let plainUserEmail = null
 
   beforeAll(async () => {
     await ensureTestTenant(admin)
+    // No app_metadata.tenant: stands in for every pre-backfill 224 account.
+    const plain = await createTestUser(admin, 'tenancy-core-plain')
+    plainUserId = plain.id
+    plainUserEmail = plain.email
     const user = await createTenantUser(admin, 'tenancy-core', TEST_TENANT)
     userId = user.id
     userEmail = user.email
@@ -120,7 +128,7 @@ describe.skipIf(CORE_SKIP)('Tenancy contract — tenancy core', () => {
 
   afterAll(async () => {
     if (!admin) return
-    await deleteTestUsers(admin, userId)
+    await deleteTestUsers(admin, userId, plainUserId)
   })
 
   it('anon with no header resolves to the default tenant', async () => {
@@ -138,6 +146,23 @@ describe.skipIf(CORE_SKIP)('Tenancy contract — tenancy core', () => {
   it('a signed-in user JWT claim beats a conflicting x-tenant header', async () => {
     const client = await signInClient(userEmail, TEST_PASSWORD, { tenant: '224clubhouse' })
     const { data, error } = await client.rpc('current_tenant')
+    expect(error).toBeNull()
+    expect(data).toBe(TEST_TENANT)
+  })
+
+  it('a signed-in user with NO tenant claim ignores a forged x-tenant header', async () => {
+    const client = await signInClient(plainUserEmail, TEST_PASSWORD, { tenant: TEST_TENANT })
+    const { data, error } = await client.rpc('current_tenant')
+    expect(error).toBeNull()
+    expect(data).toBe('224clubhouse')
+  })
+
+  it('the service role (no auth.uid()) still follows the x-tenant header', async () => {
+    const svc = createClient(URL, SERVICE, {
+      ...liveClientOptions,
+      global: { ...liveClientOptions.global, headers: { 'x-tenant': TEST_TENANT } },
+    })
+    const { data, error } = await svc.rpc('current_tenant')
     expect(error).toBeNull()
     expect(data).toBe(TEST_TENANT)
   })

@@ -34,11 +34,15 @@ stable
 set search_path = public
 as $$ select '224clubhouse'::text $$;
 
--- Signed-in users: the JWT claim is authoritative and cannot be overridden by
--- a header. Anonymous: the x-tenant header picks the store (anon can only read
--- public data, so a forged header reveals nothing private). Otherwise 224.
--- request.headers is unset/empty outside PostgREST (psql, cron, triggers), and
--- ''::json is an error, so it is nullif'd before the cast.
+-- A signed-in user's tenant comes ONLY from the JWT claim. Without a claim
+-- (every pre-backfill 224 account, or any token issued before the claim was
+-- stamped) they are 224's, never whatever x-tenant says: otherwise a forged
+-- header would move an existing 224 customer into another store. An empty
+-- claim counts as absent. The header applies only when there is no auth.uid(),
+-- i.e. anon and the service role (anon can only read public data, so a forged
+-- header reveals nothing private). request.headers is unset/empty outside
+-- PostgREST (psql, cron, triggers) and ''::json is an error, so it is
+-- nullif'd before the cast.
 create or replace function public.current_tenant()
 returns text
 language sql
@@ -46,8 +50,10 @@ stable
 set search_path = public
 as $$
   select coalesce(
-    auth.jwt() -> 'app_metadata' ->> 'tenant',
-    nullif(nullif(current_setting('request.headers', true), '')::json ->> 'x-tenant', ''),
+    nullif(auth.jwt() -> 'app_metadata' ->> 'tenant', ''),
+    case when auth.uid() is null then
+      nullif(nullif(current_setting('request.headers', true), '')::json ->> 'x-tenant', '')
+    end,
     public.default_tenant()
   )
 $$;

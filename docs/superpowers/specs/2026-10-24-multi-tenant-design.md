@@ -572,3 +572,8 @@ Builder rulings made while planning phase 2. Each one keeps 224 unchanged.
 - **Security fix carried in phase 2:** `decrement_stock` (unused,
   SECURITY DEFINER) is still executable by every signed-in user. It is
   dropped.
+- **`current_tenant()` ignores the header for signed-in users.** A
+  signed-in user's tenant comes only from the JWT claim; without one it is
+  `default_tenant()`, never the `x-tenant` header; an empty claim counts as
+  absent. The header applies only when `auth.uid()` is null (anon and the
+  service role). This amends §5.1.
