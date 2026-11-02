@@ -461,9 +461,33 @@ export const tenantClient = (slug) =>
   })
 
 /**
+ * Write a user's customer_profiles row with an explicit tenant. Since
+ * 20261102140000 place_cod_order reads only the CURRENT store's profile, so a
+ * vitest-b user needs a vitest-b row; giveAdultProfile leaves the column to its
+ * default (224clubhouse for the service role) and stays that way for the 224
+ * suites. The service role bypasses RLS, so any date of birth can be written
+ * (set_date_of_birth would refuse an under-age one).
+ */
+export async function giveTenantProfile(admin, userId, tenant, dateOfBirth = '1990-01-01') {
+  mustSucceed(`profile for ${userId} in ${tenant}`, await withRetry(`profile ${userId}`, () =>
+    admin.from('customer_profiles').upsert(
+      { user_id: userId, date_of_birth: dateOfBirth, tenant },
+      { onConflict: 'user_id' },
+    ),
+  ))
+}
+
+/** ISO date (YYYY-MM-DD) exactly `n` years before today, in UTC. */
+export const yearsAgoIso = (n) => {
+  const d = new Date()
+  d.setUTCFullYear(d.getUTCFullYear() - n)
+  return d.toISOString().slice(0, 10)
+}
+
+/**
  * Like createTestUser, but the account's `app_metadata.tenant` is set, so the
  * JWT it signs in with carries the claim `current_tenant()` trusts over any
- * header. Gets the same adult profile as createTestUser.
+ * header. Gets an adult profile in that same tenant (giveTenantProfile).
  */
 export async function createTenantUser(admin, label, tenant) {
   const email = testEmail(label)
@@ -482,12 +506,12 @@ export async function createTenantUser(admin, label, tenant) {
     // RUN_TAG address means the first attempt landed and only its reply was lost.
     const id = await findUserIdByEmail(admin, email)
     if (id) {
-      await giveAdultProfile(admin, id)
+      await giveTenantProfile(admin, id, tenant)
       return { id, email }
     }
   }
   const data = mustSucceed(`create tenant account ${email}`, result)
-  await giveAdultProfile(admin, data.user.id)
+  await giveTenantProfile(admin, data.user.id, tenant)
   return { id: data.user.id, email }
 }
 

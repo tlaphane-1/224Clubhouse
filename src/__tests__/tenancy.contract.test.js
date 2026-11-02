@@ -24,7 +24,7 @@ import {
   signInAs, deleteTestUsers, mustSucceed,
   probeMigration, describeGate, ensureTestTenant, tenantClient,
   createTenantUser, signInClient, TEST_TENANT, TEST_PASSWORD, testCode, testEmail,
-  URL, SERVICE, liveClientOptions,
+  URL, SERVICE, liveClientOptions, giveTenantProfile, yearsAgoIso,
 } from './helpers/liveFixtures.js'
 
 // ---------------------------------------------------------------------------
@@ -358,9 +358,8 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant columns', () => {
 //
 // Every user here except the "old session" one carries an app_metadata.tenant
 // claim. Admin and driver rows are written by the service role with an
-// explicit tenant. The admin_users insert trigger (admin_becomes_driver) still
-// stamps its drivers row with the default tenant until Task 6, so setup moves
-// that row to the admin's tenant by hand.
+// explicit tenant. The admin_users insert trigger (admin_becomes_driver) gives
+// each admin a drivers row in the admin_users row's tenant (Task 6).
 // ---------------------------------------------------------------------------
 const jwtPayload = async (client) => {
   const { data } = await client.auth.getSession()
@@ -400,11 +399,11 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — tables'
     return row.id
   }
 
+  // The admin_becomes_driver trigger stamps the drivers row with the
+  // admin_users row's tenant (20261102140000), so no hand correction is needed.
   const makeAdmin = async (user, tenant) => {
     mustSucceed(`grant admin ${user.email}`, await admin.from('admin_users')
       .insert({ id: user.id, email: user.email, tenant }))
-    mustSucceed(`driver tenant ${user.email}`, await admin.from('drivers')
-      .update({ tenant }).eq('user_id', user.id))
   }
 
   beforeAll(async () => {
@@ -589,5 +588,180 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — tables'
     expect(own.error).toBeNull()
     const other = await c.admin224.storage.from('payment-proofs').createSignedUrl(proof.custB, 60)
     expect(other.error).not.toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Task 6 — tenant-scoped order, discount, review and driver RPCs
+//
+// 20261102140000_tenant_rpcs_orders scopes the SECURITY DEFINER RPCs that
+// bypass RLS. place_cod_order reads only the current store's products, profile,
+// memberships and discount codes, prefixes the order number with
+// tenant_order_prefix() and checks tenant_min_age(). Tracking and admin RPCs
+// treat another store's order exactly like a missing one.
+// ---------------------------------------------------------------------------
+describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — orders and discounts', () => {
+  const admin = COLUMNS_SKIP ? null : serviceClient()
+  const SLUG = testSlug('trpc')
+  const CODE = testCode('same')
+  // The exact text 224 customers see today (20261008120000). Must not change.
+  const AGE_MESSAGE_224 = 'Age check: please confirm your date of birth before ordering'
+
+  const u = {} // label -> { id, email }
+  const c = {} // label -> signed-in client
+  const product = {} // tenant -> product id
+  const placed = {} // label -> { id, order_number }
+
+  const payload = (user, productId, extra = {}) => ({
+    p_customer: {
+      name: 'Vitest Tenancy', email: user.email, phone: '0000000000', street: '1 Test St',
+      apartment: '', city: 'Boksburg', province: 'Gauteng', postalCode: '1459',
+    },
+    p_items: [{ id: productId, quantity: 1 }],
+    p_payment_method: 'cash_on_delivery',
+    ...extra,
+  })
+
+  beforeAll(async () => {
+    await ensureTestTenant(admin)
+
+    for (const [tenant, slug] of [['224clubhouse', `${SLUG}-224`], [TEST_TENANT, `${SLUG}-b`]]) {
+      product[tenant] = mustSucceed(`product ${tenant}`, await admin.from('products').insert({
+        name: `Vitest Tenancy ${slug}`, slug, price: 10000, category: 'accessories',
+        stock_quantity: 10, is_available: true, tenant,
+      }).select('id').single()).id
+    }
+
+    // Same code in both stores, different values (Review Focus 4).
+    mustSucceed('code 224', await admin.from('discount_codes')
+      .insert({ code: CODE, kind: 'percent', value: 5, tenant: '224clubhouse' }))
+    mustSucceed('code b', await admin.from('discount_codes')
+      .insert({ code: CODE, kind: 'percent', value: 15, tenant: TEST_TENANT }))
+
+    u.cust224 = await createTenantUser(admin, 'trpc-cust224', '224clubhouse')
+    u.custB = await createTenantUser(admin, 'trpc-custb', TEST_TENANT)
+    u.crossB = await createTenantUser(admin, 'trpc-crossb', TEST_TENANT)
+    u.young224 = await createTenantUser(admin, 'trpc-young224', '224clubhouse')
+    u.youngB = await createTenantUser(admin, 'trpc-youngb', TEST_TENANT)
+    u.admin224 = await createTenantUser(admin, 'trpc-admin224', '224clubhouse')
+    u.adminB = await createTenantUser(admin, 'trpc-adminb', TEST_TENANT)
+    // 19 today: old enough for vitest-b (18), too young for 224 (21).
+    await giveTenantProfile(admin, u.young224.id, '224clubhouse', yearsAgoIso(19))
+    await giveTenantProfile(admin, u.youngB.id, TEST_TENANT, yearsAgoIso(19))
+
+    mustSucceed('admin 224', await admin.from('admin_users')
+      .insert({ id: u.admin224.id, email: u.admin224.email, tenant: '224clubhouse' }))
+    mustSucceed('admin b', await admin.from('admin_users')
+      .insert({ id: u.adminB.id, email: u.adminB.email, tenant: TEST_TENANT }))
+
+    for (const label of Object.keys(u)) {
+      c[label] = await signInClient(u[label].email, TEST_PASSWORD)
+    }
+  })
+
+  afterAll(async () => {
+    if (!admin) return
+    const emails = Object.values(u).map((x) => x.email)
+    if (emails.length) await admin.from('orders').delete().in('customer_email', emails)
+    await admin.from('products').delete().like('slug', `${SLUG}%`)
+    await admin.from('discount_codes').delete().eq('code', CODE)
+    // Cascades to customer_profiles, admin_users and drivers.
+    await deleteTestUsers(admin, ...Object.values(u).map((x) => x.id))
+  })
+
+  const ordersOf = async (user) => {
+    const { data, error } = await admin.from('orders')
+      .select('id, order_number, tenant, status').eq('user_id', user.id)
+    expect(error).toBeNull()
+    return data ?? []
+  }
+
+  it('a vitest-b customer gets a VTB- order in vitest-b; a 224 customer still gets 224-', async () => {
+    const b = await c.custB.rpc('place_cod_order', payload(u.custB, product[TEST_TENANT]))
+    expect(b.error).toBeNull()
+    expect(b.data.order_number).toMatch(/^VTB-/)
+    placed.custB = b.data
+
+    const own = await c.cust224.rpc('place_cod_order', payload(u.cust224, product['224clubhouse']))
+    expect(own.error).toBeNull()
+    expect(own.data.order_number).toMatch(/^224-/)
+    placed.cust224 = own.data
+
+    const rows = await ordersOf(u.custB)
+    expect(rows.map((r) => r.tenant)).toEqual([TEST_TENANT])
+    expect((await ordersOf(u.cust224)).map((r) => r.tenant)).toEqual(['224clubhouse'])
+  })
+
+  it('NEGATIVE: a vitest-b customer ordering a 224 product id gets "Product not found" and no order row', async () => {
+    const res = await c.crossB.rpc('place_cod_order', payload(u.crossB, product['224clubhouse']))
+    expect(res.data).toBeNull()
+    expect(res.error?.message).toBe('Product not found')
+    expect(await ordersOf(u.crossB)).toEqual([])
+    const { data: row } = await admin.from('products').select('stock_quantity')
+      .eq('id', product['224clubhouse']).single()
+    // Only the 224 customer's own order moved 224 stock.
+    expect(row.stock_quantity).toBe(9)
+  })
+
+  it('get_order_tracking: the vitest-b order is invisible to 224 anon and visible to vitest-b anon', async () => {
+    const args = { p_order_number: placed.custB.order_number, p_email: u.custB.email }
+    const from224 = await anonClient().rpc('get_order_tracking', args)
+    expect(from224.error).toBeNull()
+    expect(from224.data ?? null).toBeNull()
+
+    const fromB = await tenantClient(TEST_TENANT).rpc('get_order_tracking', args)
+    expect(fromB.error).toBeNull()
+    expect(fromB.data?.order_number).toBe(placed.custB.order_number)
+  })
+
+  it('the same code in two stores: each customer gets their own store\'s value (Review Focus 4)', async () => {
+    const own = await c.cust224.rpc('validate_discount_code', { p_code: CODE, p_subtotal_cents: 10000 })
+    expect(own.error).toBeNull()
+    expect(own.data).toMatchObject({ valid: true, value: 5, discount_cents: 500 })
+
+    const b = await c.custB.rpc('validate_discount_code', { p_code: CODE, p_subtotal_cents: 10000 })
+    expect(b.error).toBeNull()
+    expect(b.data).toMatchObject({ valid: true, value: 15, discount_cents: 1500 })
+  })
+
+  it('NEGATIVE: the 224 admin cannot change the vitest-b order\'s status (Order not found, row unchanged)', async () => {
+    const res = await c.admin224.rpc('admin_update_order_status', {
+      p_order_id: placed.custB.id, p_status: 'cancelled',
+    })
+    expect(res.error?.message).toBe('Order not found')
+    const { data: row } = await admin.from('orders').select('status').eq('id', placed.custB.id).single()
+    expect(row.status).toBe('pending')
+  })
+
+  it('a 19-year-old orders in vitest-b (min age 18); a 19-year-old in 224 gets 224\'s exact age message (Review Focus 5)', async () => {
+    const b = await c.youngB.rpc('place_cod_order', payload(u.youngB, product[TEST_TENANT]))
+    expect(b.error).toBeNull()
+    expect(b.data.order_number).toMatch(/^VTB-/)
+
+    const own = await c.young224.rpc('place_cod_order', payload(u.young224, product['224clubhouse']))
+    expect(own.data).toBeNull()
+    expect(own.error?.message).toBe(AGE_MESSAGE_224)
+    expect(await ordersOf(u.young224)).toEqual([])
+  })
+
+  it('NEGATIVE: a claim naming a store with no tenants row fails closed ("Unknown store", no order) (Ruling 8)', async () => {
+    // Adult 224 profile from createTestUser; only the claim points nowhere, so
+    // tenant_min_age()/tenant_order_prefix() are NULL for this session.
+    u.ghost = await createTestUser(admin, 'trpc-ghost')
+    mustSucceed('ghost claim', await admin.auth.admin
+      .updateUserById(u.ghost.id, { app_metadata: { tenant: 'no-such-store' } }))
+    const ghost = await signInClient(u.ghost.email, TEST_PASSWORD)
+    const res = await ghost.rpc('place_cod_order', payload(u.ghost, product['224clubhouse']))
+    expect(res.data).toBeNull()
+    expect(res.error?.message).toBe('Unknown store')
+    expect(await ordersOf(u.ghost)).toEqual([])
+  })
+
+  it('admin_becomes_driver stamps each admin\'s drivers row with the admin_users row\'s tenant (Ruling 11)', async () => {
+    const { data, error } = await admin.from('drivers').select('user_id, tenant')
+      .in('user_id', [u.admin224.id, u.adminB.id])
+    expect(error).toBeNull()
+    const byUser = Object.fromEntries((data ?? []).map((r) => [r.user_id, r.tenant]))
+    expect(byUser).toEqual({ [u.admin224.id]: '224clubhouse', [u.adminB.id]: TEST_TENANT })
   })
 })
