@@ -27,7 +27,8 @@
  * migration needs one):
  *   create policy NAME on [schema.]TABLE [as ..] [for CMD] [to ..] [using (..)] [with check (..)]
  *   drop policy [if exists] NAME on [schema.]TABLE
- *   create [or replace] function [schema.]NAME(args) ... [security definer] ... as $tag$ body $tag$
+ *   create [or replace] function [schema.]NAME(args) ... [security definer|invoker] ... as $tag$ body $tag$
+ *     (the attribute may also follow the body: `as $$ .. $$ language sql security definer`)
  *   drop function [if exists] [schema.]NAME[(arg types)] [, ...]
  *   create [or replace] trigger NAME ... on TABLE ... execute function FN(..)
  *   drop trigger [if exists] NAME on TABLE
@@ -341,17 +342,34 @@ function parseFunction(text) {
   const open = head[0].length - 1
   const close = closeParen(masked, open)
   const types = argTypes(text.slice(open + 1, close))
-  // Header = code between the argument list and the body; the body is the
-  // first dollar-quoted block (or a string right after `as`).
+  // Attributes (`security definer`) can sit before the body or after it
+  // (`as $$ .. $$ language sql security definer`), so scan the code outside
+  // the body, comments and literals on both sides. `header` is only the code
+  // before the body, used to recognise `as '<body>'`. If both security
+  // attributes appear the last one wins, as in Postgres.
   let header = ''
-  let body = ''
+  let attrs = ''
+  let body = null
   for (const seg of tokenize(text.slice(close + 1))) {
-    if (seg.type === 'dollar') { body = seg.inner; break }
-    if (seg.type === 'string' && /\bas\s*$/i.test(header)) { body = seg.text.slice(1, -1).replace(/''/g, "'"); break }
-    if (seg.type === 'code') header += seg.text
+    if (seg.type === 'code') {
+      attrs += seg.text
+      if (body === null) header += seg.text
+    } else if (body === null && seg.type === 'dollar') {
+      body = seg.inner
+    } else if (body === null && seg.type === 'string' && /\bas\s*$/i.test(header)) {
+      body = seg.text.slice(1, -1).replace(/''/g, "'")
+    } else {
+      attrs += ' '
+    }
   }
+  const security = [...attrs.matchAll(/\bsecurity\s+(definer|invoker)\b/gi)].pop()
   const name = normName(head[1])
-  return { name, key: fnKey(name, types), securityDefiner: /\bsecurity\s+definer\b/i.test(header), body }
+  return {
+    name,
+    key: fnKey(name, types),
+    securityDefiner: !!security && security[1].toLowerCase() === 'definer',
+    body: body ?? '',
+  }
 }
 
 function parseDropFunctions(text) {

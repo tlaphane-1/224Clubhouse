@@ -248,6 +248,28 @@ describe('audit: SECURITY DEFINER functions', () => {
     expect(run(TENANT_TABLE, sd('quiet', body)).problems).toEqual([])
   })
 
+  it('detects security definer written after the body', () => {
+    const trailing = (body, attr = 'security definer') =>
+      `create or replace function public.t() returns void as $$ ${body} $$ language plpgsql ${attr};`
+    const bad = run(TENANT_TABLE, trailing(`begin perform 1 from widgets; end;`))
+    expect(bad.problems.map(p => p.name)).toEqual(['t()'])
+    const good = run(TENANT_TABLE, trailing(`declare v_tenant text := public.current_tenant(); begin perform 1 from widgets where tenant = v_tenant; end;`))
+    expect(good.problems).toEqual([])
+  })
+
+  it('does not treat a trailing security invoker as definer; the last attribute wins', () => {
+    const fn = (attrs) =>
+      `create function public.t() returns void as $$ begin perform 1 from widgets; end; $$ language plpgsql ${attrs};`
+    expect(run(TENANT_TABLE, fn('security invoker')).problems).toEqual([])
+    expect(run(TENANT_TABLE, fn('security definer security invoker')).problems).toEqual([])
+    expect(run(TENANT_TABLE, fn('security invoker security definer')).problems).toHaveLength(1)
+  })
+
+  it('ignores security definer inside a trailing comment or string', () => {
+    const fn = `create function public.t() returns void as $$ begin perform 1 from widgets; end; $$ language plpgsql set x.y = 'security definer'; -- security definer`
+    expect(run(TENANT_TABLE, fn).problems).toEqual([])
+  })
+
   it('ignores invoker functions', () => {
     const fn = `create function inv() returns void language sql as $$ select 1 from widgets $$;`
     expect(run(TENANT_TABLE, fn).problems).toEqual([])
