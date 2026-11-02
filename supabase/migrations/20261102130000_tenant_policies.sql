@@ -17,8 +17,19 @@
 -- Tables with RLS on but no policies (site_events, customer_email_prefs,
 -- driver_locations, alert_settings) stay closed: there is nothing to scope.
 -- The tenants table is not a tenant table; tenants_public_select is untouched.
--- The product-images / event-images admin storage policies need no change:
--- they call is_admin(), which is now tenant-scoped.
+-- The product-images / event-images admin storage policies are not changed
+-- here. They call is_admin(), which now only proves the caller is an admin of
+-- the caller's own store; object paths are not store-prefixed, so any store's
+-- admin can still upload/delete any image object. Fixed in phase 4 (spec §11).
+
+-- The CLI runs this file in one transaction. Each drop/create policy needs an
+-- ACCESS EXCLUSIVE lock; a blocked one would queue every storefront read behind
+-- it. Fail fast instead: the push stops here and is simply re-run.
+-- The CLI sends the file as one implicit transaction, so Postgres prints
+-- "WARNING: SET LOCAL can only be used in transaction blocks"; the setting
+-- still holds until the file commits (rehearsed locally: a held lock made the
+-- next ALTER fail with 55P03 after the timeout, and nothing was recorded).
+set local lock_timeout = '5s';
 
 -- ---- 1. is_admin() / is_driver() ---------------------------------------------
 -- Body only (create or replace keeps the signature, owner, and the existing

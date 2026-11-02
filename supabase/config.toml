@@ -1,3 +1,6 @@
+# LOCAL-ONLY settings for the throwaway Docker stack (site_url, enable_confirmations = false,
+# the 563xx ports). Never run `supabase config push` from this file: it would overwrite
+# production's auth settings (e.g. turn email confirmation off).
 # NOTE: ports are moved to 563xx because other projects' local Supabase stacks hold the defaults.
 # For detailed configuration reference documentation, visit:
 # https://supabase.com/docs/guides/local-development/cli/config

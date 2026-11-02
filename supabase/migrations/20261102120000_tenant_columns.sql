@@ -6,12 +6,27 @@
 -- defaults to current_tenant(), which is '224clubhouse' for every existing
 -- caller, and existing rows are backfilled to '224clubhouse'.
 
+-- The CLI runs this file in one transaction. Every ALTER below needs an ACCESS
+-- EXCLUSIVE lock; if a long storefront query holds the table, a blocked ALTER
+-- would sit in the lock queue and every read behind it would queue too, taking
+-- the store down. Fail fast instead: the push stops here and is simply re-run.
+-- The CLI sends the file as one implicit transaction, so Postgres prints
+-- "WARNING: SET LOCAL can only be used in transaction blocks"; the setting
+-- still holds until the file commits (rehearsed locally: a held lock made the
+-- next ALTER fail with 55P03 after the timeout, and nothing was recorded).
+set local lock_timeout = '5s';
+
 -- ---- 1. tenant column on the 19 tables of spec section 5.5 -------------------
 -- Added with the literal '224clubhouse' as the default so the backfill is the
 -- same constant for every row regardless of the session running the migration
 -- (current_tenant() reads request GUCs). The default is then switched to
 -- current_tenant() so new rows follow the caller's tenant. Constant default
--- + NOT NULL is a metadata-only change: no table rewrite, no long lock.
+-- + NOT NULL is a metadata-only change (no table rewrite), but the foreign key
+-- is validated by scanning every existing row, under the ACCESS EXCLUSIVE lock
+-- the ADD COLUMN holds until commit, and each index build scans the table
+-- again. Both are fast at 224's row counts; lock_timeout above bounds the wait
+-- to get the lock. Each table is ANALYZEd so the planner has stats for tenant
+-- before the tenant-filtered policies (20261102130000) start using it.
 do $$
 declare
   t text;
@@ -36,6 +51,7 @@ begin
       execute format(
         'create index if not exists %I on public.%I (tenant)', t || '_tenant_idx', t);
     end if;
+    execute format('analyze public.%I', t);
   end loop;
 end
 $$;
