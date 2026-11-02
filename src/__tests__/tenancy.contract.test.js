@@ -18,6 +18,7 @@
  *   npm run test:local -- src/__tests__/tenancy.contract.test.js
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import {
   KEYS_MISSING, anonClient, serviceClient, testSlug, createTestUser,
@@ -25,6 +26,7 @@ import {
   probeMigration, describeGate, ensureTestTenant, tenantClient,
   createTenantUser, signInClient, TEST_TENANT, TEST_PASSWORD, testCode, testEmail,
   URL, SERVICE, liveClientOptions, giveTenantProfile, yearsAgoIso,
+  RUN_TAG, testEventTitle,
 } from './helpers/liveFixtures.js'
 
 // ---------------------------------------------------------------------------
@@ -763,5 +765,368 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — orders 
     expect(error).toBeNull()
     const byUser = Object.fromEntries((data ?? []).map((r) => [r.user_id, r.tenant]))
     expect(byUser).toEqual({ [u.admin224.id]: '224clubhouse', [u.adminB.id]: TEST_TENANT })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Task 7 — tenant-aware membership, event, newsletter, cart, analytics, age
+// and alert RPCs
+//
+// 20261102150000_tenant_rpcs_members scopes the remaining SECURITY DEFINER
+// RPCs by tenant. Tier slugs resolve per store, the minimum age comes from the
+// tenants row, analytics count only the caller's store, and alert settings
+// (plus the Telegram vault secret name) are per store. 224's messages are
+// byte-identical to today's; they are asserted literally below.
+// ---------------------------------------------------------------------------
+describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — members, events, alerts', () => {
+  const admin = COLUMNS_SKIP ? null : serviceClient()
+  // The service role scoped to vitest-b, the way an Edge Function for that
+  // store would be (no auth.uid(), so the x-tenant header is honoured).
+  const serviceB = COLUMNS_SKIP ? null : createClient(URL, SERVICE, {
+    ...liveClientOptions,
+    global: { ...liveClientOptions.global, headers: { 'x-tenant': TEST_TENANT } },
+  })
+  // Today's 224 texts (20261005130000, 20260813150000, 20261008120000). Must not change.
+  const MEMBERSHIP_AGE_224 = 'Must be 21 or older'
+  const DOB_AGE_224 = 'Age check: you must be 21 or older to order'
+  const B_DAILY_PRICE = 4321
+  const B_DAILY_DAYS = 3
+  const CHAT_224 = -1000000000000 - Math.floor(Math.random() * 1e9)
+  const NEWS_EMAIL = testEmail('tmem-news')
+  const CREATED_EMAIL_224 = testEmail('tmem-created224')
+  const CREATED_EMAIL_B = testEmail('tmem-createdb')
+  const PATH_224 = `/vitest-tenancy-${RUN_TAG}-224`
+  const PATH_B = `/vitest-tenancy-${RUN_TAG}-b`
+
+  const CONSENTS_21 = {
+    age_21: true, private_club: true, no_redistribution: true,
+    personal_use: true, code_of_conduct: true, release_liability: true,
+  }
+  const CONSENTS_MIN = {
+    age_min: true, private_club: true, no_redistribution: true,
+    personal_use: true, code_of_conduct: true, release_liability: true,
+  }
+
+  const application = (dob, consents = CONSENTS_21) => ({
+    p_customer: {
+      full_name: 'Vitest Member', phone: '0000000000', date_of_birth: dob,
+      id_number: '9001015800085', residential_address: '1 Test Street, Boksburg',
+      consumption_reasons: ['recreational'], consumption_other: null,
+      consents, signature_image: null, signature_typed: 'Vitest Member',
+    },
+    p_tier: 'daily',
+    p_reference: null,
+  })
+
+  const u = {} // label -> { id, email }
+  const c = {} // label -> signed-in client
+  const tier = {} // tenant -> { id, price_cents } of its daily tier
+  const event = {} // tenant -> event id
+  const state = {} // ids created by earlier tests
+  let original224Alerts = null
+
+  const dropBDailyTier = async () => {
+    const { data } = await admin.from('membership_tiers').select('id')
+      .eq('tenant', TEST_TENANT).eq('slug', 'daily')
+    const ids = (data ?? []).map((r) => r.id)
+    if (ids.length) {
+      await admin.from('memberships').delete().in('tier_id', ids)
+      await admin.from('membership_tiers').delete().in('id', ids)
+    }
+  }
+
+  beforeAll(async () => {
+    await ensureTestTenant(admin)
+    await dropBDailyTier()
+    await admin.from('alert_settings').delete().eq('tenant', TEST_TENANT)
+
+    tier['224clubhouse'] = mustSucceed('224 daily tier', await admin.from('membership_tiers')
+      .select('id, price_cents').eq('tenant', '224clubhouse').eq('slug', 'daily').single())
+    tier[TEST_TENANT] = mustSucceed('vitest-b daily tier', await admin.from('membership_tiers').insert({
+      slug: 'daily', name: 'Vitest B Daily', price_cents: B_DAILY_PRICE,
+      duration_days: B_DAILY_DAYS, tenant: TEST_TENANT,
+    }).select('id, price_cents').single())
+
+    const future = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
+    for (const tenant of ['224clubhouse', TEST_TENANT]) {
+      event[tenant] = mustSucceed(`event ${tenant}`, await admin.from('events').insert({
+        title: testEventTitle(`tmem-${tenant}`), date: future, capacity: 10, tenant,
+      }).select('id').single()).id
+    }
+
+    u.cust224 = await createTenantUser(admin, 'tmem-cust224', '224clubhouse')
+    u.custB = await createTenantUser(admin, 'tmem-custb', TEST_TENANT)
+    u.dob224 = await createTenantUser(admin, 'tmem-dob224', '224clubhouse')
+    u.dobB = await createTenantUser(admin, 'tmem-dobb', TEST_TENANT)
+    u.admin224 = await createTenantUser(admin, 'tmem-admin224', '224clubhouse')
+    u.adminB = await createTenantUser(admin, 'tmem-adminb', TEST_TENANT)
+    // set_date_of_birth needs accounts with no date of birth on record yet.
+    mustSucceed('clear dob profiles', await admin.from('customer_profiles')
+      .delete().in('user_id', [u.dob224.id, u.dobB.id]))
+
+    mustSucceed('admin 224', await admin.from('admin_users')
+      .insert({ id: u.admin224.id, email: u.admin224.email, tenant: '224clubhouse' }))
+    mustSucceed('admin b', await admin.from('admin_users')
+      .insert({ id: u.adminB.id, email: u.adminB.email, tenant: TEST_TENANT }))
+
+    // 224 gets a recognisable chat id for the alert tests; restored in afterAll.
+    original224Alerts = mustSucceed('read 224 alerts', await admin.from('alert_settings')
+      .select('telegram_chat_id, telegram_chat_title, telegram_enabled, telegram_kinds')
+      .eq('tenant', '224clubhouse').single())
+    mustSucceed('mark 224 alerts', await admin.from('alert_settings')
+      .update({ telegram_chat_id: CHAT_224, telegram_chat_title: 'Vitest 224 group' })
+      .eq('tenant', '224clubhouse'))
+
+    for (const label of Object.keys(u)) {
+      c[label] = await signInClient(u[label].email, TEST_PASSWORD)
+    }
+  })
+
+  afterAll(async () => {
+    if (!admin) return
+    if (original224Alerts) {
+      await admin.from('alert_settings').update(original224Alerts).eq('tenant', '224clubhouse')
+    }
+    await admin.from('alert_settings').delete().eq('tenant', TEST_TENANT)
+    const emails = [...Object.values(u).map((x) => x.email), CREATED_EMAIL_224, CREATED_EMAIL_B]
+    await admin.from('memberships').delete().in('email', emails)
+    await admin.from('event_reservations').delete().in('event_id', Object.values(event))
+    await admin.from('events').delete().in('id', Object.values(event))
+    await dropBDailyTier()
+    await admin.from('newsletter_subscribers').delete().eq('email', NEWS_EMAIL)
+    await admin.from('site_events').delete().in('path', [PATH_224, PATH_B])
+    // Cascades to customer_profiles, customer_email_prefs, admin_users and drivers.
+    await deleteTestUsers(admin, ...Object.values(u).map((x) => x.id))
+  })
+
+  const membershipsOf = async (email) => {
+    const { data, error } = await admin.from('memberships')
+      .select('id, tenant, tier_id, amount, consents, status').eq('email', email)
+    expect(error).toBeNull()
+    return data ?? []
+  }
+
+  it('a vitest-b "daily" tier coexists with 224\'s; place_membership charges each store\'s own price (age_min consent accepted)', async () => {
+    expect(tier[TEST_TENANT].id).not.toBe(tier['224clubhouse'].id)
+
+    const b = await c.custB.rpc('place_membership', application('1990-01-01', CONSENTS_MIN))
+    expect(b.error).toBeNull()
+    expect(b.data).toMatchObject({ tier: 'daily', amount: B_DAILY_PRICE, status: 'pending' })
+    const [rowB] = await membershipsOf(u.custB.email)
+    expect(rowB).toMatchObject({ tenant: TEST_TENANT, tier_id: tier[TEST_TENANT].id, amount: B_DAILY_PRICE })
+    expect(rowB.consents).toMatchObject(CONSENTS_MIN)
+    state.membershipB = rowB.id
+
+    const own = await c.cust224.rpc('place_membership', application('1990-01-01'))
+    expect(own.error).toBeNull()
+    expect(own.data).toMatchObject({ tier: 'daily', amount: tier['224clubhouse'].price_cents })
+    const [row224] = await membershipsOf(u.cust224.email)
+    expect(row224).toMatchObject({ tenant: '224clubhouse', tier_id: tier['224clubhouse'].id })
+    expect(row224.consents).toMatchObject(CONSENTS_21)
+    expect(row224.consents).not.toHaveProperty('age_min')
+  })
+
+  it('membership age: 224 keeps its exact "Must be 21 or older"; vitest-b refuses under 18 and admits 19', async () => {
+    const own = await c.dob224.rpc('place_membership', application(yearsAgoIso(19)))
+    expect(own.data).toBeNull()
+    expect(own.error?.message).toBe(MEMBERSHIP_AGE_224)
+
+    const young = await c.dobB.rpc('place_membership', application(yearsAgoIso(17), CONSENTS_MIN))
+    expect(young.error?.message).toBe('Must be 18 or older')
+
+    const created224 = await c.admin224.rpc('admin_create_membership', {
+      p_customer: { full_name: 'Vitest Walk-in', email: CREATED_EMAIL_224, phone: '0000000000', date_of_birth: yearsAgoIso(19) },
+      p_tier_slug: 'daily',
+    })
+    expect(created224.error?.message).toBe(MEMBERSHIP_AGE_224)
+
+    const createdB = await c.adminB.rpc('admin_create_membership', {
+      p_customer: { full_name: 'Vitest Walk-in', email: CREATED_EMAIL_B, phone: '0000000000', date_of_birth: yearsAgoIso(19) },
+      p_tier_slug: 'daily',
+    })
+    expect(createdB.error).toBeNull()
+    expect(createdB.data).toMatchObject({ tier: 'daily', amount: B_DAILY_PRICE, status: 'active' })
+    const [rowB] = await membershipsOf(CREATED_EMAIL_B)
+    expect(rowB).toMatchObject({ tenant: TEST_TENANT, tier_id: tier[TEST_TENANT].id })
+    state.createdB = rowB.id
+  })
+
+  it('set_date_of_birth 19 years ago: accepted in vitest-b, refused in 224 with 224\'s exact message (Review Focus 5)', async () => {
+    const dob = yearsAgoIso(19)
+    const b = await c.dobB.rpc('set_date_of_birth', { p_dob: dob })
+    expect(b.error).toBeNull()
+    expect(b.data).toEqual({ verified: true })
+    expect((await c.dobB.rpc('my_age_verified')).data).toBe(true)
+    const { data: prof } = await admin.from('customer_profiles').select('tenant').eq('user_id', u.dobB.id).single()
+    expect(prof.tenant).toBe(TEST_TENANT)
+
+    const own = await c.dob224.rpc('set_date_of_birth', { p_dob: dob })
+    expect(own.error?.message).toBe(DOB_AGE_224)
+    expect(own.error?.message).toMatch(/21 or older/)
+    expect((await c.dob224.rpc('my_age_verified')).data).toBe(false)
+  })
+
+  it('NEGATIVE: admins cannot touch another store\'s membership (not found), nor link one to another store\'s account', async () => {
+    const status = await c.admin224.rpc('admin_update_membership_status', { p_id: state.membershipB, p_status: 'active' })
+    expect(status.error?.message).toBe('Membership not found')
+    const { data: row } = await admin.from('memberships').select('status').eq('id', state.membershipB).single()
+    expect(row.status).toBe('pending')
+
+    const link = await c.adminB.rpc('admin_link_membership_user', {
+      p_membership_id: state.createdB, p_email: u.cust224.email,
+    })
+    expect(link.error?.message).toMatch(/^No account found for /)
+    const { data: linked } = await admin.from('memberships').select('user_id').eq('id', state.createdB).single()
+    expect(linked.user_id).toBeNull()
+  })
+
+  it('admin_get_alert_settings: 224\'s admin gets 224\'s settings; vitest-b\'s admin gets the defaults, never 224\'s chat', async () => {
+    const own = await c.admin224.rpc('admin_get_alert_settings')
+    expect(own.error).toBeNull()
+    expect(own.data).toMatchObject({ chat_id: CHAT_224, chat_title: 'Vitest 224 group' })
+
+    const b = await c.adminB.rpc('admin_get_alert_settings')
+    expect(b.error).toBeNull()
+    expect(b.data).toEqual({ has_token: false, chat_id: null, chat_title: null, enabled: false, kinds: {} })
+  })
+
+  it('admin_update_alert_settings by vitest-b\'s admin writes only vitest-b\'s settings', async () => {
+    const before = mustSucceed('224 alerts', await admin.from('alert_settings')
+      .select('telegram_enabled, telegram_kinds').eq('tenant', '224clubhouse').single())
+    const res = await c.adminB.rpc('admin_update_alert_settings', { p_enabled: true, p_kinds: { order: false } })
+    expect(res.error).toBeNull()
+
+    const b = await c.adminB.rpc('admin_get_alert_settings')
+    expect(b.data).toMatchObject({ chat_id: null, enabled: true, kinds: { order: false } })
+    const after = mustSucceed('224 alerts', await admin.from('alert_settings')
+      .select('telegram_enabled, telegram_kinds').eq('tenant', '224clubhouse').single())
+    expect(after).toEqual(before)
+  })
+
+  it('Telegram server RPCs follow the store: set_telegram_chat / telegram_config per tenant; 224 keeps its vault name', async () => {
+    expect((await admin.rpc('telegram_secret_name', { p_slug: '224clubhouse' })).data).toBe('telegram_bot_token')
+    expect((await admin.rpc('telegram_secret_name', { p_slug: TEST_TENANT })).data)
+      .toBe(`telegram_bot_token__${TEST_TENANT}`)
+    expect((await anonClient().rpc('telegram_secret_name', { p_slug: '224clubhouse' })).error).not.toBeNull()
+
+    const set = await serviceB.rpc('set_telegram_chat', { p_chat_id: 42, p_title: 'Vitest B group' })
+    expect(set.error).toBeNull()
+    const cfgB = await serviceB.rpc('telegram_config')
+    expect(cfgB.error).toBeNull()
+    expect(cfgB.data).toMatchObject({ token: null, chat_id: 42, enabled: true })
+
+    // No header: exactly what 224's Edge Functions send today.
+    const cfg224 = await admin.rpc('telegram_config')
+    expect(cfg224.error).toBeNull()
+    expect(cfg224.data.chat_id).toBe(CHAT_224)
+  })
+
+  it('site_analytics and admin_daily_summary count only the caller\'s store (one track_event per tenant)', async () => {
+    const visit = () => ({ p_visitor: randomUUID(), p_session: randomUUID(), p_event: 'page_view' })
+    expect((await anonClient().rpc('track_event', { ...visit(), p_path: PATH_224 })).error).toBeNull()
+    expect((await tenantClient(TEST_TENANT).rpc('track_event', { ...visit(), p_path: PATH_B })).error).toBeNull()
+    const { data: stamped } = await admin.from('site_events').select('path, tenant').in('path', [PATH_224, PATH_B])
+    expect(Object.fromEntries((stamped ?? []).map((r) => [r.path, r.tenant])))
+      .toEqual({ [PATH_224]: '224clubhouse', [PATH_B]: TEST_TENANT })
+
+    const b = await c.adminB.rpc('site_analytics', { p_days: 1 })
+    expect(b.error).toBeNull()
+    const pathsB = b.data.top_pages.map((t) => t.path)
+    expect(pathsB).toContain(PATH_B)
+    expect(pathsB).not.toContain(PATH_224)
+
+    // admin_daily_summary defaults to today in Africa/Johannesburg (UTC+2, no DST).
+    const sastDay = new Date(Date.now() + 2 * 3600000).toISOString().slice(0, 10)
+    const { count: bViews } = await admin.from('site_events').select('id', { count: 'exact', head: true })
+      .eq('tenant', TEST_TENANT).eq('event', 'page_view').gte('created_at', `${sastDay}T00:00:00+02:00`)
+    const summaryB = await c.adminB.rpc('admin_daily_summary', { p_day: null })
+    expect(summaryB.error).toBeNull()
+    expect(summaryB.data.page_views).toBe(bViews)
+    const summary224 = await c.admin224.rpc('admin_daily_summary', { p_day: null })
+    expect(summary224.error).toBeNull()
+    expect(summary224.data.page_views).toBeGreaterThanOrEqual(1)
+  })
+
+  it('NEGATIVE: reserve_event_seats by a vitest-b customer on a 224 event is "Event not found"; its own event works', async () => {
+    const guest = { name: 'Vitest B', phone: '0000000000' }
+    const cross = await c.custB.rpc('reserve_event_seats', {
+      p_event_id: event['224clubhouse'], p_quantity: 1, p_customer: guest,
+    })
+    expect(cross.data).toBeNull()
+    expect(cross.error?.message).toBe('Event not found')
+    const { data: none } = await admin.from('event_reservations').select('id').eq('user_id', u.custB.id)
+    expect(none).toEqual([])
+
+    const own = await c.custB.rpc('reserve_event_seats', {
+      p_event_id: event[TEST_TENANT], p_quantity: 2, p_customer: guest,
+    })
+    expect(own.error).toBeNull()
+    const { data: rows } = await admin.from('event_reservations').select('id, tenant').eq('user_id', u.custB.id)
+    expect(rows.map((r) => r.tenant)).toEqual([TEST_TENANT])
+    state.reservationB = rows[0].id
+
+    const { data: ev } = await tenantClient(TEST_TENANT).from('events')
+      .select('id, seats_remaining:event_seats_remaining').eq('id', event[TEST_TENANT]).single()
+    expect(ev.seats_remaining).toBe(8)
+
+    const status = await c.admin224.rpc('admin_update_reservation_status', { p_id: state.reservationB, p_status: 'cancelled' })
+    expect(status.error?.message).toBe('Reservation not found')
+    const { data: res } = await admin.from('event_reservations').select('status').eq('id', state.reservationB).single()
+    expect(res.status).toBe('reserved')
+  })
+
+  it('NEGATIVE: newsletter unsubscribe and cart opt-out tokens only work in their own store', async () => {
+    expect((await tenantClient(TEST_TENANT).rpc('subscribe_newsletter', { p_email: NEWS_EMAIL })).error).toBeNull()
+    const { data: sub } = await admin.from('newsletter_subscribers').select('unsubscribe_token')
+      .eq('email', NEWS_EMAIL).eq('tenant', TEST_TENANT).single()
+    const from224 = await anonClient().rpc('unsubscribe_newsletter', { p_token: sub.unsubscribe_token })
+    expect(from224.data).toEqual({ success: false, reason: 'not_found' })
+    const fromB = await tenantClient(TEST_TENANT).rpc('unsubscribe_newsletter', { p_token: sub.unsubscribe_token })
+    expect(fromB.data).toEqual({ success: true, email: NEWS_EMAIL })
+
+    const prefs = mustSucceed('prefs b', await admin.from('customer_email_prefs')
+      .insert({ user_id: u.custB.id, tenant: TEST_TENANT }).select('token').single())
+    expect((await anonClient().rpc('stop_cart_reminders', { p_token: prefs.token })).data).toBe(false)
+    expect((await tenantClient(TEST_TENANT).rpc('stop_cart_reminders', { p_token: prefs.token })).data).toBe(true)
+  })
+
+  it('profile_from_signup: a 224 signup (no tenant claim) keeps the 21+ rule and its profile is stamped 224clubhouse', async () => {
+    // The admin API inserts the auth.users row with app_metadata
+    // {provider, providers} only and adds a custom claim afterwards, so the
+    // trigger can only see a store's claim once the task-8 BEFORE INSERT stamp
+    // exists (task 8's own signup test covers that path). Here: 224, unchanged.
+    const signup = async (label, dob) => {
+      const res = await admin.auth.admin.createUser({
+        email: testEmail(label), password: TEST_PASSWORD, email_confirm: true,
+        user_metadata: { date_of_birth: dob },
+      })
+      const user = mustSucceed(`signup ${label}`, res).user
+      u[label] = { id: user.id, email: user.email }
+      const { data } = await admin.from('customer_profiles')
+        .select('tenant, date_of_birth').eq('user_id', user.id)
+      return data ?? []
+    }
+    expect(await signup('tmem-signup-young', yearsAgoIso(19))).toEqual([])
+    expect(await signup('tmem-signup-adult', '1990-01-01'))
+      .toEqual([{ tenant: '224clubhouse', date_of_birth: '1990-01-01' }])
+  })
+
+  it('NEGATIVE: a claim naming a store with no tenants row fails closed in every age RPC ("Unknown store") (Ruling 8)', async () => {
+    u.ghost = await createTestUser(admin, 'tmem-ghost')
+    mustSucceed('ghost claim', await admin.auth.admin
+      .updateUserById(u.ghost.id, { app_metadata: { tenant: 'no-such-store' } }))
+    mustSucceed('clear ghost profile', await admin.from('customer_profiles').delete().eq('user_id', u.ghost.id))
+    const ghost = await signInClient(u.ghost.email, TEST_PASSWORD)
+
+    const dob = await ghost.rpc('set_date_of_birth', { p_dob: '1990-01-01' })
+    expect(dob.error?.message).toBe('Unknown store')
+    const { data: prof } = await admin.from('customer_profiles').select('user_id').eq('user_id', u.ghost.id)
+    expect(prof).toEqual([])
+
+    expect((await ghost.rpc('my_age_verified')).error?.message).toBe('Unknown store')
+
+    const mem = await ghost.rpc('place_membership', application('1990-01-01'))
+    expect(mem.error?.message).toBe('Unknown store')
+    expect(await membershipsOf(u.ghost.email)).toEqual([])
   })
 })
