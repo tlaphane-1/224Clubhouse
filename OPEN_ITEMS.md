@@ -25,6 +25,10 @@ recompute totals from DB prices.
 - Rename the auto-created admin driver profile (it is called "admin"): Admin → Drivers → Add driver
   with the admin's own email and real name (leaves the password alone).
 - Do one real delivery end to end on a phone before relying on live tracking.
+- Restrict the Google Maps key (now `VITE_GOOGLE_MAPS_KEY` in `.env.local`) in Google Cloud to
+  `224clubhouse.store/*`, `www.224clubhouse.store/*` and `224clubhouse.web.app/*`.
+- Multi-store (Explosive 420): buy their domain; confirm bank holder name. See
+  `docs/onboarding/explosive420-inputs.md`.
 
 ---
 
@@ -129,6 +133,13 @@ PR numbers are on `tlaphane-1/224Clubhouse`.
   geolocation site-wide.
 
 ---
+
+## 7a. Multi-store stage 1 live (2026-11-02)
+PR #23 merged and deployed: every 224-specific fact now lives in `tenants/224clubhouse/`
+(spec `docs/superpowers/specs/2026-10-24-multi-tenant-design.md`). Live site compared to the
+pre-change build: 20/20 routes identical, Contact map present. No DB change. Next: stage 2
+(tenant columns + RLS), which needs `SUPABASE_SERVICE_ROLE_KEY` reachable so the 39 live
+contract tests actually run. Rollback: `firebase hosting:rollback --site 224clubhouse`.
 
 ## 8. Resolved
 
