@@ -73,7 +73,12 @@ After any lever:
    224clubhouse.store: expect 20/20.
 3. The owner places one real order on their phone: it must show `224-…`. If
    lever 1 was used, also do one test signup.
-4. Record what was rolled back, and why, in `OPEN_ITEMS.md` §7a.
+4. Record what was rolled back, and why, in `OPEN_ITEMS.md` §7b.
+
+While any lever is in place, `predeploy` fails (the tenancy suite runs inside it),
+so it blocks frontend hotfixes too. Until the suite is reconciled with the rolled-back
+schema, deploy a hotfix with `npm run build` and `firebase deploy` after running the
+pre-phase-2 suites by hand.
 
 ## Rehearsal (local stack, 2026-11-03)
 

@@ -50,6 +50,12 @@ network freeze (seen again 2026-10-05 on one newsletter test, passed on re-run).
 `/driver` is a web page: the phone only shares location while it is open and visible (it keeps
 the screen awake via the Wake Lock API where supported). Background tracking needs a native app.
 
+### 3.3 Owner saw no "order placed" success message (2026-11-03, to check)
+Phone order `224-849A99` was stored correctly, but the owner did not see a success message.
+Not caused by stage 2: `place_cod_order` returns the same fields as before and the branch changed
+no app code. Checkout navigates to `/order-confirmation/:orderNumber` (a page, not a toast).
+Next: ask what the phone showed after Place Order, then reproduce at 390px.
+
 ---
 
 ## 4. Compliance and risk
@@ -140,6 +146,14 @@ PR #23 merged and deployed: every 224-specific fact now lives in `tenants/224clu
 pre-change build: 20/20 routes identical, Contact map present. No DB change. Next: stage 2
 (tenant columns + RLS), which needs `SUPABASE_SERVICE_ROLE_KEY` reachable so the 39 live
 contract tests actually run. Rollback: `firebase hosting:rollback --site 224clubhouse`.
+
+## 7b. Multi-store stage 2 live (2026-11-03)
+PR #25: the 7 `20261102*` migrations applied to production (owner ran `db push`). Every table
+carries `tenant`; RLS and RPCs are store-scoped; 224 behaves as before. Checks against live:
+`predeploy` 274 passed; tenancy suite 75 passed / 10 expected skips; compare-rendered 20/20.
+Owner phone order `224-849A99` stored with `tenant = 224clubhouse`. Pre-push schema dump:
+`C:\Users\azgcl\Documents\224-backups\pre-phase2-schema-20261103.sql`. Rollback:
+`docs/superpowers/plans/2026-11-02-phase-2-rollback.md`.
 
 ### Multi-store: must fix before a second store has an admin
 (Phase-2 final review, 2026-11-03. Harmless while 224 is the only store with admins.)
