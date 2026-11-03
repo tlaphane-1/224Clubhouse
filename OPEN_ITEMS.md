@@ -50,11 +50,12 @@ network freeze (seen again 2026-10-05 on one newsletter test, passed on re-run).
 `/driver` is a web page: the phone only shares location while it is open and visible (it keeps
 the screen awake via the Wake Lock API where supported). Background tracking needs a native app.
 
-### 3.3 Owner saw no "order placed" success message (2026-11-03, to check)
-Phone order `224-849A99` was stored correctly, but the owner did not see a success message.
-Not caused by stage 2: `place_cod_order` returns the same fields as before and the branch changed
-no app code. Checkout navigates to `/order-confirmation/:orderNumber` (a page, not a toast).
-Next: ask what the phone showed after Place Order, then reproduce at 390px.
+### 3.3 Checkout never showed the confirmation page (fixed 2026-11-03, awaiting deploy)
+Phone order `224-849A99` was stored, but the phone stayed on a blank checkout with an empty cart.
+Cause (pre-existing, not stage 2): the router applies navigations as transitions, so clearing the
+cart let Checkout's empty-cart redirect replace `/order-confirmation/...` with `/cart` ~10 ms later.
+Fix: `placed` state in `Checkout.jsx` skips that redirect. Regression check (local stack only):
+`node scripts/checkout-confirmation-local.mjs`, which fails without the fix and passes with it.
 
 ---
 

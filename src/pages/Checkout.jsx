@@ -55,6 +55,10 @@ export default function Checkout() {
   const [agreed, setAgreed] = useState(false)
   const [method, setMethod] = useState('cash_on_delivery')
   const [processing, setProcessing] = useState(false)
+  // Set when an order is placed. Placing one empties the cart, and the router
+  // applies navigations as transitions, so the empty-cart redirect below would
+  // otherwise run first and replace the confirmation page with /cart.
+  const [placed, setPlaced] = useState(false)
   // Phones show the order summary collapsed behind a total bar (desktop: always open).
   const [summaryOpen, setSummaryOpen] = useState(false)
   const navigate = useNavigate()
@@ -94,8 +98,8 @@ export default function Checkout() {
 
   useEffect(() => {
     document.title = pageTitle('Checkout')
-    if (items.length === 0) navigate('/cart')
-  }, [items, navigate])
+    if (items.length === 0 && !placed) navigate('/cart')
+  }, [items, navigate, placed])
 
   // Funnel step, once per visit to the page (not on every cart change).
   useEffect(() => {
@@ -272,15 +276,16 @@ export default function Checkout() {
     queryClient.invalidateQueries({ queryKey: ['my-orders'] })
 
     trackEvent('order_placed')
+    setPlaced(true)
     clearCart()
     navigate(`/order-confirmation/${data.order_number}`, {
       state: { order: data, items, customer: checkoutForm, paymentMethod: method },
     })
   }
 
-  if (items.length === 0) return null
+  if (items.length === 0 && !placed) return null
 
-  if (authLoading) {
+  if (authLoading || placed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
