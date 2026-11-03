@@ -1,0 +1,206 @@
+{
+  "slug": "explosive420",
+  "name": "Explosive 420 Cannabis Social Club",
+  "shortName": "E420",
+  "legalName": "Explosive 420 Cannabis Social Club",
+  "orderPrefix": "E420",
+  "storagePrefix": "e420",
+  "minimumAge": 21,
+  "domain": {
+    "siteUrl": "https://explosive420.web.app",
+    "apex": "explosive420.web.app",
+    "liveHosts": ["explosive420.web.app"]
+  },
+  "contact": {
+    "street": "702 Aubrey Matlakala St",
+    "suburb": "Soshanguve Block L",
+    "city": "Soshanguve",
+    "postalCode": "0152",
+    "province": "Gauteng",
+    "country": "ZA",
+    "phoneDisplay": "076 135 2497",
+    "phoneTel": "0761352497",
+    "phoneIntl": "+27 76 135 2497",
+    "mapsLink": "https://maps.google.com/?q=702+Aubrey+Matlakala+St+Soshanguve+Block+L+Soshanguve",
+    "mapQuery": "702 Aubrey Matlakala St, Soshanguve Block L, Soshanguve",
+    "mapCentre": [-25.52, 28.1]
+  },
+  "hours": {
+    "status": "Open Monday – Sunday, 09:00 – 22:00",
+    "contactPage": ["Open Monday – Sunday", "09:00 – 22:00"]
+  },
+  "telegram": false,
+  "delivery": {
+    "feeCents": 3000,
+    "freeFromCents": 50000,
+    "promoteMemberFreeDelivery": false
+  },
+  "images": {
+    "logo": "brand-assets/e420/e420-logo.webp",
+    "logoWide": "brand-assets/e420/e420-logo-wide.png",
+    "favicon": "brand-assets/e420/e420-favicon.png",
+    "header": "brand-assets/e420/e420-header.jpg",
+    "gallery": [
+      "brand-assets/e420/e420-gallery-1.jpg",
+      "brand-assets/e420/e420-gallery-2.jpg",
+      "brand-assets/e420/e420-gallery-3.jpg"
+    ],
+    "uploadFolder": "e420",
+    "logoWideSize": [480, 142],
+    "iconSource": "tenants/explosive420/assets/e420-icon-source.png"
+  },
+  "theme": {
+    "colors": {
+      "background": "#0a0a0a",
+      "surface": "#111111",
+      "gold": "#F5C518",
+      "gold-light": "#FFD84D",
+      "muted": "#888888",
+      "border": "#222222",
+      "leaf": "#3FC24D",
+      "leaf-deep": "#0F2A12",
+      "paper": "#FBF8F1",
+      "paper-line": "#CFC8B8",
+      "print": "#1C1C1C",
+      "ink": "#1D3D8F"
+    },
+    "fonts": {
+      "heading": ["Oswald", "sans-serif"],
+      "body": ["Inter", "sans-serif"],
+      "hand": ["Caveat", "cursive"]
+    },
+    "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap"
+  },
+  "seo": {
+    "title": "Explosive 420 Cannabis Social Club | Soshanguve",
+    "description": "Explosive 420 Cannabis Social Club — a private adult-use cannabis club in Soshanguve Block L. Premium indoor strains from local growers. Members 21+ only.",
+    "locale": "en_ZA",
+    "routes": {
+      "/store": {
+        "title": "Shop",
+        "description": "Premium indoor cannabis strains from local growers at Explosive 420 Cannabis Social Club, Soshanguve. Members 21+ only."
+      },
+      "/events": {
+        "title": "Events",
+        "description": "Upcoming events and socials at Explosive 420 Cannabis Social Club, Soshanguve."
+      },
+      "/membership": {
+        "title": "Membership",
+        "description": "Join Explosive 420 Cannabis Social Club, a private adult-use club in Soshanguve. See membership options and how to sign up."
+      },
+      "/about": {
+        "title": "About Us",
+        "description": "About Explosive 420 Cannabis Social Club — a private wellness and lifestyle circle in Soshanguve Block L."
+      },
+      "/contact": {
+        "title": "Contact",
+        "description": "Get in touch with Explosive 420 Cannabis Social Club in Soshanguve — questions about membership, orders or visiting."
+      },
+      "/privacy": {
+        "title": "Privacy Policy",
+        "description": "How Explosive 420 Cannabis Social Club collects, uses and protects your personal information (POPIA)."
+      },
+      "/terms": {
+        "title": "Terms & Conditions",
+        "description": "Terms and conditions for using the Explosive 420 Cannabis Social Club website, membership and store."
+      },
+      "/delivery-returns": {
+        "title": "Delivery & Returns",
+        "description": "Delivery and returns policy for Explosive 420 Cannabis Social Club orders."
+      }
+    },
+    "productDescription": "{name} from Explosive 420 Cannabis Social Club, Soshanguve. Members 21+ only.",
+    "eventDescription": "{name} at Explosive 420 Cannabis Social Club, Soshanguve."
+  },
+  "legal": {
+    "reviewNotes": false,
+    "lastUpdated": "3 November 2026"
+  },
+  "content": {
+    "home": {
+      "heroTitle": "Premium Indoor. Proudly Local.",
+      "heroSubtitle": "Quality flower from local growers, for vetted adult members.",
+      "reviews": [],
+      "galleryHeading": "The Explosive 420 Vibe",
+      "newsletter": {
+        "eyebrow": "Join The Circle",
+        "heading": "Never Miss a Drop",
+        "blurb": "Subscribe for new strains, events & updates.",
+        "cta": "Subscribe",
+        "welcomeToast": "Welcome to the Explosive 420 circle! You're on the list."
+      }
+    },
+    "about": {
+      "heroLines": ["Premium Flower,", "Local Growers,", "Mindful Living."],
+      "heroIntro": "Explosive 420 Cannabis Social Club is a private wellness and lifestyle circle in Soshanguve Block L, connecting adult members with premium indoor flower from local growers.",
+      "founderHeading": "Who We Are",
+      "founderParagraphs": [
+        "Explosive 420 was built around a simple idea: quality cannabis belongs in a healthy, balanced routine. We connect premium indoor flower from local growers with adult members looking for an alternative approach to wellness and socialising.",
+        "Our menu focuses on premium indoor strains, starting at around R150 per gram, alongside dabs and extracts.",
+        "We are a community first. The club operates under South African private adult-use guidelines, and access is reserved for vetted adult members aged 21 and over."
+      ],
+      "timeline": [
+        {
+          "year": "Today",
+          "title": "Soshanguve Block L",
+          "description": "A private, members-only club at 702 Aubrey Matlakala St, open Monday to Sunday from 09:00 to 22:00."
+        }
+      ],
+      "values": [
+        { "title": "Community", "desc": "A community-driven club where members support each other and the local growers who supply us." },
+        { "title": "Wellness", "desc": "Premium cannabis as part of a balanced lifestyle that supports physical and mental wellbeing." },
+        { "title": "Quality", "desc": "Premium indoor strains, dabs and extracts, chosen for quality and consistency." },
+        { "title": "Respect", "desc": "A safe, judgment-free space designed for mindful consumption." }
+      ],
+      "cta": {
+        "heading": "Ready to Join the Circle?",
+        "text": "Become a member and be part of the Explosive 420 community."
+      }
+    },
+    "membership": {
+      "intro": "Explosive 420 is a private adult-use club. Access is reserved for vetted members aged 21 and over with a valid South African ID or passport.",
+      "requirements": "Must be 21 years or older · Valid SA ID or passport · Personal use only",
+      "rulesTitle": "House Guidelines",
+      "rulesShortTitle": "Guidelines",
+      "rules": [
+        "Members only: 21 or older with a valid South African ID or passport.",
+        "Register as a member before accessing the menu or the space.",
+        "Consume mindfully and know your limits.",
+        "Keep the space safe and judgment-free for everyone.",
+        "Personal use only: no reselling or redistribution."
+      ]
+    },
+    "checkout": {
+      "joinPrompt": "Thanks for your first order! Explosive 420 is a private members' club, so from your second order onwards you need a membership."
+    },
+    "memberOnly": {
+      "event": "This event is reserved for active Explosive 420 members.",
+      "product": "This product is reserved for active Explosive 420 members."
+    },
+    "store": {
+      "subtitle": "Premium indoor strains from local growers"
+    },
+    "events": {
+      "intro": "Socials and sessions for the Explosive 420 community."
+    },
+    "footer": {
+      "tagline": "A private adult-use cannabis social club in Soshanguve. Premium indoor strains from local growers. Members 21+ only.",
+      "hoursHeading": "Opening Hours"
+    },
+    "ageGate": {
+      "heading": "Cannabis Social Club",
+      "tagline": "Private adult-use club. Members only."
+    },
+    "paperForm": {
+      "letterheadStreet": "702 Aubrey Matlakala St",
+      "intro": "We’re excited to have you join our community of responsible cannabis users. Please complete the form below to apply for membership.",
+      "reasonsLegend": "• Do you consume cannabis for:",
+      "consents": {
+        "private_club": "I understand that Explosive 420 Cannabis Social Club is a private cannabis club operating within legal guidelines.",
+        "no_redistribution": "I will not redistribute cannabis obtained through the Club.",
+        "personal_use": "I accept that any cannabis products are for personal use only.",
+        "release_liability": "I release Explosive 420 Cannabis Social Club from any liability related to personal use or effects of cannabis."
+      }
+    }
+  }
+}

@@ -19,7 +19,8 @@ import { focusField } from '../utils/focusField'
 import CustomerAuth from '../components/auth/CustomerAuth'
 import OrderSummary from '../components/checkout/OrderSummary'
 import Modal from '../components/ui/Modal'
-import { shippingFeeFor } from '../utils/shipping'
+import { shippingFeeFor, PROMOTE_MEMBER_FREE_DELIVERY } from '../utils/shipping'
+import { EFT_AVAILABLE } from '../utils/bankDetails'
 import PaymentMethodSelect from '../components/checkout/PaymentMethodSelect'
 import EftDetails from '../components/checkout/EftDetails'
 // Paystack is disabled while the online paygate is being confirmed (PaystackButton.jsx retained for re-enable).
@@ -167,7 +168,7 @@ export default function Checkout() {
       return
     }
     if (!agreed) {
-      toast.error('Please confirm you are 21 or older')
+      toast.error(`Please confirm you are ${MIN_AGE} or older`)
       focusField('checkout-agree')
       return
     }
@@ -475,7 +476,7 @@ export default function Checkout() {
                 </h2>
                 <Checkbox id="checkout-agree" checked={agreed} onChange={setAgreed}>
                   <span className="text-muted">
-                    I confirm that I am <span className="text-white font-semibold">21 years of age or older</span> and agree to the{' '}
+                    I confirm that I am <span className="text-white font-semibold">{MIN_AGE} years of age or older</span> and agree to the{' '}
                     <Link to="/terms" className="text-gold hover:text-gold-light underline transition-colors">terms of service</Link>, including the{' '}
                     <Link to="/privacy" className="text-gold hover:text-gold-light underline transition-colors">Privacy Policy</Link>. I understand that cannabis products are intended for adults only.
                   </span>
@@ -526,8 +527,11 @@ export default function Checkout() {
             {tenant.content.checkout.joinPrompt}
           </p>
           <p className="text-muted text-sm leading-relaxed mb-6">
-            Apply in a minute — pay by EFT or with your next delivery. Members also get{' '}
-            <span className="text-white font-semibold">free delivery</span>. Your cart is saved.
+            Apply in a minute — pay {EFT_AVAILABLE ? 'by EFT or ' : ''}with your next delivery.
+            {PROMOTE_MEMBER_FREE_DELIVERY && (
+              <> Members also get <span className="text-white font-semibold">free delivery</span>.</>
+            )}{' '}
+            Your cart is saved.
           </p>
           <Link to="/membership" className="btn-gold w-full py-3 block">Become a member</Link>
           <button

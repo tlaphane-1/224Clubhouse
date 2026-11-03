@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import LegalPage, { LegalSection } from './LegalPage'
 import { tenant } from '../../tenant'
+import { MIN_AGE } from '../../utils/age'
 
 const { contact } = tenant
 
@@ -23,7 +24,7 @@ export default function PrivacyPolicy() {
           &ldquo;responsible party&rdquo; for the personal information described in this policy.
         </p>
         <p>
-          <span className="text-white font-semibold">Information Officer:</span> {tenant.legal.informationOfficer}. You can reach the
+          <span className="text-white font-semibold">Information Officer:</span> {tenant.legal.informationOfficer ?? `${tenant.name} (${contact.phoneDisplay})`}. You can reach the
           Information Officer through the{' '}
           <Link to="/contact" className="text-gold hover:text-gold-light transition-colors">contact form</Link>{' '}
           on this site or in person at the store.
@@ -37,7 +38,7 @@ export default function PrivacyPolicy() {
             <span className="text-white">Account details</span> — your email address and a password
             (stored in hashed form by our authentication provider, never readable by us), and your{' '}
             <span className="text-white">date of birth</span>, asked for when you create an account
-            or at your first checkout, so we can confirm every customer is 21 or older before an
+            or at your first checkout, so we can confirm every customer is {MIN_AGE} or older before an
             order is accepted.
           </li>
           <li>
@@ -46,8 +47,8 @@ export default function PrivacyPolicy() {
           </li>
           <li>
             <span className="text-white">Membership applications</span> — your full name, phone
-            number, <span className="text-white">date of birth</span> (required, to verify you are
-            21 or older) and, optionally, your{' '}
+            number, <span className="text-white">date of birth</span> (required, to verify you are{' '}
+            {MIN_AGE} or older) and, optionally, your{' '}
             <span className="text-white">South African ID number</span>. Your ID number is used
             solely to verify your identity and age for membership. We treat it with heightened
             care: access is restricted to club management and it is never shared for marketing
@@ -87,7 +88,7 @@ export default function PrivacyPolicy() {
         <ul className="list-disc pl-5 space-y-2">
           <li>
             <span className="text-white">Age and identity verification</span> — cannabis products
-            are for adults only. Verifying that members and customers are 21 or older is a legal
+            are for adults only. Verifying that members and customers are {MIN_AGE} or older is a legal
             and club requirement, and is the reason we ask for your date of birth (and optionally
             your ID number) on membership applications.
           </li>
@@ -192,7 +193,7 @@ export default function PrivacyPolicy() {
           in your browser&rsquo;s local storage to work properly:
         </p>
         <ul className="list-disc pl-5 space-y-2">
-          <li>An age-gate flag remembering that you confirmed you are 21 or older.</li>
+          <li>An age-gate flag remembering that you confirmed you are {MIN_AGE} or older.</li>
           <li>Your shopping cart contents.</li>
           <li>Your login session token, if you sign in.</li>
           <li>A short-lived record of your most recent order so the confirmation page survives a refresh.</li>

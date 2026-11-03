@@ -60,7 +60,7 @@ export default function Login() {
                 className="input-base"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder={tenant.content.login.emailPlaceholder}
+                placeholder={tenant.content.login?.emailPlaceholder ?? 'Email address'}
                 required
               />
             </div>

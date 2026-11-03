@@ -28,7 +28,7 @@ const emptyForm = {
 // `${yyyy-mm-dd}T23:59:59` in local time, so reading it back in UTC lands on the
 // previous day in any UTC-negative zone — and every open-and-save of the form
 // would walk the expiry a day earlier. Same class of bug as MembershipForm's
-// maxDobFor21(). Local out, local in, so the round trip is a fixed point.
+// maxAdultDob(). Local out, local in, so the round trip is a fixed point.
 function toDateInput(ts) {
   if (!ts) return ''
   const d = new Date(ts)

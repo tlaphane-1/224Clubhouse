@@ -15,6 +15,12 @@ import EftDetails from '../components/checkout/EftDetails'
 import PaperApplication from '../components/membership/PaperApplication'
 import { CONSENTS, EMPTY_PAPER_FORM, paperDob } from '../components/membership/paperForm'
 import { tenant, pageTitle } from '../tenant'
+import { MIN_AGE } from '../utils/age'
+import { EFT_AVAILABLE } from '../utils/bankDetails'
+import { PROMOTE_MEMBER_FREE_DELIVERY } from '../utils/shipping'
+
+// How a member pays offline: EFT only where the store has bank details.
+const PAY_OFFLINE = EFT_AVAILABLE ? 'by EFT or with your next delivery' : 'with your next delivery'
 
 // Tiers are data now (membership_tiers table) — only the presentation layer
 // stays client-side. Unknown future slugs fall back to the Star icon.
@@ -84,16 +90,16 @@ export default function Membership() {
 
   const tier = tiers?.find(t => t.slug === selected)
 
-  // Mirrors the RPC's `dob > current_date - interval '21 years'` rejection
+  // Mirrors the RPC's `dob > current_date - <store min age>` rejection
   // exactly, day-of-month included. A year+month-only check let anyone up to
-  // ~30 days short of 21 through to Paystack and only failed server-side —
+  // ~30 days short of the minimum age through to Paystack and only failed server-side —
   // after the card was charged. Dates are built from the parts (the input is
   // always YYYY-MM-DD) so no UTC-vs-local parsing shifts the day.
   function validateAge(dob) {
     const [y, m, d] = String(dob).split('-').map(Number)
     if (!y || !m || !d) return false
     const today = new Date()
-    const cutoff = new Date(today.getFullYear() - 21, today.getMonth(), today.getDate())
+    const cutoff = new Date(today.getFullYear() - MIN_AGE, today.getMonth(), today.getDate())
     return new Date(y, m - 1, d) <= cutoff
   }
 
@@ -193,7 +199,7 @@ export default function Membership() {
     const keys = Object.keys(found)
     setErrors(Object.fromEntries(keys.map(k => [k, k === 'dob' && dob ? 'age' : true])))
     if (keys.length) {
-      toast.error(found.dob && dob ? `You must be 21 or older to join ${tenant.name}.` : 'Please complete the highlighted parts of the form.')
+      toast.error(found.dob && dob ? `You must be ${MIN_AGE} or older to join ${tenant.name}.` : 'Please complete the highlighted parts of the form.')
       focusField(found[keys[0]])
       return
     }
@@ -251,9 +257,9 @@ export default function Membership() {
           <p className="text-muted text-sm leading-relaxed mb-8">
             {PAY_ONLINE
               ? 'Your membership starts the moment we confirm it — you can check its status right here any time.'
-              : `Pay ${tier ? formatTierPrice(tier.price_cents) : ''} by EFT, or pay the driver with your next delivery. We'll activate your membership as soon as payment is received — check its status here any time.`}
+              : `Pay ${tier ? formatTierPrice(tier.price_cents) : ''} ${EFT_AVAILABLE ? 'by EFT, or pay the driver' : 'to the driver'} with your next delivery. We'll activate your membership as soon as payment is received — check its status here any time.`}
           </p>
-          {!PAY_ONLINE && (
+          {!PAY_ONLINE && EFT_AVAILABLE && (
             <div className="mb-8">
               <EftDetails
                 reference={form.full_name || 'your full name'}
@@ -288,7 +294,7 @@ export default function Membership() {
     </button>
   )
   const payNote = !PAY_ONLINE && (
-    <p className="text-muted text-xs text-center mt-2 md:mt-3">Apply online — pay by EFT or with your next delivery.</p>
+    <p className="text-muted text-xs text-center mt-2 md:mt-3">Apply online — pay {PAY_OFFLINE}.</p>
   )
 
   // The application sheet: sign-in gate first, then the form (account email is fixed).
@@ -483,7 +489,9 @@ export default function Membership() {
                 {effectiveStatus === 'pending' &&
                   'We’ll confirm your application shortly — your membership clock only starts once it’s approved.'}
                 {effectiveStatus === 'active' &&
-                  'You get free delivery on every order while your membership is active. Contact us if anything looks wrong.'}
+                  (PROMOTE_MEMBER_FREE_DELIVERY
+                    ? 'You get free delivery on every order while your membership is active. Contact us if anything looks wrong.'
+                    : 'Your membership is active. Contact us if anything looks wrong.')}
                 {effectiveStatus === 'expired' &&
                   'Your access has ended. Pick a tier above to renew — you keep the same account.'}
               </p>
@@ -598,7 +606,7 @@ export default function Membership() {
           <>
             <p className="text-muted text-sm mb-4">
               This is our paper membership form — fill it in and sign it on screen.
-              {PAY_ONLINE ? '' : ' You pay by EFT or with your next delivery.'}
+              {PAY_ONLINE ? '' : ` You pay ${PAY_OFFLINE}.`}
             </p>
             <PaperApplication
               form={form}

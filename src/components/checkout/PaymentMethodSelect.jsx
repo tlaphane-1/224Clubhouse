@@ -1,4 +1,8 @@
 import { PAYMENT_METHODS, PAYMENT_LABELS } from '../../utils/orderStatus'
+import { EFT_AVAILABLE } from '../../utils/bankDetails'
+
+// EFT is offered only when the store has bank details to pay into.
+const METHODS = EFT_AVAILABLE ? PAYMENT_METHODS : PAYMENT_METHODS.filter(m => m !== 'eft')
 
 const HELPER_TEXT = {
   cash_on_delivery: 'Pay with cash when your order arrives.',
@@ -8,8 +12,8 @@ const HELPER_TEXT = {
 
 export default function PaymentMethodSelect({ value, onChange }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4" role="radiogroup" aria-label="Payment method">
-      {PAYMENT_METHODS.map((m) => {
+    <div className={`grid grid-cols-1 ${METHODS.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3 sm:gap-4`} role="radiogroup" aria-label="Payment method">
+      {METHODS.map((m) => {
         const selected = value === m
         return (
           <button

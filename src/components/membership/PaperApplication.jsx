@@ -1,5 +1,6 @@
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
 import { tenant } from '../../tenant'
+import { MIN_AGE } from '../../utils/age'
 import { formatTierPrice } from '../../utils/tierPrice'
 import PaperCheckbox from './PaperCheckbox'
 import SignaturePad from './SignaturePad'
@@ -55,9 +56,15 @@ export default function PaperApplication({ form, setForm, email, tiers, selected
           <span className="font-bold text-xs">Address</span>
           <span>{tenant.content.paperForm.letterheadStreet}</span>
           <span>{`${tenant.contact.suburb}, ${tenant.contact.city}`}</span>
-          <a href={`mailto:${tenant.contact.email}`} className="mt-1 font-semibold break-all hover:underline">
-            {tenant.contact.email}
-          </a>
+          {tenant.contact.email ? (
+            <a href={`mailto:${tenant.contact.email}`} className="mt-1 font-semibold break-all hover:underline">
+              {tenant.contact.email}
+            </a>
+          ) : (
+            <a href={`tel:${tenant.contact.phoneTel}`} className="mt-1 font-semibold hover:underline">
+              {tenant.contact.phoneDisplay}
+            </a>
+          )}
         </div>
       </div>
 
@@ -82,7 +89,7 @@ export default function PaperApplication({ form, setForm, email, tiers, selected
           </div>
 
           <fieldset>
-            <legend className={FIELD_LABEL}>Date of Birth (21+):</legend>
+            <legend className={FIELD_LABEL}>Date of Birth ({MIN_AGE}+):</legend>
             <div className="flex items-end gap-2">
               {[
                 ['dob_day', 'mem-dob', 'DD', 2, 'Day', 'bday-day'],
@@ -101,7 +108,7 @@ export default function PaperApplication({ form, setForm, email, tiers, selected
               ))}
             </div>
             <ErrorNote show={errors.dob}>
-              {errors.dob === 'age' ? 'You must be 21 or older to join.' : 'Please write a valid date of birth.'}
+              {errors.dob === 'age' ? `You must be ${MIN_AGE} or older to join.` : 'Please write a valid date of birth.'}
             </ErrorNote>
           </fieldset>
 

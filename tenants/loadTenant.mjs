@@ -10,11 +10,29 @@ export const DEFAULT_TENANT = '224clubhouse'
 
 const TENANTS_ROOT = path.dirname(fileURLToPath(import.meta.url))
 
-// Paths a store may omit. Everything else present in the 224 reference config
-// is required of every store: the shared code reads those paths unguarded, so a
-// missing one shows up as "undefined" on the page or a TypeError at module load.
-// legacyStorageKeys exists only to preserve keys that predate the prefix scheme.
-const OPTIONAL_PATHS = ['legacyStorageKeys']
+// Paths a store may omit (leave out or set to null; an optional array may also
+// be empty). When present they are still held to the reference shape.
+// Everything else present in the 224 reference config is required of every
+// store: the shared code reads those paths unguarded, so a missing one shows up
+// as "undefined" on the page or a TypeError at module load. The optional ones
+// are facts a new store may not have yet (no email, no social pages, no bank
+// account, no reviews); the components that read them skip the field instead of
+// showing a placeholder. legacyStorageKeys exists only to preserve keys that
+// predate the prefix scheme.
+const OPTIONAL_PATHS = [
+  'legacyStorageKeys',
+  'contact.email',
+  'social',
+  'social.facebook',
+  'social.instagram',
+  'bank',
+  'hours.delivery',
+  'legal.informationOfficer',
+  'content.home.reviews',
+  'content.home.newsletter.offer',
+  'content.home.newsletter.offerSuffix',
+  'content.login',
+]
 
 // Static files every store must ship in tenants/<slug>/public/ (vite publicDir).
 // Without them the build still exits 0 but the site 404s its favicon, manifest
@@ -49,12 +67,18 @@ function referenceTenant() {
 
 const typeOf = value => (Array.isArray(value) ? 'array' : value === null ? 'null' : typeof value)
 
-const isOptional = field => OPTIONAL_PATHS.some(p => field === p || field.startsWith(`${p}.`))
+// Only the listed path itself is optional; once present, its children are held
+// to the reference (a bank block needs a bankName). legacyStorageKeys is the
+// exception: each of its keys is optional too.
+const isOptional = field => OPTIONAL_PATHS.includes(field) || field.startsWith('legacyStorageKeys.')
 
 // Compares one candidate value to its reference value, recursing into objects
 // and arrays. Arrays only need to be non-empty (a store may have fewer gallery
 // images); each element is held to the shape of the reference's first element.
 function checkShape(ref, value, field, where) {
+  if (isOptional(field) && (value === undefined || value === null || (Array.isArray(value) && value.length === 0))) {
+    return
+  }
   if (value === undefined || value === null) {
     throw new Error(`${where}: missing required field "${field}"`)
   }
@@ -71,7 +95,6 @@ function checkShape(ref, value, field, where) {
   } else if (expected === 'object') {
     for (const [key, refChild] of Object.entries(ref)) {
       const childField = field ? `${field}.${key}` : key
-      if (isOptional(childField)) continue
       checkShape(refChild, value[key], childField, where)
     }
   }
@@ -83,6 +106,17 @@ export function validateTenant(obj, slug) {
 
   if (obj.slug !== slug) {
     throw new Error(`${where}: slug "${obj.slug}" does not match folder "${slug}"`)
+  }
+  // Same range as the tenants.min_age check constraint; the two must agree.
+  if (!Number.isInteger(obj.minimumAge) || obj.minimumAge < 18 || obj.minimumAge > 25) {
+    throw new Error(`${where}: minimumAge must be a whole number from 18 to 25 (got ${JSON.stringify(obj.minimumAge)})`)
+  }
+  // Delivery fee and free-delivery threshold are integer cents (ZAR), like every
+  // other amount in the app; place_cod_order charges the same numbers.
+  for (const key of ['feeCents', 'freeFromCents']) {
+    if (!Number.isInteger(obj.delivery[key]) || obj.delivery[key] < 0) {
+      throw new Error(`${where}: delivery.${key} must be a whole number of cents, 0 or more (got ${JSON.stringify(obj.delivery[key])})`)
+    }
   }
   // tailwind.config.js turns each colour into rgba() by slicing #RRGGBB.
   for (const [name, colour] of Object.entries(obj.theme.colors)) {

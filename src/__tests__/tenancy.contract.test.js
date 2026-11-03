@@ -19,6 +19,8 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { randomUUID } from 'node:crypto'
+import { readdirSync } from 'node:fs'
+import path from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 import {
   anonClient, serviceClient, testSlug, createTestUser,
@@ -279,13 +281,17 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant columns', () => {
     expect(error).toBeNull()
   })
 
-  it('every existing row belongs to the default tenant (no NULL, no other tenant)', async () => {
+  it('every existing row belongs to a known store (no NULL, no unknown tenant)', async () => {
+    // A store is known when it has a tenants/<slug>/ folder: once a second
+    // store (e.g. explosive420) is provisioned its rows are legitimate.
+    const known = new Set(readdirSync(path.resolve(import.meta.dirname, '../../tenants'), { withFileTypes: true })
+      .filter(d => d.isDirectory()).map(d => d.name))
     for (const table of TENANT_TABLES) {
       // Rows other suites park under vitest-b are removed by their owners; any
-      // OTHER non-224 value (or NULL) means the backfill went wrong.
+      // OTHER value (or NULL) means the backfill went wrong.
       const { data, error } = await admin.from(table).select('tenant').neq('tenant', '224clubhouse').limit(50)
       expect(error, table).toBeNull()
-      const stray = (data ?? []).filter((r) => r.tenant !== TEST_TENANT)
+      const stray = (data ?? []).filter((r) => r.tenant !== TEST_TENANT && !known.has(r.tenant))
       expect(stray, table).toEqual([])
     }
   })

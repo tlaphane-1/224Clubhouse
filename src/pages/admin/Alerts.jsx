@@ -30,7 +30,28 @@ function Step({ n, done, title, children }) {
   )
 }
 
+// Telegram is per store (tenant.json "telegram"). A store with it off gets no
+// Telegram controls at all, so its admins can never call telegram-connect.
 export default function Alerts() {
+  return tenant.telegram ? <TelegramAlerts /> : <NoTelegram />
+}
+
+function NoTelegram() {
+  useEffect(() => {
+    document.title = adminTitle('Alerts')
+  }, [])
+  return (
+    <AdminLayout>
+      <div className="flex items-center gap-3 mb-2">
+        <Bell size={22} className="text-gold" />
+        <h1 className="font-heading text-3xl font-bold text-white">Alerts</h1>
+      </div>
+      <p className="text-muted text-sm max-w-2xl">Telegram alerts are not available for this store.</p>
+    </AdminLayout>
+  )
+}
+
+function TelegramAlerts() {
   const { data: s, isLoading, isError, refetch } = useAlertSettings()
   const update = useUpdateAlertSettings()
   const queryClient = useQueryClient()
@@ -169,7 +190,7 @@ export default function Alerts() {
               ))}
             </div>
             <p className="text-muted text-xs mt-4">
-              Group messages never include ID numbers or dates of birth. Email alerts to {tenant.contact.email} carry on as before.
+              Group messages never include ID numbers or dates of birth. {tenant.contact.email ? `Email alerts to ${tenant.contact.email} carry on as before.` : 'Email alerts carry on as before.'}
             </p>
           </Step>
         </div>

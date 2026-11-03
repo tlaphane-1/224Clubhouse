@@ -7,6 +7,7 @@ import { formatZAR } from '../utils/formatCurrency'
 import { statusLabel, paymentLabel } from '../utils/orderStatus'
 import { BANK_DETAILS } from '../utils/bankDetails'
 import { tenant, pageTitle } from '../tenant'
+import { MIN_AGE } from '../utils/age'
 
 // Seller details printed on every invoice. Same facts as Contact.jsx / Footer.jsx
 // (from tenant.json, the same facts Contact.jsx / Footer.jsx print).
@@ -159,7 +160,7 @@ function InvoiceSheet({ order }) {
             {BUSINESS.addressLines.map((line) => (
               <span key={line} className="block">{line}</span>
             ))}
-            <span className="block mt-1">{BUSINESS.phone} · {BUSINESS.email}</span>
+            <span className="block mt-1">{BUSINESS.email ? `${BUSINESS.phone} · ${BUSINESS.email}` : BUSINESS.phone}</span>
             <span className="block">{BUSINESS.web}</span>
           </address>
         </div>
@@ -277,7 +278,7 @@ function InvoiceSheet({ order }) {
 
       <footer className="mt-10 pt-4 border-t border-neutral-300 text-center text-neutral-600 space-y-1">
         <p className="font-semibold text-black">Thank you for your order</p>
-        <p className="text-xs">Not for persons under 21</p>
+        <p className="text-xs">Not for persons under {MIN_AGE}</p>
       </footer>
     </article>
   )

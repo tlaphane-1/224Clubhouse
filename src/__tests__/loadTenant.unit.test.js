@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { resolveTenantSlug, validateTenant, loadTenant, checkTenantPublic } from '../../tenants/loadTenant.mjs'
@@ -51,6 +51,36 @@ describe('validateTenant', () => {
     expect(broken(t => { delete t.legacyStorageKeys })).not.toThrow()
   })
 
+  // Facts a new store may not have yet: left out (or null / an empty list),
+  // the components skip them instead of showing a placeholder.
+  it('accepts a store without email, social links, bank, delivery hours, officer, reviews, offer or login copy', () => {
+    expect(broken(t => {
+      delete t.contact.email
+      delete t.social
+      t.bank = null
+      delete t.hours.delivery
+      delete t.legal.informationOfficer
+      t.content.home.reviews = []
+      delete t.content.home.newsletter.offer
+      delete t.content.home.newsletter.offerSuffix
+      delete t.content.login
+    })).not.toThrow()
+  })
+
+  it('still checks an optional field that is present', () => {
+    expect(broken(t => { t.bank = { details: 'x' } })).toThrow(/missing required field "bank.bankName"/)
+    expect(broken(t => { t.social.facebook = 7 })).toThrow(/"social.facebook" must be a string \(got number\)/)
+  })
+
+  it.each([
+    ['a fractional fee', t => { t.delivery.feeCents = 30.5 }, /delivery.feeCents must be a whole number of cents/],
+    ['a negative threshold', t => { t.delivery.freeFromCents = -1 }, /delivery.freeFromCents must be a whole number of cents/],
+    ['a missing delivery block', t => { delete t.delivery }, /missing required field "delivery"/],
+    ['a missing telegram switch', t => { delete t.telegram }, /missing required field "telegram"/],
+  ])('rejects %s', (_label, mutate, message) => {
+    expect(broken(mutate)).toThrow(message)
+  })
+
   it('accepts a store with fewer gallery images and extra routes', () => {
     expect(broken(t => {
       t.images.gallery = [t.images.gallery[0]]
@@ -76,6 +106,9 @@ describe('validateTenant', () => {
     ['productDescription without {name}', t => { t.seo.productDescription = 'A product.' }, /seo.productDescription must contain the \{name\} placeholder/],
     ['eventDescription without {name}', t => { t.seo.eventDescription = 'An event.' }, /seo.eventDescription must contain the \{name\} placeholder/],
     ['unknown template token', t => { t.seo.productDescription = '{name} {price}' }, /unknown placeholder \{price\}/],
+    ['minimumAge missing', t => { delete t.minimumAge }, /missing required field "minimumAge"/],
+    ['minimumAge below 18', t => { t.minimumAge = 16 }, /minimumAge must be a whole number from 18 to 25/],
+    ['minimumAge not whole', t => { t.minimumAge = 18.5 }, /minimumAge must be a whole number from 18 to 25/],
   ])('rejects %s, naming the slug and path', (_label, mutate, message) => {
     expect(broken(mutate)).toThrow(message)
     expect(broken(mutate)).toThrow(/tenants\/224clubhouse\/tenant\.json/)
@@ -112,5 +145,18 @@ describe('checkTenantPublic', () => {
   it.each(files)('fails when %s is missing', missing => {
     const dir = fixture(files.filter(f => f !== missing))
     expect(() => checkTenantPublic('shop', dir)).toThrow(new RegExp(`tenants/shop/public/${missing.replaceAll('.', String.raw`\.`)}`))
+  })
+})
+
+// place_cod_order charges a fixed R30 below R500 for every store; the cart
+// shows each store's tenant.json numbers, so they must match the server's.
+describe('every store', () => {
+  const slugs = readdirSync(path.resolve(import.meta.dirname, '../../tenants'), { withFileTypes: true })
+    .filter(d => d.isDirectory()).map(d => d.name)
+
+  it.each(slugs)('%s loads and its delivery numbers match place_cod_order', (slug) => {
+    const t = loadTenant(slug)
+    expect(t.delivery.feeCents).toBe(3000)
+    expect(t.delivery.freeFromCents).toBe(50000)
   })
 })
