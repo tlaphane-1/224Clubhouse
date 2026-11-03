@@ -39,6 +39,12 @@
     "facebook": "https://www.facebook.com/224clubhouse",
     "instagram": "https://www.instagram.com/224clubhouse"
   },
+  "telegram": true,
+  "delivery": {
+    "feeCents": 3000,
+    "freeFromCents": 50000,
+    "promoteMemberFreeDelivery": true
+  },
   "bank": {
     "bankName": "FNB",
     "details": "Bank: FNB\nAccount holder: 224 Clubhouse\nAccount type: Gold Business Account\nAccount number: 63228491138\nBranch code: 250655"
@@ -133,6 +139,7 @@
   },
   "legal": {
     "informationOfficer": "224 Clubhouse Management",
+    "reviewNotes": true,
     "lastUpdated": "13 August 2026"
   },
   "content": {
@@ -238,7 +245,8 @@
       "emailPlaceholder": "admin@224clubhouse.co.za"
     },
     "footer": {
-      "tagline": "A private cannabis members' club. Premium cannabis, delivered to your door. Members only. Elevated always."
+      "tagline": "A private cannabis members' club. Premium cannabis, delivered to your door. Members only. Elevated always.",
+      "hoursHeading": "Delivery Only"
     },
     "ageGate": {
       "heading": "Members' Club",

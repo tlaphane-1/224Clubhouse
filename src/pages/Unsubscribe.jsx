@@ -5,6 +5,7 @@ import { useNewsletterUnsubscribe } from '../hooks/useNewsletterSubscribers'
 import { useStopCartReminders } from '../hooks/useSavedCart'
 import BrandLogo from '../components/ui/BrandLogo'
 import { tenant, pageTitle } from '../tenant'
+import { STORE_CONTACT } from '../utils/storeContact'
 
 // The token is a uuid straight from the DB. Checking the shape here means a
 // mangled link (truncated by a mail client, or someone poking at the URL)
@@ -54,9 +55,9 @@ function CartRemindersOptOut({ raw }) {
     return (
       <Shell icon={<AlertTriangle size={32} className="text-gold" />} title="This link isn't valid">
         <p className="text-muted text-sm leading-relaxed">
-          We couldn't match this link. Try opening it again from the original email, or email{' '}
-          <a href={`mailto:${tenant.contact.email}`} className="text-gold underline underline-offset-2">
-            {tenant.contact.email}
+          We couldn't match this link. Try opening it again from the original email, or {STORE_CONTACT.verb}{' '}
+          <a href={STORE_CONTACT.href} className="text-gold underline underline-offset-2">
+            {STORE_CONTACT.label}
           </a>{' '}
           and we'll switch cart reminders off for you.
         </p>
@@ -111,9 +112,9 @@ function NewsletterUnsubscribe({ raw: rawToken }) {
       <Shell icon={<AlertTriangle size={32} className="text-gold" />} title="This link isn't valid">
         <p className="text-muted text-sm leading-relaxed">
           The unsubscribe link looks incomplete. Some email apps cut long links in half — try
-          opening it again from the original email, or email us at{' '}
-          <a href={`mailto:${tenant.contact.email}`} className="text-gold hover:underline">
-            {tenant.contact.email}
+          opening it again from the original email, or {STORE_CONTACT.verb} us at{' '}
+          <a href={STORE_CONTACT.href} className="text-gold hover:underline">
+            {STORE_CONTACT.label}
           </a>{' '}
           and we'll remove you.
         </p>
@@ -150,9 +151,9 @@ function NewsletterUnsubscribe({ raw: rawToken }) {
       <Shell icon={<AlertTriangle size={32} className="text-gold" />} title="This link isn't valid">
         <p className="text-muted text-sm leading-relaxed">
           We couldn't match this link to a subscription. It may already have been removed. If you
-          are still receiving our newsletter, email{' '}
-          <a href={`mailto:${tenant.contact.email}`} className="text-gold hover:underline">
-            {tenant.contact.email}
+          are still receiving our newsletter, {STORE_CONTACT.verb}{' '}
+          <a href={STORE_CONTACT.href} className="text-gold hover:underline">
+            {STORE_CONTACT.label}
           </a>{' '}
           and we'll take you off the list.
         </p>

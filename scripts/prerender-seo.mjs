@@ -31,7 +31,10 @@ const DESC_MAX = 155
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '..')
-const DIST = resolve(ROOT, 'dist')
+// The build output folder: dist for 224 (npm run build), or the folder named
+// by --dist <dir> (scripts/build-store.mjs builds other stores into their own).
+const distArg = process.argv.indexOf('--dist')
+const DIST = resolve(ROOT, distArg > -1 ? process.argv[distArg + 1] : 'dist')
 
 // ── env: process.env first, then .env.local parsed by hand (same as the other scripts)
 function loadEnv() {
@@ -144,7 +147,9 @@ function writePage(route, html) {
 // ── data
 async function fetchRows(env, table, query) {
   const res = await fetch(`${env.url}/rest/v1/${table}?${query}`, {
-    headers: { apikey: env.key, Authorization: `Bearer ${env.key}` },
+    // x-tenant picks the store whose rows the anon key sees (current_tenant()),
+    // so each store's build prerenders its own products and events.
+    headers: { apikey: env.key, Authorization: `Bearer ${env.key}`, 'x-tenant': tenant.slug },
     signal: AbortSignal.timeout(15000),
   })
   if (!res.ok) throw new Error(`${table}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`)
@@ -279,7 +284,7 @@ Sitemap: ${SITE}/sitemap.xml
 async function main() {
   const templatePath = resolve(DIST, 'index.html')
   if (!existsSync(templatePath)) {
-    console.error('[prerender-seo] dist/index.html not found — run `vite build` first.')
+    console.error(`[prerender-seo] ${templatePath} not found — run \`vite build\` first.`)
     process.exit(1)
   }
   const template = readFileSync(templatePath, 'utf-8')

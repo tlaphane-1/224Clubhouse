@@ -56,9 +56,15 @@ export default function PaperApplication({ form, setForm, email, tiers, selected
           <span className="font-bold text-xs">Address</span>
           <span>{tenant.content.paperForm.letterheadStreet}</span>
           <span>{`${tenant.contact.suburb}, ${tenant.contact.city}`}</span>
-          <a href={`mailto:${tenant.contact.email}`} className="mt-1 font-semibold break-all hover:underline">
-            {tenant.contact.email}
-          </a>
+          {tenant.contact.email ? (
+            <a href={`mailto:${tenant.contact.email}`} className="mt-1 font-semibold break-all hover:underline">
+              {tenant.contact.email}
+            </a>
+          ) : (
+            <a href={`tel:${tenant.contact.phoneTel}`} className="mt-1 font-semibold hover:underline">
+              {tenant.contact.phoneDisplay}
+            </a>
+          )}
         </div>
       </div>
 

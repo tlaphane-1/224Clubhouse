@@ -8,7 +8,7 @@ import { useCheapestTier } from '../hooks/useMembershipTiers'
 import { memberPurchaseGate } from '../utils/memberGate'
 import { formatZAR } from '../utils/formatCurrency'
 import { formatTierPrice } from '../utils/tierPrice'
-import { SHIPPING_THRESHOLD, shippingFeeFor } from '../utils/shipping'
+import { SHIPPING_THRESHOLD, PROMOTE_MEMBER_FREE_DELIVERY, shippingFeeFor } from '../utils/shipping'
 import WhatsAppOrderPanel from '../components/store/WhatsAppOrderPanel'
 import StickyActionBar from '../components/ui/StickyActionBar'
 import BrandLogo from '../components/ui/BrandLogo'
@@ -206,6 +206,13 @@ export default function Cart() {
                   <p className="flex items-center gap-2 text-green-400 text-xs">
                     <Truck size={14} className="shrink-0" /> Free delivery, your member benefit.
                   </p>
+                ) : !PROMOTE_MEMBER_FREE_DELIVERY ? (
+                  shippingFee > 0 && (
+                    <p className="flex items-center gap-2 text-muted text-xs">
+                      <Truck size={14} className="shrink-0 text-leaf" />
+                      Add {formatZAR(SHIPPING_THRESHOLD - cartSubtotal)} more for free delivery.
+                    </p>
+                  )
                 ) : (
                   <div className="flex items-start gap-3 text-xs bg-leaf/5 border border-leaf/30 rounded-lg p-3 leading-relaxed">
                     <Truck size={16} className="text-leaf shrink-0 mt-0.5" />

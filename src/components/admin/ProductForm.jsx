@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { slugify } from '../../utils/slugify'
 import { safeFileName } from '../../utils/safeFileName'
+import { uploadPath } from '../../utils/uploadPath'
 import { withTimeout } from '../../utils/withTimeout'
 import Button from '../ui/Button'
 import Checkbox from '../ui/Checkbox'
@@ -60,7 +61,7 @@ export default function ProductForm({ product, onClose }) {
     setUploading(true)
     try {
       const urls = await Promise.all(files.map(async (file, i) => {
-        const path = `products/${Date.now()}-${i}-${safeFileName(file.name)}`
+        const path = uploadPath('products', `${Date.now()}-${i}-${safeFileName(file.name)}`)
         const { error } = await withTimeout(
           supabase.storage.from('product-images').upload(path, file),
           60000, // uploads carry a file, so they get far longer than a plain write

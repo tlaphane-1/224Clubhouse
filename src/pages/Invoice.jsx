@@ -160,7 +160,7 @@ function InvoiceSheet({ order }) {
             {BUSINESS.addressLines.map((line) => (
               <span key={line} className="block">{line}</span>
             ))}
-            <span className="block mt-1">{BUSINESS.phone} · {BUSINESS.email}</span>
+            <span className="block mt-1">{BUSINESS.email ? `${BUSINESS.phone} · ${BUSINESS.email}` : BUSINESS.phone}</span>
             <span className="block">{BUSINESS.web}</span>
           </address>
         </div>

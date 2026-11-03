@@ -24,7 +24,7 @@ export default function PrivacyPolicy() {
           &ldquo;responsible party&rdquo; for the personal information described in this policy.
         </p>
         <p>
-          <span className="text-white font-semibold">Information Officer:</span> {tenant.legal.informationOfficer}. You can reach the
+          <span className="text-white font-semibold">Information Officer:</span> {tenant.legal.informationOfficer ?? `${tenant.name} (${contact.phoneDisplay})`}. You can reach the
           Information Officer through the{' '}
           <Link to="/contact" className="text-gold hover:text-gold-light transition-colors">contact form</Link>{' '}
           on this site or in person at the store.

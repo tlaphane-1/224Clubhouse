@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { Upload } from 'lucide-react'
 import { safeFileName } from '../../utils/safeFileName'
+import { uploadPath } from '../../utils/uploadPath'
 import { withTimeout } from '../../utils/withTimeout'
 import { tenant } from '../../tenant'
 
@@ -34,7 +35,7 @@ export default function EventForm({ event, onClose }) {
     if (!file) return
     setUploading(true)
     try {
-      const path = `events/${Date.now()}-${safeFileName(file.name)}`
+      const path = uploadPath('events', `${Date.now()}-${safeFileName(file.name)}`)
       const { error } = await withTimeout(
         supabase.storage.from('event-images').upload(path, file),
         60000, // uploads carry a file, so they get far longer than a plain write

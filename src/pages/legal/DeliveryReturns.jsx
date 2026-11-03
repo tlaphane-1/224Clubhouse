@@ -2,6 +2,9 @@ import { Link } from 'react-router-dom'
 import LegalPage, { LegalSection, ReviewNote } from './LegalPage'
 import { tenant } from '../../tenant'
 import { MIN_AGE } from '../../utils/age'
+import { SHIPPING_FEE, SHIPPING_THRESHOLD } from '../../utils/shipping'
+import { EFT_AVAILABLE } from '../../utils/bankDetails'
+import { formatTierPrice } from '../../utils/tierPrice'
 
 const { contact } = tenant
 
@@ -32,12 +35,12 @@ export default function DeliveryReturns() {
       <LegalSection title="2. Delivery times and fees">
         <ul className="list-disc pl-5 space-y-2">
           <li>Orders are typically delivered within <span className="text-white">2–5 business days</span> of confirmation.</li>
-          <li>The delivery fee is <span className="text-white">R30</span>.</li>
-          <li>Delivery is <span className="text-white">free for active members</span>, and for orders of R500 or more.</li>
+          <li>The delivery fee is <span className="text-white">{formatTierPrice(SHIPPING_FEE)}</span>.</li>
+          <li>Delivery is <span className="text-white">free for active members</span>, and for orders of {formatTierPrice(SHIPPING_THRESHOLD)} or more.</li>
           <li>
             Payment is <span className="text-white">cash or card on delivery</span> — have your
-            payment ready for the driver — or <span className="text-white">EFT</span>, in which case we
-            dispatch once the payment reflects.
+            payment ready for the driver{EFT_AVAILABLE ? <> — or <span className="text-white">EFT</span>, in which case we
+            dispatch once the payment reflects</> : null}.
           </li>
         </ul>
       </LegalSection>

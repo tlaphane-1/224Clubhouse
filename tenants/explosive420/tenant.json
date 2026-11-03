@@ -21,23 +21,19 @@
     "phoneDisplay": "076 135 2497",
     "phoneTel": "0761352497",
     "phoneIntl": "+27 76 135 2497",
-    "email": "demo@explosive420.example",
     "mapsLink": "https://maps.google.com/?q=702+Aubrey+Matlakala+St+Soshanguve+Block+L+Soshanguve",
     "mapQuery": "702 Aubrey Matlakala St, Soshanguve Block L, Soshanguve",
     "mapCentre": [-25.52, 28.1]
   },
   "hours": {
     "status": "Open Monday – Sunday, 09:00 – 22:00",
-    "delivery": "Delivery details to be confirmed",
     "contactPage": ["Open Monday – Sunday", "09:00 – 22:00"]
   },
-  "social": {
-    "facebook": "#",
-    "instagram": "#"
-  },
-  "bank": {
-    "bankName": "Capitec",
-    "details": "Bank: Capitec\nAccount holder: to be confirmed\nAccount number: to be confirmed\nReference: your order number"
+  "telegram": false,
+  "delivery": {
+    "feeCents": 3000,
+    "freeFromCents": 50000,
+    "promoteMemberFreeDelivery": false
   },
   "images": {
     "logo": "brand-assets/e420/e420-logo.webp",
@@ -49,6 +45,7 @@
       "brand-assets/e420/e420-gallery-2.jpg",
       "brand-assets/e420/e420-gallery-3.jpg"
     ],
+    "uploadFolder": "e420",
     "logoWideSize": [480, 142],
     "iconSource": "tenants/explosive420/assets/e420-icon-source.png"
   },
@@ -116,36 +113,21 @@
     "eventDescription": "{name} at Explosive 420 Cannabis Social Club, Soshanguve."
   },
   "legal": {
-    "informationOfficer": "Explosive 420 Management (to be confirmed)",
+    "reviewNotes": false,
     "lastUpdated": "3 November 2026"
   },
   "content": {
     "home": {
       "heroTitle": "Premium Indoor. Proudly Local.",
       "heroSubtitle": "Quality flower from local growers, for vetted adult members.",
-      "reviews": [
-        {
-          "name": "Sample review",
-          "rating": 5,
-          "text": "Placeholder testimonial for the demo. Real member reviews will appear here once the club supplies them.",
-          "date": "Sample — not a real review"
-        },
-        {
-          "name": "Sample review 2",
-          "rating": 5,
-          "text": "Placeholder testimonial for the demo. Replace with a genuine member review before going live.",
-          "date": "Sample — not a real review"
-        }
-      ],
+      "reviews": [],
       "galleryHeading": "The Explosive 420 Vibe",
       "newsletter": {
         "eyebrow": "Join The Circle",
         "heading": "Never Miss a Drop",
         "blurb": "Subscribe for new strains, events & updates.",
-        "offer": "Get 10% OFF",
-        "offerSuffix": "your first purchase.",
-        "cta": "Subscribe & Get 10% Off",
-        "welcomeToast": "Welcome to the Explosive 420 circle! Check your email for your discount code."
+        "cta": "Subscribe",
+        "welcomeToast": "Welcome to the Explosive 420 circle! You're on the list."
       }
     },
     "about": {
@@ -201,11 +183,9 @@
     "events": {
       "intro": "Socials and sessions for the Explosive 420 community."
     },
-    "login": {
-      "emailPlaceholder": "admin@explosive420.example"
-    },
     "footer": {
-      "tagline": "A private adult-use cannabis social club in Soshanguve. Premium indoor strains from local growers. Members 21+ only."
+      "tagline": "A private adult-use cannabis social club in Soshanguve. Premium indoor strains from local growers. Members 21+ only.",
+      "hoursHeading": "Opening Hours"
     },
     "ageGate": {
       "heading": "Cannabis Social Club",

@@ -30,7 +30,10 @@ export default function Footer() {
             <p className="text-muted text-sm leading-relaxed max-w-xs">
               {tenant.content.footer.tagline}
             </p>
+            {/* social is optional in tenant.json; each link shows only when set. */}
+            {(tenant.social?.facebook || tenant.social?.instagram) && (
             <div className="flex gap-4 mt-6">
+              {tenant.social.facebook && (
               <a
                 href={tenant.social.facebook}
                 target="_blank"
@@ -40,6 +43,8 @@ export default function Footer() {
               >
                 <FacebookIcon size={20} />
               </a>
+              )}
+              {tenant.social.instagram && (
               <a
                 href={tenant.social.instagram}
                 target="_blank"
@@ -49,7 +54,9 @@ export default function Footer() {
               >
                 <InstagramIcon size={20} />
               </a>
+              )}
             </div>
+            )}
           </div>
 
           {/* Quick Links */}
@@ -99,13 +106,13 @@ export default function Footer() {
           {/* Hours & Address */}
           <div>
             <h4 className="text-white font-semibold uppercase tracking-widest text-xs mb-6">
-              Delivery Only
+              {tenant.content.footer.hoursHeading}
             </h4>
             <div className="space-y-4">
               <div>
                 <p className="text-gold text-xs uppercase tracking-widest mb-1.5">Store</p>
                 <p className="text-white text-sm">{tenant.hours.status}</p>
-                <p className="text-muted text-sm">{tenant.hours.delivery}</p>
+                {tenant.hours.delivery && <p className="text-muted text-sm">{tenant.hours.delivery}</p>}
               </div>
               <div>
                 <p className="text-gold text-xs uppercase tracking-widest mb-1.5">Address</p>

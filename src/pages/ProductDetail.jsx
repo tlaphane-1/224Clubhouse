@@ -11,7 +11,7 @@ import ProductCard from '../components/store/ProductCard'
 import ProductReviews from '../components/store/ProductReviews'
 import StickyActionBar from '../components/ui/StickyActionBar'
 import { formatZAR } from '../utils/formatCurrency'
-import { SHIPPING_FEE } from '../utils/shipping'
+import { SHIPPING_FEE, SHIPPING_THRESHOLD, PROMOTE_MEMBER_FREE_DELIVERY } from '../utils/shipping'
 import { toastAddedToCart } from '../utils/cartToast'
 import BrandLogo from '../components/ui/BrandLogo'
 import { purchasableVariants, hasVariants, toCartItem } from '../utils/variants'
@@ -220,6 +220,10 @@ export default function ProductDetail() {
               <Truck size={16} className="text-leaf mt-0.5 shrink-0" />
               {isMember ? (
                 <span className="text-white">Free delivery, your member benefit</span>
+              ) : !PROMOTE_MEMBER_FREE_DELIVERY ? (
+                <span className="text-muted">
+                  Delivery {formatZAR(SHIPPING_FEE)} · free on orders from {formatZAR(SHIPPING_THRESHOLD)}
+                </span>
               ) : (
                 <span className="text-muted">
                   Delivery {formatZAR(SHIPPING_FEE)} ·{' '}

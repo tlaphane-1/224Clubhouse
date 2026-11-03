@@ -39,12 +39,13 @@ const INFO = [
     lines: [contact.phoneDisplay],
     action: { label: 'Call Us', href: `tel:${contact.phoneTel}` },
   },
-  {
+  // contact.email is optional in tenant.json: no email, no card.
+  ...(contact.email ? [{
     icon: Mail,
     label: 'Email',
     lines: [contact.email],
     action: { label: 'Send Email', href: `mailto:${contact.email}` },
-  },
+  }] : []),
   {
     icon: Clock,
     label: 'Hours',
@@ -53,6 +54,9 @@ const INFO = [
 ]
 
 // Null when VITE_GOOGLE_MAPS_KEY is unset; the map block is then omitted.
+// Where to send people when the form fails: email if the store has one, else phone.
+const FALLBACK_CONTACT = contact.email ? `email us directly at ${contact.email}` : `call us on ${contact.phoneDisplay}`
+
 const mapSrc = mapEmbedUrl(import.meta.env.VITE_GOOGLE_MAPS_KEY, tenant.contact.mapQuery)
 
 export default function Contact() {
@@ -81,7 +85,7 @@ export default function Contact() {
       })
 
       if (error) {
-        toast.error(`Something went wrong. Please email us directly at ${contact.email}`)
+        toast.error(`Something went wrong. Please ${FALLBACK_CONTACT}`)
       } else {
         toast.success('Message sent! We\'ll get back to you within 1–2 business days.', {
           duration: 5000,
@@ -90,7 +94,7 @@ export default function Contact() {
         setForm({ name: '', email: '', subject: '', message: '' })
       }
     } catch {
-      toast.error(`Something went wrong. Please email us directly at ${contact.email}`)
+      toast.error(`Something went wrong. Please ${FALLBACK_CONTACT}`)
     } finally {
       setLoading(false)
     }
@@ -145,10 +149,12 @@ export default function Contact() {
               )
             })}
 
-            {/* Social */}
+            {/* Social — only the links the store has */}
+            {(tenant.social?.facebook || tenant.social?.instagram) && (
             <div className="bg-surface border border-border rounded-xl p-6">
               <p className="text-gold text-xs uppercase tracking-widest mb-4">Follow Us</p>
               <div className="flex gap-4">
+                {tenant.social.facebook && (
                 <a
                   href={tenant.social.facebook}
                   target="_blank"
@@ -157,6 +163,8 @@ export default function Contact() {
                 >
                   <FacebookIcon size={18} /> Facebook
                 </a>
+                )}
+                {tenant.social.instagram && (
                 <a
                   href={tenant.social.instagram}
                   target="_blank"
@@ -165,8 +173,10 @@ export default function Contact() {
                 >
                   <InstagramIcon size={18} /> Instagram
                 </a>
+                )}
               </div>
             </div>
+            )}
           </div>
 
           {/* Contact Form */}

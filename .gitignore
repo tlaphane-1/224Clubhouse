@@ -35,3 +35,6 @@ playwright-report/
 *.njsproj
 *.sln
 *.sw?
+
+# Other stores build into dist-<slug>/ (scripts/build-store.mjs)
+dist-*

@@ -25,6 +25,8 @@ export function DraftBanner() {
 
 /** A note for statements management still needs to confirm. */
 export function ReviewNote({ children }) {
+  // A store can turn these management-facing notes off (legal.reviewNotes).
+  if (!tenant.legal.reviewNotes) return null
   return (
     <p className="text-gold/80 text-xs italic mt-2 leading-relaxed">
       [To be confirmed by management: {children}]

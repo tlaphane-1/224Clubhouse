@@ -8,10 +8,9 @@
  * Talks ONLY to the local Supabase stack (Docker): it refuses to run if
  * `supabase status` reports an API host other than 127.0.0.1/localhost, and it
  * never reads .env files. Idempotent — safe to re-run. It:
- *   1. upserts the `explosive420` tenants row (min age 21, order prefix E420);
- *   2. upserts the demo products and the alert_settings row for that store;
- *   3. creates the public `brand-assets` bucket if missing and uploads
- *      tenants/explosive420/assets/* under `e420/`;
+ *   1-3. runs scripts/provision-explosive420.mjs --local (tenants row,
+ *      alert_settings, products, membership tier, brand images under e420/) —
+ *      the same script the owner runs against production;
  *   4. creates (or resets) a demo customer of that store: date of birth
  *      2000-01-01 (21+), email confirmed, any earlier orders
  *      cancelled so the first-order flow can be shown again.
@@ -27,9 +26,9 @@
  */
 import { spawn, spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { existsSync, openSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, openSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, extname, join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -39,7 +38,6 @@ const SUPABASE_BIN = process.env.SUPABASE_BIN || 'supabase'
 const DB_CONTAINER = 'supabase_db_224clubhouse'
 const LOGIN_FILE = join(ROOT, 'scripts', 'demo-explosive420.local')
 const PID_FILE = join(ROOT, 'scripts', 'demo-explosive420-pid.local')
-const ASSETS = join(ROOT, 'tenants', SLUG, 'assets')
 
 function fail(message) {
   console.error(`demo-explosive420-local: ${message}`)
@@ -68,62 +66,12 @@ const service = {
   Authorization: `Bearer ${local.SERVICE_ROLE_KEY}`,
 }
 
-// ---- 1. tenant row ---------------------------------------------------------
-psql(`insert into tenants (slug, name, order_prefix, min_age, active)
-      values ('${SLUG}', 'Explosive 420 Cannabis Social Club', 'E420', 21, true)
-      on conflict (slug) do update set name = excluded.name, order_prefix = excluded.order_prefix,
-        min_age = excluded.min_age, active = true`)
-
-// ---- 2. demo catalogue (prices are integer cents; ~R150/g per the owner) ---
-const PRODUCTS = [
-  ['Explosive OG', 'explosive-og', 'hybrid', 24, 15000, 'Heavy-hitting house hybrid with a classic earthy, piney OG nose.'],
-  ['Soshanguve Haze', 'soshanguve-haze', 'sativa', 22, 15000, 'Bright, uplifting sativa with citrus and spice notes.'],
-  ['Purple Grenade', 'purple-grenade', 'indica', 23, 16000, 'Deep purple indica for slow evenings; berry and grape aroma.'],
-  ['Gelato Blast', 'gelato-blast', 'hybrid', 25, 18000, 'Creamy, sweet dessert hybrid. Smooth and balanced.'],
-  ['Lemon Fuse', 'lemon-fuse', 'sativa', 21, 15000, 'Zesty lemon-forward sativa for a clear, social high.'],
-  ['Northern Kush', 'northern-kush', 'indica', 20, 15000, 'Relaxing old-school kush with a hashy finish.'],
-  ['Rasta Runtz', 'rasta-runtz', 'hybrid', 26, 20000, 'Top-shelf candy-sweet hybrid. Limited indoor batch.'],
-]
-const rows = PRODUCTS.map(([name, slug, strain, thc, price, desc]) =>
-  `(${q(SLUG)}, ${q(name)}, ${q(slug)}, ${q(`${desc} Premium indoor flower from local growers. (Demo product.)`)}, ${price}, 'flower', ${q(strain)}, ${thc}, 1, 50, true)`)
-rows.push(`(${q(SLUG)}, 'Explosive Pre-Roll', 'explosive-pre-roll', ${q('Single 1g pre-roll of the house Explosive OG. (Demo product.)')}, 6000, 'joints', 'hybrid', 24, 1, 80, true)`)
-psql(`insert into products (tenant, name, slug, description, price, category, strain_type, thc_percentage, weight_grams, stock_quantity, is_available)
-      values ${rows.join(',\n')}
-      on conflict (tenant, slug) do update set name = excluded.name, description = excluded.description,
-        price = excluded.price, category = excluded.category, strain_type = excluded.strain_type,
-        thc_percentage = excluded.thc_percentage, weight_grams = excluded.weight_grams,
-        stock_quantity = greatest(products.stock_quantity, 20), is_available = true`)
-psql(`insert into alert_settings (tenant) values ('${SLUG}') on conflict (tenant) do nothing`)
-// The membership page shows a load error with no tiers. One placeholder tier;
-// the owner has not supplied membership prices.
-psql(`insert into membership_tiers (tenant, slug, name, price_cents, duration_days, perks, sort_order, is_active)
-      values ('${SLUG}', 'monthly', 'Monthly Member (demo price)', 10000, 30,
-        '["Free delivery on every order for 30 days", "Keep ordering: no limit after your first order", "Price is a demo placeholder, to be confirmed"]'::jsonb, 1, true)
-      on conflict (tenant, slug) do update set name = excluded.name, price_cents = excluded.price_cents,
-        duration_days = excluded.duration_days, perks = excluded.perks, is_active = true`)
-
-// ---- 3. brand images -------------------------------------------------------
-const STORAGE = `${local.API_URL}/storage/v1`
-const bucket = await fetch(`${STORAGE}/bucket/brand-assets`, { headers: service })
-if (bucket.status !== 200) {
-  const made = await fetch(`${STORAGE}/bucket`, {
-    method: 'POST',
-    headers: { ...service, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: 'brand-assets', name: 'brand-assets', public: true }),
-  })
-  if (!made.ok) fail(`create bucket: ${made.status} ${await made.text()}`)
-}
-const TYPES = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' }
-for (const file of readdirSync(ASSETS)) {
-  const type = TYPES[extname(file).toLowerCase()]
-  if (!type) continue
-  const up = await fetch(`${STORAGE}/object/brand-assets/e420/${file}`, {
-    method: 'POST',
-    headers: { ...service, 'Content-Type': type, 'x-upsert': 'true', 'Cache-Control': 'max-age=300' },
-    body: readFileSync(join(ASSETS, file)),
-  })
-  if (!up.ok) fail(`upload ${file}: ${up.status} ${await up.text()}`)
-}
+// ---- 1-3. store rows + brand images: the same script production uses -------
+// (scripts/provision-explosive420.mjs), so local shows what production gets.
+const provisioned = spawnSync(process.execPath, [join(ROOT, 'scripts', 'provision-explosive420.mjs'), '--local'], {
+  cwd: ROOT, stdio: 'inherit', env: { ...process.env, SUPABASE_BIN },
+})
+if (provisioned.status !== 0) fail('provision-explosive420 --local failed')
 
 // ---- 4. demo customer --------------------------------------------------------
 let login

@@ -12,8 +12,12 @@ import { HIGHLIGHT_TOAST_STYLE } from '../utils/toastTheme'
 import { BRAND_IMAGES } from '../hooks/useStorageImages'
 import BrandLogo from '../components/ui/BrandLogo'
 import { tenant } from '../tenant'
+import { PROMOTE_MEMBER_FREE_DELIVERY } from '../utils/shipping'
+import { EFT_AVAILABLE } from '../utils/bankDetails'
 
-const { reviews, newsletter: newsletterCopy } = tenant.content.home
+// reviews is optional in tenant.json: a store with none shows no reviews band.
+const { newsletter: newsletterCopy } = tenant.content.home
+const reviews = tenant.content.home.reviews ?? []
 
 export default function Home() {
   const { data: products, isLoading, isError, refetch } = useProducts()
@@ -110,13 +114,15 @@ export default function Home() {
               </Link>
             </div>
 
-            <p
-              className="mt-6 inline-flex items-center gap-2 h-11 px-4 rounded-full border border-leaf/30 bg-leaf/10
-                         text-white text-xs uppercase tracking-widest animate-glow-leaf"
-            >
-              <Truck size={14} className="text-leaf" />
-              Free delivery for members
-            </p>
+            {PROMOTE_MEMBER_FREE_DELIVERY && (
+              <p
+                className="mt-6 inline-flex items-center gap-2 h-11 px-4 rounded-full border border-leaf/30 bg-leaf/10
+                           text-white text-xs uppercase tracking-widest animate-glow-leaf"
+              >
+                <Truck size={14} className="text-leaf" />
+                Free delivery for members
+              </p>
+            )}
           </div>
         </div>
 
@@ -191,14 +197,16 @@ export default function Home() {
               <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Membership</p>
               <h2 className="font-heading text-2xl md:text-3xl font-bold text-white mb-4">Join the club</h2>
               <ul className="space-y-2.5 text-sm text-white/90">
-                <li className="flex items-center gap-3">
-                  <Truck size={16} className="text-leaf shrink-0" /> Free delivery on every order
-                </li>
+                {PROMOTE_MEMBER_FREE_DELIVERY && (
+                  <li className="flex items-center gap-3">
+                    <Truck size={16} className="text-leaf shrink-0" /> Free delivery on every order
+                  </li>
+                )}
                 <li className="flex items-center gap-3">
                   <Sparkles size={16} className="text-leaf shrink-0" /> Members-only products
                 </li>
                 <li className="flex items-center gap-3">
-                  <Crown size={16} className="text-leaf shrink-0" /> Pay by EFT or with your next delivery
+                  <Crown size={16} className="text-leaf shrink-0" /> Pay {EFT_AVAILABLE ? 'by EFT or ' : ''}with your next delivery
                 </li>
               </ul>
             </div>
@@ -213,7 +221,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Reviews */}
+      {/* Reviews — only when the store has some */}
+      {reviews.length > 0 && (
       <section className="py-14 md:py-24 px-4 bg-surface border-y border-border">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-8 md:mb-14 reveal">
@@ -247,6 +256,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* Gallery */}
       <section className="py-14 md:py-24 px-4 max-w-7xl mx-auto">
@@ -282,8 +292,13 @@ export default function Home() {
             <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">{newsletterCopy.eyebrow}</p>
             <h2 className="font-heading text-2xl md:text-3xl font-bold text-white mb-3">{newsletterCopy.heading}</h2>
             <p className="text-muted text-sm mb-8 leading-relaxed">
-              {newsletterCopy.blurb}<br />
-              <span className="text-gold font-semibold">{newsletterCopy.offer}</span> {newsletterCopy.offerSuffix}
+              {newsletterCopy.blurb}
+              {newsletterCopy.offer && (
+                <>
+                  <br />
+                  <span className="text-gold font-semibold">{newsletterCopy.offer}</span> {newsletterCopy.offerSuffix}
+                </>
+              )}
             </p>
 
             <form onSubmit={handleSubscribe} className="space-y-3">
