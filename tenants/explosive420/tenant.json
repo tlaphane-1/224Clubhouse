@@ -46,7 +46,8 @@
       "brand-assets/e420/e420-gallery-3.jpg"
     ],
     "uploadFolder": "e420",
-    "logoWideSize": [480, 142],
+    "logoWideSize": [495, 142],
+    "logoLarge": true,
     "iconSource": "tenants/explosive420/assets/e420-icon-source.png"
   },
   "theme": {

@@ -25,8 +25,9 @@ export default function AgeGate() {
           className="fixed inset-0 z-[9999] bg-background flex items-center justify-center p-6 animate-fade"
         >
           <div className="text-center max-w-md w-full animate-scaleIn">
-            {/* Logo */}
-            <BrandLogo className="h-16 sm:h-20 mx-auto mb-8" />
+            {/* Logo. A store whose logo is detailed artwork (not a wordmark) opts
+                into a larger size with images.logoLarge so the artwork stays legible. */}
+            <BrandLogo className={`${tenant.images.logoLarge ? 'h-44 sm:h-52' : 'h-16 sm:h-20'} mx-auto mb-8`} />
 
             {/* Divider */}
             <div className="w-16 h-px bg-gold mx-auto mb-8" />

@@ -8,6 +8,8 @@
  *   node scripts/provision-explosive420.mjs --production --yes      # writes production
  *   ... --admin      also create the store's first admin (see ADMIN_EMAIL below)
  *   ... --remove     undo: delete what this script created (see removeAll)
+ *   ... --assets-only  only re-upload tenants/explosive420/assets/* (e.g. a new
+ *                      logo); no row is touched, so admin edits to products stay
  *
  * --local reads `supabase status` (SUPABASE_BIN overrides the CLI path) and
  * refuses any API host that is not 127.0.0.1/localhost.
@@ -77,7 +79,7 @@ const TYPES = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg'
 
 // ---- arguments -------------------------------------------------------------
 const args = new Set(process.argv.slice(2))
-const known = ['--local', '--production', '--yes', '--admin', '--remove']
+const known = ['--local', '--production', '--yes', '--admin', '--remove', '--assets-only']
 for (const a of args) if (!known.includes(a)) fail(`unknown option ${a} (use ${known.join(' ')})`)
 if (args.has('--local') === args.has('--production')) fail('choose exactly one target: --local or --production')
 const PRODUCTION = args.has('--production')
@@ -124,7 +126,9 @@ const check = (label, { error }) => { if (error) throw new Error(`${label}: ${er
 // ---- plan ------------------------------------------------------------------
 const assetFiles = readdirSync(ASSETS).filter(f => TYPES[extname(f).toLowerCase()])
 console.log(`target: ${target.label}`)
-if (args.has('--remove')) {
+if (args.has('--assets-only')) {
+  console.log(`plan: upload ${assetFiles.length} images to brand-assets/${BRAND_FOLDER}/ (no rows touched).`)
+} else if (args.has('--remove')) {
   console.log(`plan: REMOVE every ${SLUG} row this script creates (products + variants, tier, alert_settings, admin_users,`
     + ` ${args.has('--admin') ? `the auth user ${ADMIN_EMAIL}, ` : ''}storage under brand-assets/${BRAND_FOLDER}/,`
     + ` product-images/${UPLOAD_FOLDER}/, event-images/${UPLOAD_FOLDER}/), then the tenants row if nothing else references it.`)
@@ -163,6 +167,13 @@ async function provision() {
   check('membership_tiers', await service.from('membership_tiers')
     .upsert({ ...TIER, tenant: SLUG }, { onConflict: 'tenant,slug' }))
 
+  await uploadAssets()
+  console.log(`wrote: tenants, alert_settings, ${fresh.length} new + ${PRODUCTS.length - fresh.length} updated products, tier, ${assetFiles.length} images`)
+
+  if (args.has('--admin')) await provisionAdmin()
+}
+
+async function uploadAssets() {
   const { error: bucketErr } = await service.storage.getBucket('brand-assets')
   if (bucketErr) {
     if (PRODUCTION) throw new Error(`brand-assets bucket: ${bucketErr.message}`)
@@ -172,9 +183,6 @@ async function provision() {
     check(`upload ${file}`, await service.storage.from('brand-assets').upload(`${BRAND_FOLDER}/${file}`,
       readFileSync(join(ASSETS, file)), { contentType: TYPES[extname(file).toLowerCase()], upsert: true, cacheControl: '300' }))
   }
-  console.log(`wrote: tenants, alert_settings, ${fresh.length} new + ${PRODUCTS.length - fresh.length} updated products, tier, ${assetFiles.length} images`)
-
-  if (args.has('--admin')) await provisionAdmin()
 }
 
 async function findUserByEmail(email) {
@@ -305,7 +313,10 @@ async function removeAll() {
 }
 
 try {
-  if (args.has('--remove')) {
+  if (args.has('--assets-only')) {
+    await uploadAssets()
+    console.log(`wrote: ${assetFiles.length} images to brand-assets/${BRAND_FOLDER}/`)
+  } else if (args.has('--remove')) {
     await removeAll()
   } else {
     await provision()
