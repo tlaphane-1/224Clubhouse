@@ -8,6 +8,7 @@ phase 5 (see `docs/superpowers/specs/2026-10-24-multi-tenant-design.md` §9).
 - **Name:** Explosive 420 Cannabis Social Club
 - **Address:** 702 Aubrey Matlakala St, Soshanguve Block L, Soshanguve, 0152
   (province assumed Gauteng)
+- **Minimum age:** 21 (owner decision 2026-11-03; the supplied text said 18).
 - **Phone:** 076 135 2497 (+27 76 135 2497)
 - **Hours:** Monday – Sunday, 09:00 – 22:00
 - **Bank:** Capitec, 076 135 2497 (holder name, account type and whether this

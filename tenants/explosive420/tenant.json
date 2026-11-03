@@ -5,7 +5,7 @@
   "legalName": "Explosive 420 Cannabis Social Club",
   "orderPrefix": "E420",
   "storagePrefix": "e420",
-  "minimumAge": 18,
+  "minimumAge": 21,
   "domain": {
     "siteUrl": "https://explosive420.web.app",
     "apex": "explosive420.web.app",
@@ -76,12 +76,12 @@
   },
   "seo": {
     "title": "Explosive 420 Cannabis Social Club | Soshanguve",
-    "description": "Explosive 420 Cannabis Social Club — a private adult-use cannabis club in Soshanguve Block L. Premium indoor strains from local growers. Members 18+ only.",
+    "description": "Explosive 420 Cannabis Social Club — a private adult-use cannabis club in Soshanguve Block L. Premium indoor strains from local growers. Members 21+ only.",
     "locale": "en_ZA",
     "routes": {
       "/store": {
         "title": "Shop",
-        "description": "Premium indoor cannabis strains from local growers at Explosive 420 Cannabis Social Club, Soshanguve. Members 18+ only."
+        "description": "Premium indoor cannabis strains from local growers at Explosive 420 Cannabis Social Club, Soshanguve. Members 21+ only."
       },
       "/events": {
         "title": "Events",
@@ -112,7 +112,7 @@
         "description": "Delivery and returns policy for Explosive 420 Cannabis Social Club orders."
       }
     },
-    "productDescription": "{name} from Explosive 420 Cannabis Social Club, Soshanguve. Members 18+ only.",
+    "productDescription": "{name} from Explosive 420 Cannabis Social Club, Soshanguve. Members 21+ only.",
     "eventDescription": "{name} at Explosive 420 Cannabis Social Club, Soshanguve."
   },
   "legal": {
@@ -155,7 +155,7 @@
       "founderParagraphs": [
         "Explosive 420 was built around a simple idea: quality cannabis belongs in a healthy, balanced routine. We connect premium indoor flower from local growers with adult members looking for an alternative approach to wellness and socialising.",
         "Our menu focuses on premium indoor strains, starting at around R150 per gram, alongside dabs and extracts.",
-        "We are a community first. The club operates under South African private adult-use guidelines, and access is reserved for vetted adult members aged 18 and over."
+        "We are a community first. The club operates under South African private adult-use guidelines, and access is reserved for vetted adult members aged 21 and over."
       ],
       "timeline": [
         {
@@ -176,12 +176,12 @@
       }
     },
     "membership": {
-      "intro": "Explosive 420 is a private adult-use club. Access is reserved for vetted members aged 18 and over with a valid South African ID or passport.",
-      "requirements": "Must be 18 years or older · Valid SA ID or passport · Personal use only",
+      "intro": "Explosive 420 is a private adult-use club. Access is reserved for vetted members aged 21 and over with a valid South African ID or passport.",
+      "requirements": "Must be 21 years or older · Valid SA ID or passport · Personal use only",
       "rulesTitle": "House Guidelines",
       "rulesShortTitle": "Guidelines",
       "rules": [
-        "Members only: 18 or older with a valid South African ID or passport.",
+        "Members only: 21 or older with a valid South African ID or passport.",
         "Register as a member before accessing the menu or the space.",
         "Consume mindfully and know your limits.",
         "Keep the space safe and judgment-free for everyone.",
@@ -205,7 +205,7 @@
       "emailPlaceholder": "admin@explosive420.example"
     },
     "footer": {
-      "tagline": "A private adult-use cannabis social club in Soshanguve. Premium indoor strains from local growers. Members 18+ only."
+      "tagline": "A private adult-use cannabis social club in Soshanguve. Premium indoor strains from local growers. Members 21+ only."
     },
     "ageGate": {
       "heading": "Cannabis Social Club",

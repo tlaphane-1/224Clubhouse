@@ -8,12 +8,12 @@
  * Talks ONLY to the local Supabase stack (Docker): it refuses to run if
  * `supabase status` reports an API host other than 127.0.0.1/localhost, and it
  * never reads .env files. Idempotent — safe to re-run. It:
- *   1. upserts the `explosive420` tenants row (min age 18, order prefix E420);
+ *   1. upserts the `explosive420` tenants row (min age 21, order prefix E420);
  *   2. upserts the demo products and the alert_settings row for that store;
  *   3. creates the public `brand-assets` bucket if missing and uploads
  *      tenants/explosive420/assets/* under `e420/`;
  *   4. creates (or resets) a demo customer of that store: date of birth
- *      2000-01-01 (18+, under 21), email confirmed, any earlier orders
+ *      2000-01-01 (21+), email confirmed, any earlier orders
  *      cancelled so the first-order flow can be shown again.
  *      Email + password are written to scripts/demo-explosive420.local
  *      (gitignored by the *.local rule), created on the first run.
@@ -70,7 +70,7 @@ const service = {
 
 // ---- 1. tenant row ---------------------------------------------------------
 psql(`insert into tenants (slug, name, order_prefix, min_age, active)
-      values ('${SLUG}', 'Explosive 420 Cannabis Social Club', 'E420', 18, true)
+      values ('${SLUG}', 'Explosive 420 Cannabis Social Club', 'E420', 21, true)
       on conflict (slug) do update set name = excluded.name, order_prefix = excluded.order_prefix,
         min_age = excluded.min_age, active = true`)
 
