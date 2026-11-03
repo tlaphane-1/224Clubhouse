@@ -125,7 +125,12 @@ export const testCode = (label) => `${CODE_PREFIX}${label}-${RUN_TAG}`.toUpperCa
 const READ_TIMEOUT_MS = 8000
 const WRITE_TIMEOUT_MS = 90000
 const READ_ATTEMPTS = 3
-const READ_ONLY_RPCS = new Set(['get_order_tracking', 'discount_newsletter_fixes_applied'])
+const READ_ONLY_RPCS = new Set([
+  'get_order_tracking', 'discount_newsletter_fixes_applied',
+  // Phase-2 tenancy helpers, all STABLE/IMMUTABLE (20261102110000, 20261102130000).
+  'current_tenant', 'default_tenant', 'tenant_min_age', 'tenant_order_prefix',
+  'tenancy_applied', 'is_admin',
+])
 const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'PUT', 'PATCH', 'DELETE'])
 
 const safeToRepeat = (url, method) => {
@@ -384,7 +389,8 @@ export async function giveAdultProfile(admin, userId) {
   }
 }
 
-async function findUserIdByEmail(admin, email) {
+/** The id of the auth user with exactly this email, or null. Pages through listUsers. */
+export async function findUserIdByEmail(admin, email) {
   for (let page = 1; ; page++) {
     const data = mustSucceed(`look up ${email}`, await withRetry(`listUsers ${page}`, () =>
       admin.auth.admin.listUsers({ page, perPage: 1000 }),
@@ -423,6 +429,124 @@ export async function signInAs(client, email) {
     client.auth.signInWithPassword({ email, password: TEST_PASSWORD }),
   )
   mustSucceed(`sign in as ${email}`, result)
+}
+
+// ---------------------------------------------------------------------------
+// Tenancy helpers (phase 2)
+// ---------------------------------------------------------------------------
+
+/**
+ * The second tenant every phase-2 suite uses to prove isolation. It is created
+ * by tests, never by a migration, and stays `active: false` so it can never
+ * serve real traffic. Rows in later suites reference it by FK, so nothing
+ * deletes it afterwards.
+ */
+export const TEST_TENANT = 'vitest-b'
+
+/**
+ * Idempotent: several describes call it. Upserts on the slug so a second call
+ * (or a leftover row from an earlier run) converges on the same values.
+ */
+export async function ensureTestTenant(admin) {
+  mustSucceed('ensure test tenant', await withRetry('ensureTestTenant', () =>
+    admin.from('tenants').upsert({
+      slug: TEST_TENANT,
+      name: 'Vitest B',
+      order_prefix: 'VTB',
+      min_age: 18,
+      active: false,
+    }, { onConflict: 'slug' }),
+  ))
+}
+
+/** An anonymous client that sends `x-tenant: <slug>` on every request. */
+export const tenantClient = (slug) =>
+  createClient(URL, ANON, {
+    ...liveClientOptions,
+    global: { ...liveClientOptions.global, headers: { 'x-tenant': slug } },
+  })
+
+/**
+ * Write a user's customer_profiles row with an explicit tenant. Since
+ * 20261102140000 place_cod_order reads only the CURRENT store's profile, so a
+ * vitest-b user needs a vitest-b row; giveAdultProfile leaves the column to its
+ * default (224clubhouse for the service role) and stays that way for the 224
+ * suites. The service role bypasses RLS, so any date of birth can be written
+ * (set_date_of_birth would refuse an under-age one).
+ */
+export async function giveTenantProfile(admin, userId, tenant, dateOfBirth = '1990-01-01') {
+  mustSucceed(`profile for ${userId} in ${tenant}`, await withRetry(`profile ${userId}`, () =>
+    admin.from('customer_profiles').upsert(
+      { user_id: userId, date_of_birth: dateOfBirth, tenant },
+      { onConflict: 'user_id' },
+    ),
+  ))
+}
+
+/** ISO date (YYYY-MM-DD) exactly `n` years before today, in UTC. */
+export const yearsAgoIso = (n) => {
+  const d = new Date()
+  d.setUTCFullYear(d.getUTCFullYear() - n)
+  return d.toISOString().slice(0, 10)
+}
+
+/**
+ * Like createTestUser, but the account's `app_metadata.tenant` is set, so the
+ * JWT it signs in with carries the claim `current_tenant()` trusts over any
+ * header. Gets an adult profile in that same tenant (giveTenantProfile).
+ *
+ * The tenant goes in BOTH metadata objects. GoTrue's admin createUser inserts
+ * the auth.users row with user_metadata but without the custom app_metadata
+ * (that arrives in a later UPDATE), so the BEFORE INSERT stamp
+ * (20261102160000) and profile_from_signup only see the store through
+ * user_metadata.tenant. app_metadata must carry the tenant as well: when
+ * createUser is given app_metadata at all, its later UPDATE rewrites the
+ * column from GoTrue's own copy (which never saw the stamp) plus what was
+ * passed, so a stamp the passed object does not repeat is lost.
+ */
+export async function createTenantUser(admin, label, tenant) {
+  const email = testEmail(label)
+  let attempts = 0
+  const result = await withRetry(`createUser ${email}`, () => {
+    attempts++
+    return admin.auth.admin.createUser({
+      email,
+      password: TEST_PASSWORD,
+      email_confirm: true,
+      user_metadata: { tenant },
+      app_metadata: { tenant },
+    })
+  })
+  if (attempts > 1 && result.error?.code === 'email_exists') {
+    // Same adoption rule as createTestUser: a retry that finds our own
+    // RUN_TAG address means the first attempt landed and only its reply was lost.
+    const id = await findUserIdByEmail(admin, email)
+    if (id) {
+      await giveTenantProfile(admin, id, tenant)
+      return { id, email }
+    }
+  }
+  const data = mustSucceed(`create tenant account ${email}`, result)
+  await giveTenantProfile(admin, data.user.id, tenant)
+  return { id: data.user.id, email }
+}
+
+/**
+ * A new client signed in as `email`, optionally sending `x-tenant` on every
+ * request (a signed-in user's JWT claim still wins over the header).
+ */
+export async function signInClient(email, password, { tenant } = {}) {
+  const client = createClient(URL, ANON, {
+    ...liveClientOptions,
+    global: {
+      ...liveClientOptions.global,
+      ...(tenant ? { headers: { 'x-tenant': tenant } } : {}),
+    },
+  })
+  mustSucceed(`sign in as ${email}`, await withRetry(`signIn ${email}`, () =>
+    client.auth.signInWithPassword({ email, password }),
+  ))
+  return client
 }
 
 /** Delete a run's accounts. Safe to call with nulls. */

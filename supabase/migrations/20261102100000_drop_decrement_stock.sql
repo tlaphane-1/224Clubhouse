@@ -1,0 +1,11 @@
+-- decrement_stock(product_id, qty) is a SECURITY DEFINER leftover from the
+-- initial schema. Nothing calls it: place_cod_order does its own stock
+-- arithmetic under a row lock, and no file in src/, supabase/functions/ or
+-- scripts/ references it. It was nevertheless executable by every
+-- `authenticated` user (only anon/public were revoked in 20260623120000), so any
+-- signed-in customer could lower any product's stock to zero.
+--
+-- Dropped rather than hardened: dead code with a definer escalation has no
+-- reason to exist, and in the multi-tenant database it would also have crossed
+-- store boundaries.
+drop function if exists public.decrement_stock(uuid, integer);
