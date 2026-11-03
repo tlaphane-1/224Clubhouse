@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { CART_KEY, CART_CLEAR_EVENT } from './cartReducer'
 import { AuthContext } from './useAuth'
+import { tenant } from '../tenant'
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -125,14 +126,17 @@ export function AuthProvider({ children }) {
   // already-registered email via data.user?.identities?.length === 0 (Supabase
   // obfuscates that case to prevent account enumeration).
   // `data` becomes user metadata (e.g. date_of_birth, which a DB trigger copies
-  // into customer_profiles for the server-side 21+ check).
+  // into customer_profiles for the server-side minimum-age check).
+  // `tenant` is always sent: the stamp_user_tenant trigger reads
+  // user_metadata.tenant to fix the account's store at creation (migration
+  // 20261102160000); without it the account would belong to the default store.
   const signUp = async (email, password, { redirectTo, data: metadata } = {}) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectTo ?? window.location.origin + '/checkout',
-        ...(metadata ? { data: metadata } : {}),
+        data: { ...metadata, tenant: tenant.slug },
       },
     })
     if (error) throw error

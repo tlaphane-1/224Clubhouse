@@ -167,7 +167,7 @@ export default function Checkout() {
       return
     }
     if (!agreed) {
-      toast.error('Please confirm you are 21 or older')
+      toast.error(`Please confirm you are ${MIN_AGE} or older`)
       focusField('checkout-agree')
       return
     }
@@ -475,7 +475,7 @@ export default function Checkout() {
                 </h2>
                 <Checkbox id="checkout-agree" checked={agreed} onChange={setAgreed}>
                   <span className="text-muted">
-                    I confirm that I am <span className="text-white font-semibold">21 years of age or older</span> and agree to the{' '}
+                    I confirm that I am <span className="text-white font-semibold">{MIN_AGE} years of age or older</span> and agree to the{' '}
                     <Link to="/terms" className="text-gold hover:text-gold-light underline transition-colors">terms of service</Link>, including the{' '}
                     <Link to="/privacy" className="text-gold hover:text-gold-light underline transition-colors">Privacy Policy</Link>. I understand that cannabis products are intended for adults only.
                   </span>

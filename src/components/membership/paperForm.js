@@ -1,4 +1,5 @@
 import { tenant } from '../../tenant'
+import { MIN_AGE } from '../../utils/age'
 
 // Wording and keys of the club's paper membership form
 // ("<store name> Membership Form"). The keys must match place_membership
@@ -14,7 +15,8 @@ export const CONSUMPTION_REASONS = [
 const consentText = tenant.content.paperForm.consents
 
 export const CONSENTS = [
-  { key: 'age_21', text: 'I confirm that I am 21 years of age or older.' },
+  // Key stays 'age_21' for every store: place_membership still requires it.
+  { key: 'age_21', text: `I confirm that I am ${MIN_AGE} years of age or older.` },
   { key: 'private_club', text: consentText.private_club },
   { key: 'no_redistribution', text: consentText.no_redistribution },
   { key: 'personal_use', text: consentText.personal_use },

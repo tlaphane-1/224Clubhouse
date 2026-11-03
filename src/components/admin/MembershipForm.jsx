@@ -3,19 +3,20 @@ import Button from '../ui/Button'
 import toast from 'react-hot-toast'
 import { useAdminCreateMembership, useAllMembershipTiers } from '../../hooks/useMemberships'
 import { formatZAR } from '../../utils/formatCurrency'
+import { MIN_AGE } from '../../utils/age'
 
 const defaultForm = {
   full_name: '', email: '', phone: '', date_of_birth: '', id_number: '', tier_slug: '',
 }
 
-// Latest date of birth that still makes someone 21 today (mirrors the
-// `current_date - interval '21 years'` check inside admin_create_membership).
+// Latest date of birth that still makes someone MIN_AGE today (mirrors the
+// store-minimum-age check inside admin_create_membership).
 // Built from local date parts, not toISOString(): SAST is UTC+2, so before
-// 02:00 the UTC date is still yesterday and a member born exactly 21 years
+// 02:00 the UTC date is still yesterday and a member born exactly MIN_AGE years
 // ago today would be rejected.
-function maxDobFor21() {
+function maxAdultDob() {
   const d = new Date()
-  d.setFullYear(d.getFullYear() - 21)
+  d.setFullYear(d.getFullYear() - MIN_AGE)
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${mm}-${dd}`
@@ -32,9 +33,9 @@ export default function MembershipForm({ onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    // Client-side 21+ gate; the RPC enforces the same rule server-side.
-    if (form.date_of_birth > maxDobFor21()) {
-      toast.error('Member must be 21 or older')
+    // Client-side minimum-age gate; the RPC enforces the same rule server-side.
+    if (form.date_of_birth > maxAdultDob()) {
+      toast.error(`Member must be ${MIN_AGE} or older`)
       return
     }
     setSaving(true)
@@ -89,8 +90,8 @@ export default function MembershipForm({ onClose }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className={labelCls}>Date of Birth * (21+)</label>
-          <input required type="date" max={maxDobFor21()} className={inputCls} value={form.date_of_birth}
+          <label className={labelCls}>Date of Birth * ({MIN_AGE}+)</label>
+          <input required type="date" max={maxAdultDob()} className={inputCls} value={form.date_of_birth}
             onChange={e => set('date_of_birth', e.target.value)} />
         </div>
         <div>

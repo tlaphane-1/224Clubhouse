@@ -15,6 +15,7 @@ import EftDetails from '../components/checkout/EftDetails'
 import PaperApplication from '../components/membership/PaperApplication'
 import { CONSENTS, EMPTY_PAPER_FORM, paperDob } from '../components/membership/paperForm'
 import { tenant, pageTitle } from '../tenant'
+import { MIN_AGE } from '../utils/age'
 
 // Tiers are data now (membership_tiers table) — only the presentation layer
 // stays client-side. Unknown future slugs fall back to the Star icon.
@@ -84,16 +85,16 @@ export default function Membership() {
 
   const tier = tiers?.find(t => t.slug === selected)
 
-  // Mirrors the RPC's `dob > current_date - interval '21 years'` rejection
+  // Mirrors the RPC's `dob > current_date - <store min age>` rejection
   // exactly, day-of-month included. A year+month-only check let anyone up to
-  // ~30 days short of 21 through to Paystack and only failed server-side —
+  // ~30 days short of the minimum age through to Paystack and only failed server-side —
   // after the card was charged. Dates are built from the parts (the input is
   // always YYYY-MM-DD) so no UTC-vs-local parsing shifts the day.
   function validateAge(dob) {
     const [y, m, d] = String(dob).split('-').map(Number)
     if (!y || !m || !d) return false
     const today = new Date()
-    const cutoff = new Date(today.getFullYear() - 21, today.getMonth(), today.getDate())
+    const cutoff = new Date(today.getFullYear() - MIN_AGE, today.getMonth(), today.getDate())
     return new Date(y, m - 1, d) <= cutoff
   }
 
@@ -193,7 +194,7 @@ export default function Membership() {
     const keys = Object.keys(found)
     setErrors(Object.fromEntries(keys.map(k => [k, k === 'dob' && dob ? 'age' : true])))
     if (keys.length) {
-      toast.error(found.dob && dob ? `You must be 21 or older to join ${tenant.name}.` : 'Please complete the highlighted parts of the form.')
+      toast.error(found.dob && dob ? `You must be ${MIN_AGE} or older to join ${tenant.name}.` : 'Please complete the highlighted parts of the form.')
       focusField(found[keys[0]])
       return
     }

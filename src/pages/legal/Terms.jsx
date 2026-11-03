@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import LegalPage, { LegalSection } from './LegalPage'
 import { tenant } from '../../tenant'
+import { MIN_AGE } from '../../utils/age'
 
 const { contact } = tenant
 // rulesShortTitle is the form used mid-sentence ("the Commandments").
@@ -18,13 +19,13 @@ export default function Terms() {
       title="Terms of Service"
       intro={`These terms govern your use of the ${tenant.name} website, store, and membership. By placing an order or applying for membership you agree to them.`}
     >
-      <LegalSection title="1. Who may use this site (21+ only)">
+      <LegalSection title={`1. Who may use this site (${MIN_AGE}+ only)`}>
         <p>
           {tenant.legalName} is a private, members-based cannabis lifestyle lounge operating within the
           framework of the Cannabis for Private Purposes Act. Our products and services are
-          strictly for adults aged <span className="text-white font-semibold">21 years or older</span>.
+          strictly for adults aged <span className="text-white font-semibold">{MIN_AGE} years or older</span>.
           By using this site, placing an order, or applying for membership you confirm that you are
-          at least 21 years old. We verify age on membership applications and on delivery, and we
+          at least {MIN_AGE} years old. We verify age on membership applications and on delivery, and we
           refuse sale or delivery where age cannot be verified.
         </p>
         <p>
@@ -80,7 +81,7 @@ export default function Terms() {
           Orders are typically delivered within <span className="text-white">2–5 business days</span>.
           The delivery fee is <span className="text-white">R30</span>, and delivery is{' '}
           <span className="text-white">free for active members</span> and for orders of R500 or more. The recipient must
-          be 21 or older and may be asked to show ID on delivery. Full details, including what
+          be {MIN_AGE} or older and may be asked to show ID on delivery. Full details, including what
           happens if you are not home, are in our{' '}
           <Link to="/delivery-returns" className="text-gold hover:text-gold-light transition-colors">
             Delivery &amp; Returns policy
@@ -103,7 +104,7 @@ export default function Terms() {
         <ul className="list-disc pl-5 space-y-2">
           <li>
             Membership is by application and subject to approval by club management, at
-            management&rsquo;s discretion. Applicants must be 21 or older and provide accurate
+            management&rsquo;s discretion. Applicants must be {MIN_AGE} or older and provide accurate
             information, including date of birth for age verification.
           </li>
           <li>

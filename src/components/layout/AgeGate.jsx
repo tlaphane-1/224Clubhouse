@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { isAgeVerified, setAgeVerified } from '../../utils/ageGate'
 import BrandLogo from '../ui/BrandLogo'
 import { tenant } from '../../tenant'
+import { MIN_AGE } from '../../utils/age'
 
 export default function AgeGate() {
   // localStorage is read synchronously, so the initial value can come straight
@@ -37,7 +38,7 @@ export default function AgeGate() {
               {tenant.content.ageGate.tagline}
             </p>
             <p className="text-white text-base mb-10">
-              Are you <span className="text-gold font-semibold">21 or older?</span>
+              Are you <span className="text-gold font-semibold">{MIN_AGE} or older?</span>
             </p>
 
             <div className="flex gap-4">
@@ -46,13 +47,13 @@ export default function AgeGate() {
                 className="flex-1 border border-border text-muted hover:border-muted hover:text-white
                            py-4 rounded-lg font-semibold tracking-wider uppercase text-sm transition-all duration-200"
               >
-                No, I'm Under 21
+                No, I'm Under {MIN_AGE}
               </button>
               <button
                 onClick={handleYes}
                 className="flex-1 btn-gold py-4 rounded-lg font-semibold tracking-wider uppercase text-sm"
               >
-                Yes, I'm 21+
+                Yes, I'm {MIN_AGE}+
               </button>
             </div>
 

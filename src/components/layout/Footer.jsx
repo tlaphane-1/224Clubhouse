@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
 import { tenant } from '../../tenant'
+import { MIN_AGE } from '../../utils/age'
 
 function FacebookIcon({ size = 20, className = '' }) {
   return (
@@ -123,7 +124,7 @@ export default function Footer() {
             © {new Date().getFullYear()} {tenant.name}. All rights reserved.
           </p>
           <p className="text-muted text-xs text-center">
-            🔞 No sales to persons under 21 years of age. Not for sale to minors.
+            🔞 No sales to persons under {MIN_AGE} years of age. Not for sale to minors.
           </p>
         </div>
       </div>

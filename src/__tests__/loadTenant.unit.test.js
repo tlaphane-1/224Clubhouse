@@ -76,6 +76,9 @@ describe('validateTenant', () => {
     ['productDescription without {name}', t => { t.seo.productDescription = 'A product.' }, /seo.productDescription must contain the \{name\} placeholder/],
     ['eventDescription without {name}', t => { t.seo.eventDescription = 'An event.' }, /seo.eventDescription must contain the \{name\} placeholder/],
     ['unknown template token', t => { t.seo.productDescription = '{name} {price}' }, /unknown placeholder \{price\}/],
+    ['minimumAge missing', t => { delete t.minimumAge }, /missing required field "minimumAge"/],
+    ['minimumAge below 18', t => { t.minimumAge = 16 }, /minimumAge must be a whole number from 18 to 25/],
+    ['minimumAge not whole', t => { t.minimumAge = 18.5 }, /minimumAge must be a whole number from 18 to 25/],
   ])('rejects %s, naming the slug and path', (_label, mutate, message) => {
     expect(broken(mutate)).toThrow(message)
     expect(broken(mutate)).toThrow(/tenants\/224clubhouse\/tenant\.json/)

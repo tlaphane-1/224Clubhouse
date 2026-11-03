@@ -5,6 +5,7 @@
   "legalName": "224 Clubhouse",
   "orderPrefix": "224",
   "storagePrefix": "224",
+  "minimumAge": 21,
   "legacyStorageKeys": {
     "age-verified": "age-verified",
     "recent-orders": "224:recent-orders"

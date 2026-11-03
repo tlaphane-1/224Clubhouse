@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import LegalPage, { LegalSection, ReviewNote } from './LegalPage'
 import { tenant } from '../../tenant'
+import { MIN_AGE } from '../../utils/age'
 
 const { contact } = tenant
 
@@ -41,10 +42,10 @@ export default function DeliveryReturns() {
         </ul>
       </LegalSection>
 
-      <LegalSection title="3. ID check on delivery (21+)">
+      <LegalSection title={`3. ID check on delivery (${MIN_AGE}+)`}>
         <p>
-          Cannabis products are for adults aged 21 and over. The person receiving the order must
-          be 21 or older and must be able to show valid identification (SA ID, driver&rsquo;s
+          Cannabis products are for adults aged {MIN_AGE} and over. The person receiving the order must
+          be {MIN_AGE} or older and must be able to show valid identification (SA ID, driver&rsquo;s
           licence, or passport) if asked. If nobody at the address can verify their age, the
           driver will not hand over the order.
         </p>

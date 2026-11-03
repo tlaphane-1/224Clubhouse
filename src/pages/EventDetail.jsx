@@ -14,6 +14,7 @@ import { formatZAR } from '../utils/formatCurrency'
 import toast from 'react-hot-toast'
 import BrandLogo from '../components/ui/BrandLogo'
 import { tenant, pageTitle } from '../tenant'
+import { MIN_AGE } from '../utils/age'
 
 const { street, suburb, city, postalCode } = tenant.contact
 const ADDRESS = `${street}, ${suburb}, ${city}, ${postalCode}`
@@ -165,7 +166,7 @@ export default function EventDetail() {
             <p className="text-muted text-xs leading-relaxed">
               Give your name at the door — you&apos;re on our list.
               {owed > 0 ? ` Settle ${formatZAR(owed)} in cash or by card when you arrive.` : ''}
-              {' '}Bring ID: strictly 21+.
+              {' '}Bring ID: strictly {MIN_AGE}+.
             </p>
             <p className="text-muted text-xs leading-relaxed">{ADDRESS}</p>
           </div>
@@ -320,7 +321,7 @@ export default function EventDetail() {
             {reserve.isPending ? 'Reserving...' : 'Reserve my spot'}
           </button>
           <p className="text-muted text-xs text-center leading-relaxed">
-            Nothing is charged now. Pay cash or card at the door — 21+, ID required.
+            Nothing is charged now. Pay cash or card at the door — {MIN_AGE}+, ID required.
           </p>
         </div>
       </Panel>

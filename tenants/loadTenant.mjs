@@ -84,6 +84,10 @@ export function validateTenant(obj, slug) {
   if (obj.slug !== slug) {
     throw new Error(`${where}: slug "${obj.slug}" does not match folder "${slug}"`)
   }
+  // Same range as the tenants.min_age check constraint; the two must agree.
+  if (!Number.isInteger(obj.minimumAge) || obj.minimumAge < 18 || obj.minimumAge > 25) {
+    throw new Error(`${where}: minimumAge must be a whole number from 18 to 25 (got ${JSON.stringify(obj.minimumAge)})`)
+  }
   // tailwind.config.js turns each colour into rgba() by slicing #RRGGBB.
   for (const [name, colour] of Object.entries(obj.theme.colors)) {
     if (typeof colour !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(colour)) {
