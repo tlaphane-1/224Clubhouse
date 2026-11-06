@@ -3,15 +3,15 @@ import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, serviceClient } from '../_shared/supabaseClients.ts'
 import { emailLogo } from '../_shared/brand.ts'
-import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
+import { notifyTelegram, tg } from '../_shared/telegram.ts'
+import { alertStore, type AlertStore } from '../_shared/storeAlerts.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 // Interim: sends go out from a domain already verified on the Resend account until
 // 224clubhouse.co.za is verified there. Unset MAIL_FROM_DOMAIN to revert to the default.
 const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
-// Internal owner alert. Unset = no alert at all (the customer receipt is unaffected).
-// Comma-separated for several recipients: "owner@x.co.za, manager@x.co.za".
-const ADMIN_ALERT_EMAIL = Deno.env.get('ADMIN_ALERT_EMAIL') ?? ''
+// Internal owner alert recipients are per store: see _shared/storeAlerts.ts.
+// No recipients = no alert at all (the customer receipt is unaffected).
 
 interface OrderItem {
   id?: string
@@ -114,6 +114,7 @@ interface OwnerAlert {
   total: number
   paymentMethod?: string
   lowStock: LowStockLine[]
+  store: AlertStore
 }
 
 /**
@@ -236,14 +237,14 @@ function ownerAlertHtml(alert: OwnerAlert): string {
       </div>` : ''}
 
       <div style="margin-top:20px;">
-        <a href="${SITE_URL}/admin/orders"
+        <a href="${alert.store.siteUrl}/admin/orders"
            style="display:inline-block; background:#111111; color:#ffffff; text-decoration:none; padding:12px 22px; border-radius:6px; font-size:14px; font-weight:700;">
           Open admin orders
         </a>
       </div>
 
       <div style="margin-top:20px; padding-top:14px; border-top:1px solid #eeeeee; font-size:11px; color:#999999;">
-        <span style="color:#ffffff; font-weight:700;">224 Clubhouse</span> &middot; internal order alert
+        <span style="color:#ffffff; font-weight:700;">${escapeHtml(alert.store.name)}</span> &middot; internal order alert
       </div>
     </div>
   </div>
@@ -256,8 +257,8 @@ function ownerAlertHtml(alert: OwnerAlert): string {
  * the contract with the browser, the owner alert is a courtesy on top of it.
  */
 async function sendOwnerAlert(alert: OwnerAlert): Promise<string> {
-  const to = ADMIN_ALERT_EMAIL.split(',').map(address => address.trim()).filter(Boolean)
-  if (to.length === 0) return 'skipped: ADMIN_ALERT_EMAIL not set'
+  const to = alert.store.to
+  if (to.length === 0) return `skipped: no alert email set for ${alert.store.tenant}`
 
   const subject = `New order ${alert.orderNumber} — ${formatZAR(alert.total)} (${paymentLabel(alert.paymentMethod).toLowerCase()})`
 
@@ -268,7 +269,7 @@ async function sendOwnerAlert(alert: OwnerAlert): Promise<string> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: `224 Clubhouse <orders@${MAIL_FROM_DOMAIN}>`,
+      from: `${alert.store.name} <orders@${MAIL_FROM_DOMAIN}>`,
       to,
       subject,
       html: ownerAlertHtml(alert),
@@ -311,7 +312,7 @@ serve(async (req) => {
       .select(
         'order_number, customer_name, customer_email, customer_phone, items, subtotal, ' +
         'discount_code, discount_cents, shipping_fee, total, payment_method, ' +
-        'shipping_address, created_at, user_id'
+        'shipping_address, created_at, user_id, tenant'
       )
       .eq('id', orderId)
       .single()
@@ -484,6 +485,8 @@ serve(async (req) => {
     // missing alert can be diagnosed without function logs.
     let ownerAlert = 'sent'
     const lowStock = await lowStockFor(items)
+    // Alerts go to the store the order belongs to, never by default to 224.
+    const store = await alertStore(order.tenant)
     // Telegram group alert — independent of the email (never throws).
     const telegram = await notifyTelegram('orders',
       `🛒 <b>New order ${tg(orderNumber)}</b> — ${tg(formatZAR(total))} (${tg(paymentLabel(paymentMethod))})\n`
@@ -491,7 +494,7 @@ serve(async (req) => {
       + `${tg(formatAddress((order.shipping_address ?? null) as ShippingAddress | null))}\n\n`
       + items.map(i => `• ${tg(i.quantity)}× ${tg(lineName(i))}`).join('\n')
       + (lowStock.length ? `\n\n⚠️ <b>Low stock</b>\n` + lowStock.map(l => `• ${tg(l.name)}: ${l.left === 0 ? 'SOLD OUT' : `${l.left} left`}`).join('\n') : ''),
-      { text: 'Open orders', url: `${TG_SITE}/admin/orders` })
+      { text: 'Open orders', url: `${store.siteUrl}/admin/orders` }, store.tenant)
     try {
       ownerAlert = await sendOwnerAlert({
         orderNumber,
@@ -508,6 +511,7 @@ serve(async (req) => {
         total,
         paymentMethod,
         lowStock,
+        store,
       })
     } catch (alertError) {
       console.error('[send-order-email] owner alert failed:', alertError)

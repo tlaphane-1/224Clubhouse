@@ -6,8 +6,10 @@
  *   node scripts/provision-explosive420.mjs --local                 # local Docker stack
  *   node scripts/provision-explosive420.mjs --production            # dry run: prints the plan
  *   node scripts/provision-explosive420.mjs --production --yes      # writes production
- *   ... --admin      also create the store's first admin (see ADMIN_EMAIL below)
+ *   ... --admin      also create the store's admins (see ADMIN_EMAILS below)
  *   ... --remove     undo: delete what this script created (see removeAll)
+ *   ... --assets-only  only re-upload tenants/explosive420/assets/* (e.g. a new
+ *                      logo); no row is touched, so admin edits to products stay
  *
  * --local reads `supabase status` (SUPABASE_BIN overrides the CLI path) and
  * refuses any API host that is not 127.0.0.1/localhost.
@@ -20,12 +22,12 @@
  * no JWT claim, so a column default would otherwise resolve to 224):
  *   tenants          the explosive420 row (name, order prefix E420, min age 21)
  *   alert_settings   the store's (empty) alert row
- *   products         the 8 catalogue products (new ones get stock 50; a re-run
+ *   products         the menu products + pictures (new ones get stock 50; a re-run
  *                    updates names/prices/descriptions but never resets stock)
  *   membership_tiers one Monthly Membership tier (the membership page needs one)
  *   storage          tenants/explosive420/assets/* → brand-assets/e420/
- *   with --admin:    auth user ADMIN_EMAIL (email confirmed, tenant claim
- *                    explosive420) + its admin_users row; the generated
+ *   with --admin:    an auth user per ADMIN_EMAILS (email confirmed, tenant claim
+ *                    explosive420) + its admin_users row; each generated
  *                    password is written to scripts/explosive420-admin.local
  *                    (gitignored), never printed.
  * Then it reads back with the anon key: with x-tenant: explosive420 it must see
@@ -33,7 +35,7 @@
  */
 import { spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, extname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
@@ -44,29 +46,50 @@ const PRODUCTION_HOST = 'aogdkqczvlffgydgxsmz.supabase.co'
 const ASSETS = join(ROOT, 'tenants', SLUG, 'assets')
 const BRAND_FOLDER = 'e420' // tenant.json images.* point at brand-assets/e420/…
 const UPLOAD_FOLDER = 'e420' // tenant.json images.uploadFolder (admin uploads)
-const ADMIN_EMAIL = 'tlaphane+explosive420@gmail.com'
+// Owner decisions 2026-11-03 / 2026-11-07. An address that already has an
+// account at another store is refused: one login belongs to one store.
+const ADMIN_EMAILS = ['tlaphane+explosive420@gmail.com', 'tlzitha98@gmail.com']
+// Where this store's owner alerts (new order, EFT proof, membership application,
+// review) are emailed; comma-separated. Never 224's address (owner 2026-11-07).
+const ALERT_EMAILS = 'tlaphane@gmail.com'
 const ADMIN_FILE = join(ROOT, 'scripts', 'explosive420-admin.local')
 
 const TENANT_ROW = { slug: SLUG, name: 'Explosive 420 Cannabis Social Club', order_prefix: 'E420', min_age: 21, active: true }
 
-// Prices are integer cents (around R150 per gram, per the owner). No THC
-// figures: none were supplied, and an invented lab number would read as fact.
-const flower = (name, slug, strain, price) => ({
-  name, slug, price, category: 'flower', strain_type: strain, weight_grams: 1,
-  description: `${strain[0].toUpperCase()}${strain.slice(1)} flower. Premium indoor, from local growers.`,
+// The club's menu as supplied by the owner (2026-11-06). Prices are integer
+// cents. Strain type and THC are left empty: the menu gives neither, and an
+// invented figure would read as fact. Dabs & extracts are on the menu without
+// prices, so they are not listed yet. Each picture is cut from the menu and
+// lives at tenants/explosive420/products/<slug>.jpg.
+const gram = (name, slug, price, notes, grade) => ({
+  name, slug, price, category: 'flower', weight_grams: 1, description: `${notes}. ${grade}`,
 })
+const indoor = (name, slug, notes) => gram(name, slug, 15000, notes, 'Premium indoor, Triple A.')
 const PRODUCTS = [
-  flower('Explosive OG', 'explosive-og', 'hybrid', 15000),
-  flower('Soshanguve Haze', 'soshanguve-haze', 'sativa', 15000),
-  flower('Purple Grenade', 'purple-grenade', 'indica', 16000),
-  flower('Gelato Blast', 'gelato-blast', 'hybrid', 18000),
-  flower('Lemon Fuse', 'lemon-fuse', 'sativa', 15000),
-  flower('Northern Kush', 'northern-kush', 'indica', 15000),
-  flower('Rasta Runtz', 'rasta-runtz', 'hybrid', 20000),
-  { name: 'Explosive Pre-Roll', slug: 'explosive-pre-roll', price: 6000, category: 'joints', strain_type: 'hybrid',
-    weight_grams: 1, description: 'Single 1g pre-roll. Premium indoor, from local growers.' },
-].map(p => ({ ...p, thc_percentage: null, is_available: true, is_member_only: false }))
+  indoor('Strawberry Cough', 'strawberry-cough', 'Sweet · Uplifting · Creative'),
+  indoor('Chem Dawg', 'chem-dawg', 'Pungent · Energetic · Earthy'),
+  indoor('Afghani Purple', 'afghani-purple', 'Body high · Deep relaxation · Sleep'),
+  indoor('UK Cheese', 'uk-cheese', 'Earthy · Lemony · Uplifting'),
+  indoor('Exodus Cheese', 'exodus-cheese', 'Strong · Relaxing · Medicinal'),
+  indoor('Cali Lemon', 'cali-lemon', 'Citrus · Energising · Focused'),
+  indoor('Wedding Cake', 'wedding-cake', 'Sweet · Balanced · Happy'),
+  indoor('Tropic Cake', 'tropic-cake', 'Fruity · Smooth · Uplifting'),
+  // The menu lists two outdoor strains both called "Outdoor"; named by price
+  // until the owner gives them names.
+  gram('Outdoor (R50 grade)', 'outdoor-r50', 5000, 'Natural · Organic · Bold', 'Outdoor grown, from indigenous growers.'),
+  gram('Outdoor (R35 grade)', 'outdoor-r35', 3500, 'Natural · Organic · Bold', 'Outdoor grown, from indigenous growers.'),
+  gram('Green Door', 'green-door', 7000, 'Premium · Smooth · Potent', 'Per gram.'),
+  { name: 'Gummies', slug: 'gummies', price: 8000, category: 'edibles', weight_grams: null,
+    description: 'Infused gummies, assorted flavours. Priced per pack.' },
+  { name: 'Lollipop', slug: 'lollipop', price: 5000, category: 'edibles', weight_grams: null,
+    description: 'Infused lollipop, assorted flavours. Priced each.' },
+].map(p => ({ ...p, strain_type: null, thc_percentage: null, is_available: true, is_member_only: false }))
 const NEW_PRODUCT_STOCK = 50
+const PRODUCT_PICTURES = join(ROOT, 'tenants', SLUG, 'products')
+// Placeholder products from the first pitch build, replaced by the real menu.
+// Deleted on provision; orders keep their own copy of item names and prices.
+const RETIRED_SLUGS = ['explosive-og', 'soshanguve-haze', 'purple-grenade', 'gelato-blast',
+  'lemon-fuse', 'northern-kush', 'rasta-runtz', 'explosive-pre-roll']
 
 const TIER = {
   slug: 'monthly', name: 'Monthly Membership', price_cents: 10000, duration_days: 30, sort_order: 1, is_active: true,
@@ -77,7 +100,7 @@ const TYPES = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg'
 
 // ---- arguments -------------------------------------------------------------
 const args = new Set(process.argv.slice(2))
-const known = ['--local', '--production', '--yes', '--admin', '--remove']
+const known = ['--local', '--production', '--yes', '--admin', '--remove', '--assets-only']
 for (const a of args) if (!known.includes(a)) fail(`unknown option ${a} (use ${known.join(' ')})`)
 if (args.has('--local') === args.has('--production')) fail('choose exactly one target: --local or --production')
 const PRODUCTION = args.has('--production')
@@ -124,14 +147,16 @@ const check = (label, { error }) => { if (error) throw new Error(`${label}: ${er
 // ---- plan ------------------------------------------------------------------
 const assetFiles = readdirSync(ASSETS).filter(f => TYPES[extname(f).toLowerCase()])
 console.log(`target: ${target.label}`)
-if (args.has('--remove')) {
+if (args.has('--assets-only')) {
+  console.log(`plan: upload ${assetFiles.length} images to brand-assets/${BRAND_FOLDER}/ (no rows touched).`)
+} else if (args.has('--remove')) {
   console.log(`plan: REMOVE every ${SLUG} row this script creates (products + variants, tier, alert_settings, admin_users,`
-    + ` ${args.has('--admin') ? `the auth user ${ADMIN_EMAIL}, ` : ''}storage under brand-assets/${BRAND_FOLDER}/,`
+    + ` ${args.has('--admin') ? `the auth users ${ADMIN_EMAILS.join(', ')}, ` : ''}storage under brand-assets/${BRAND_FOLDER}/,`
     + ` product-images/${UPLOAD_FOLDER}/, event-images/${UPLOAD_FOLDER}/), then the tenants row if nothing else references it.`)
 } else {
   console.log(`plan: upsert tenants row ${SLUG} (order prefix ${TENANT_ROW.order_prefix}, min age ${TENANT_ROW.min_age}); alert_settings row;`
-    + ` ${PRODUCTS.length} products; tier "${TIER.name}"; upload ${assetFiles.length} images to brand-assets/${BRAND_FOLDER}/`
-    + `${args.has('--admin') ? `; admin ${ADMIN_EMAIL}` : ''}; then verify with the anon key.`)
+    + ` ${PRODUCTS.length} products with pictures (placeholders ${RETIRED_SLUGS.length} removed); tier "${TIER.name}"; upload ${assetFiles.length} images to brand-assets/${BRAND_FOLDER}/`
+    + `${args.has('--admin') ? `; admins ${ADMIN_EMAILS.join(', ')}` : ''}; then verify with the anon key.`)
 }
 if (!WRITE) {
   console.log('dry run: nothing written. Re-run with --yes to apply.')
@@ -143,6 +168,8 @@ async function provision() {
   check('tenants', await service.from('tenants').upsert(TENANT_ROW, { onConflict: 'slug' }))
   check('alert_settings', await service.from('alert_settings')
     .upsert({ tenant: SLUG }, { onConflict: 'tenant', ignoreDuplicates: true }))
+  check('alert_settings alert_emails', await service.from('alert_settings')
+    .update({ alert_emails: ALERT_EMAILS }).eq('tenant', SLUG))
 
   // A slug is unique per store, so sharing one with 224 is allowed; still
   // worth knowing, since the two stores' product URLs would then look alike.
@@ -151,18 +178,41 @@ async function provision() {
   check('slug check', { error: clashErr })
   if (clash.length) console.warn(`note: 224 also has slug(s) ${clash.map(r => r.slug).join(', ')} (allowed: slugs are per store)`)
 
+  const products = await withPictures(PRODUCTS)
   const { data: have, error: haveErr } = await service.from('products').select('slug').eq('tenant', SLUG)
   check('products read', { error: haveErr })
   const existing = new Set(have.map(r => r.slug))
-  const fresh = PRODUCTS.filter(p => !existing.has(p.slug)).map(p => ({ ...p, tenant: SLUG, stock_quantity: NEW_PRODUCT_STOCK }))
+  const fresh = products.filter(p => !existing.has(p.slug)).map(p => ({ ...p, tenant: SLUG, stock_quantity: NEW_PRODUCT_STOCK }))
   if (fresh.length) check('products insert', await service.from('products').insert(fresh))
-  for (const p of PRODUCTS.filter(p => existing.has(p.slug))) {
+  for (const p of products.filter(p => existing.has(p.slug))) {
     check(`products update ${p.slug}`, await service.from('products').update(p).eq('tenant', SLUG).eq('slug', p.slug))
   }
+  const retired = RETIRED_SLUGS.filter(s => existing.has(s))
+  if (retired.length) check('retire placeholders', await service.from('products').delete().eq('tenant', SLUG).in('slug', retired))
+  console.log(`products: ${retired.length} placeholder(s) removed`)
 
   check('membership_tiers', await service.from('membership_tiers')
     .upsert({ ...TIER, tenant: SLUG }, { onConflict: 'tenant,slug' }))
 
+  await uploadAssets()
+  console.log(`wrote: tenants, alert_settings, ${fresh.length} new + ${PRODUCTS.length - fresh.length} updated products, tier, ${assetFiles.length} images`)
+
+  if (args.has('--admin')) for (const email of ADMIN_EMAILS) await provisionAdmin(email)
+}
+
+// Uploads each product's picture to product-images/<UPLOAD_FOLDER>/<slug>.jpg
+// (the store's own folder, where its admin uploads go too) and returns the
+// products with `images` pointing at it.
+async function withPictures(products) {
+  return Promise.all(products.map(async p => {
+    const path = `${UPLOAD_FOLDER}/${p.slug}.jpg`
+    check(`upload ${path}`, await service.storage.from('product-images').upload(path,
+      readFileSync(join(PRODUCT_PICTURES, `${p.slug}.jpg`)), { contentType: 'image/jpeg', upsert: true, cacheControl: '300' }))
+    return { ...p, images: [service.storage.from('product-images').getPublicUrl(path).data.publicUrl] }
+  }))
+}
+
+async function uploadAssets() {
   const { error: bucketErr } = await service.storage.getBucket('brand-assets')
   if (bucketErr) {
     if (PRODUCTION) throw new Error(`brand-assets bucket: ${bucketErr.message}`)
@@ -172,9 +222,6 @@ async function provision() {
     check(`upload ${file}`, await service.storage.from('brand-assets').upload(`${BRAND_FOLDER}/${file}`,
       readFileSync(join(ASSETS, file)), { contentType: TYPES[extname(file).toLowerCase()], upsert: true, cacheControl: '300' }))
   }
-  console.log(`wrote: tenants, alert_settings, ${fresh.length} new + ${PRODUCTS.length - fresh.length} updated products, tier, ${assetFiles.length} images`)
-
-  if (args.has('--admin')) await provisionAdmin()
 }
 
 async function findUserByEmail(email) {
@@ -186,12 +233,12 @@ async function findUserByEmail(email) {
   }
 }
 
-async function provisionAdmin() {
-  let user = await findUserByEmail(ADMIN_EMAIL)
+async function provisionAdmin(email) {
+  let user = await findUserByEmail(email)
   if (user) {
     const claim = user.app_metadata?.tenant
-    if (claim !== SLUG) throw new Error(`${ADMIN_EMAIL} already exists with store "${claim}", not ${SLUG}; refusing to make it an admin`)
-    console.log(`admin: ${ADMIN_EMAIL} already exists (store ${SLUG}); password unchanged`)
+    if (claim !== SLUG) throw new Error(`${email} already exists with store "${claim}", not ${SLUG}; refusing to make it an admin`)
+    console.log(`admin: ${email} already exists (store ${SLUG}); password unchanged`)
   } else {
     // Never write a password to a file git would commit.
     const ignored = spawnSync('git', ['check-ignore', '-q', ADMIN_FILE], { cwd: ROOT })
@@ -201,24 +248,25 @@ async function provisionAdmin() {
     // GoTrue then REPLACES app_metadata with what is passed here, so both
     // must name the store or the account would lose its tenant claim.
     const { data, error } = await service.auth.admin.createUser({
-      email: ADMIN_EMAIL, password, email_confirm: true,
+      email: email, password, email_confirm: true,
       user_metadata: { tenant: SLUG }, app_metadata: { tenant: SLUG },
     })
     if (error) throw new Error(`createUser: ${error.message}`)
     user = data.user
-    writeFileSync(ADMIN_FILE, `# ${SLUG} admin (${target.label}). Change the password after first sign-in.\nemail=${ADMIN_EMAIL}\npassword=${password}\n`)
-    console.log(`admin: created ${ADMIN_EMAIL}; sign-in details written to ${ADMIN_FILE}`)
+    // Appended, so an earlier admin's details are never overwritten.
+    appendFileSync(ADMIN_FILE, `# ${SLUG} admin (${target.label}). Change the password after first sign-in.\nemail=${email}\npassword=${password}\n\n`)
+    console.log(`admin: created ${email}; sign-in details written to ${ADMIN_FILE}`)
   }
   const { data: fresh, error: getErr } = await service.auth.admin.getUserById(user.id)
   if (getErr) throw new Error(`getUserById: ${getErr.message}`)
-  if (fresh.user.app_metadata?.tenant !== SLUG) throw new Error(`${ADMIN_EMAIL} has tenant claim "${fresh.user.app_metadata?.tenant}", expected ${SLUG}`)
+  if (fresh.user.app_metadata?.tenant !== SLUG) throw new Error(`${email} has tenant claim "${fresh.user.app_metadata?.tenant}", expected ${SLUG}`)
 
   check('admin_users', await service.from('admin_users')
-    .upsert({ id: user.id, email: ADMIN_EMAIL, tenant: SLUG }, { onConflict: 'id', ignoreDuplicates: true }))
+    .upsert({ id: user.id, email: email, tenant: SLUG }, { onConflict: 'id', ignoreDuplicates: true }))
   const { data: row, error: rowErr } = await service.from('admin_users').select('tenant').eq('id', user.id).single()
   check('admin_users read', { error: rowErr })
-  if (row.tenant !== SLUG) throw new Error(`admin_users row for ${ADMIN_EMAIL} has tenant "${row.tenant}", expected ${SLUG}`)
-  console.log(`admin: admin_users row present for ${ADMIN_EMAIL} (tenant ${SLUG})`)
+  if (row.tenant !== SLUG) throw new Error(`admin_users row for ${email} has tenant "${row.tenant}", expected ${SLUG}`)
+  console.log(`admin: admin_users row present for ${email} (tenant ${SLUG})`)
 }
 
 // ---- verify ------------------------------------------------------------------
@@ -261,11 +309,13 @@ async function removeObjects(bucket, prefix) {
 async function removeAll() {
   check('admin_users', await service.from('admin_users').delete().eq('tenant', SLUG))
   if (args.has('--admin')) {
-    const user = await findUserByEmail(ADMIN_EMAIL)
-    if (user && user.app_metadata?.tenant === SLUG) {
-      const { error } = await service.auth.admin.deleteUser(user.id)
-      if (error) throw new Error(`deleteUser: ${error.message}`)
-      console.log(`removed auth user ${ADMIN_EMAIL}`)
+    for (const email of ADMIN_EMAILS) {
+      const user = await findUserByEmail(email)
+      if (user && user.app_metadata?.tenant === SLUG) {
+        const { error } = await service.auth.admin.deleteUser(user.id)
+        if (error) throw new Error(`deleteUser: ${error.message}`)
+        console.log(`removed auth user ${email}`)
+      }
     }
   }
   check('product_variants', await service.from('product_variants').delete().eq('tenant', SLUG))
@@ -305,7 +355,10 @@ async function removeAll() {
 }
 
 try {
-  if (args.has('--remove')) {
+  if (args.has('--assets-only')) {
+    await uploadAssets()
+    console.log(`wrote: ${assetFiles.length} images to brand-assets/${BRAND_FOLDER}/`)
+  } else if (args.has('--remove')) {
     await removeAll()
   } else {
     await provision()

@@ -39,10 +39,13 @@ export async function sendTelegram(token: string, chatId: number | string, html:
   return body
 }
 
-/** Post an alert to the configured group if Telegram is set up and this kind is on. */
-export async function notifyTelegram(kind: AlertKind, html: string, button?: Button): Promise<string> {
+/**
+ * Post an alert to the store's configured group if Telegram is set up there and
+ * this kind is on. `tenant` is the store the alert is about; omitted means 224.
+ */
+export async function notifyTelegram(kind: AlertKind, html: string, button?: Button, tenant?: string): Promise<string> {
   try {
-    const { data, error } = await serviceClient().rpc('telegram_config')
+    const { data, error } = await serviceClient(tenant).rpc('telegram_config')
     if (error) return `skipped: ${error.message}`
     if (!data?.token || !data?.chat_id || !data?.enabled) return 'skipped: not set up'
     if (data.kinds?.[kind] === false) return `skipped: ${kind} off`

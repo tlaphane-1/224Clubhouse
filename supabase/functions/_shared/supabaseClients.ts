@@ -11,9 +11,12 @@ const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
  * name, order/tier details) AFTER the caller has been authorized — never to
  * decide whether the caller is allowed.
  */
-export function serviceClient() {
+export function serviceClient(tenant?: string) {
   return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
+    // The service role has no tenant claim, so current_tenant() reads x-tenant
+    // and otherwise means 224. Pass the store when an RPC must act for it.
+    ...(tenant ? { global: { headers: { 'x-tenant': tenant } } } : {}),
   })
 }
 

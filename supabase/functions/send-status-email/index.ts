@@ -3,7 +3,8 @@ import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, callerIsAdmin, serviceClient } from '../_shared/supabaseClients.ts'
 import { emailLogo } from '../_shared/brand.ts'
-import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
+import { notifyTelegram, tg } from '../_shared/telegram.ts'
+import { alertStore } from '../_shared/storeAlerts.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 // Interim: sends go out from a domain already verified on the Resend account until
@@ -77,7 +78,7 @@ serve(async (req) => {
     // --- Facts come from the DB, never from the payload ------------------
     const { data: order, error: orderError } = await serviceClient()
       .from('orders')
-      .select('order_number, customer_name, customer_email, status, driver_id')
+      .select('order_number, customer_name, customer_email, status, driver_id, tenant')
       .eq('id', orderId)
       .single()
 
@@ -109,11 +110,12 @@ serve(async (req) => {
         ? await serviceClient().from('drivers').select('full_name').eq('user_id', order.driver_id).maybeSingle()
         : { data: null }
       const who = drv?.full_name ? tg(drv.full_name) : 'The driver'
+      const store = await alertStore(order.tenant)
       await notifyTelegram('deliveries',
         status === 'out_for_delivery'
           ? `🚚 ${who} set off with <b>${tg(orderNumber)}</b> for ${tg(customerName)}`
           : `✅ <b>${tg(orderNumber)}</b> delivered to ${tg(customerName)}${drv?.full_name ? ` by ${tg(drv.full_name)}` : ''}`,
-        { text: 'Drivers', url: `${TG_SITE}/admin/drivers` })
+        { text: 'Drivers', url: `${store.siteUrl}/admin/drivers` }, store.tenant)
     }
 
     const copy = nearby
