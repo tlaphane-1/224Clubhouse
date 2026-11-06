@@ -3,7 +3,8 @@ import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, callerIsAdmin, serviceClient } from '../_shared/supabaseClients.ts'
 import { emailLogo } from '../_shared/brand.ts'
-import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
+import { notifyTelegram, tg } from '../_shared/telegram.ts'
+import { alertStore } from '../_shared/storeAlerts.ts'
 
 // EFT payment emails (migration 20261007120000_eft_payment_verification):
 //   kind 'proof'    — the CUSTOMER uploaded proof of payment → alert the club.
@@ -14,7 +15,6 @@ import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
-const ADMIN_ALERT_EMAIL = Deno.env.get('ADMIN_ALERT_EMAIL') ?? ''
 const SITE_URL = 'https://224clubhouse.store'
 
 function formatZAR(cents: number): string {
@@ -71,7 +71,7 @@ serve(async (req) => {
     const { data: order, error } = await serviceClient()
       .from('orders')
       .select('order_number, customer_name, customer_email, total, payment_method, user_id, ' +
-              'paid_at, paid_amount_cents, payment_proof_uploaded_at')
+              'paid_at, paid_amount_cents, payment_proof_uploaded_at, tenant')
       .eq('id', orderId)
       .single()
     if (error || !order) return jsonResponse({ error: 'Order not found' }, 404)
@@ -85,12 +85,14 @@ serve(async (req) => {
       }
       if (!order.payment_proof_uploaded_at) return jsonResponse({ error: 'No proof on this order' }, 400)
 
-      const to = ADMIN_ALERT_EMAIL.split(',').map((a: string) => a.trim()).filter(Boolean)
+      // The store's own owner alert recipients, never by default 224's.
+      const store = await alertStore(order.tenant)
+      const to = store.to
       await notifyTelegram('eft',
         `🧾 <b>Proof of payment</b> for ${tg(order.order_number)} — ${tg(formatZAR(order.total))}\n`
         + `${tg(order.customer_name)}. Check FNB for the reference <b>${tg(order.customer_name)}</b> before marking it paid.`,
-        { text: 'EFT to check', url: `${TG_SITE}/admin/orders?filter=eft` })
-      if (to.length === 0) return jsonResponse({ success: false, reason: 'ADMIN_ALERT_EMAIL not set' })
+        { text: 'EFT to check', url: `${store.siteUrl}/admin/orders?filter=eft` }, store.tenant)
+      if (to.length === 0) return jsonResponse({ success: false, reason: `no alert email set for ${store.tenant}` })
       await send(
         to,
         `Proof of payment: ${order.order_number} — ${formatZAR(order.total)}`,
@@ -101,7 +103,7 @@ serve(async (req) => {
            (${formatZAR(order.total)}).<br><br>
            Check that the money has reflected in the FNB account, then mark the payment received.
            A proof of payment alone is not confirmation — they can be faked.`,
-          `${SITE_URL}/admin/orders`,
+          `${store.siteUrl}/admin/orders`,
           'Open orders',
         ),
       )

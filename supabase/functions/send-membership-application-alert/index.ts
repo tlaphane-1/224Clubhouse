@@ -3,16 +3,16 @@ import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, serviceClient } from '../_shared/supabaseClients.ts'
 import { emailLogo } from '../_shared/brand.ts'
-import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
+import { notifyTelegram, tg } from '../_shared/telegram.ts'
+import { alertStore } from '../_shared/storeAlerts.ts'
 
 // Tells the club a membership application is waiting for approval. Invoked by
 // the APPLICANT right after place_membership succeeds (fire-and-forget).
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
-// Same secret the order alert uses. Unset = deliberate silent no-op.
-const ADMIN_ALERT_EMAIL = Deno.env.get('ADMIN_ALERT_EMAIL') ?? ''
-const SITE_URL = 'https://224clubhouse.store'
+// Recipients are the store's owner alert addresses (_shared/storeAlerts.ts).
+// None set = deliberate silent no-op.
 
 // Only alert for fresh applications, so a caller can't re-invoke this to spam
 // the club's inbox with an old row.
@@ -42,7 +42,7 @@ serve(async (req) => {
     const admin = serviceClient()
     const { data: m, error } = await admin
       .from('memberships')
-      .select('user_id, full_name, email, phone, id_number, date_of_birth, tier, tier_id, amount, status, created_at')
+      .select('user_id, full_name, email, phone, id_number, date_of_birth, tier, tier_id, amount, status, created_at, tenant')
       .eq('id', membershipId)
       .maybeSingle()
     // "Not yours" and "not found" look the same to the caller.
@@ -57,12 +57,13 @@ serve(async (req) => {
       : await admin.from('membership_tiers').select('name').eq('slug', m.tier).maybeSingle()
     if (tier?.name) tierName = tier.name
 
+    const store = await alertStore(m.tenant)
     // Telegram: no ID number or date of birth in a group chat (POPIA).
     await notifyTelegram('memberships',
       `👑 <b>Membership application</b> — ${tg(tierName)}\n${tg(m.full_name)} · ${tg(m.phone ?? '')}`,
-      { text: 'Open memberships', url: `${TG_SITE}/admin/memberships` })
+      { text: 'Open memberships', url: `${store.siteUrl}/admin/memberships` }, store.tenant)
 
-    const to = ADMIN_ALERT_EMAIL.split(',').map(a => a.trim()).filter(Boolean)
+    const to = store.to
     if (to.length === 0 || !RESEND_API_KEY) return jsonResponse({ skipped: true })
 
     const row = (label: string, value: string) =>
@@ -86,7 +87,7 @@ serve(async (req) => {
     <p style="color:#888;font-size:13px;margin:24px 0;">
       The applicant pays by EFT or with their next delivery. Approve it once payment is received.
     </p>
-    <a href="${SITE_URL}/admin/memberships" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;font-weight:bold;padding:12px 24px;border-radius:6px;">Review in admin</a>
+    <a href="${store.siteUrl}/admin/memberships" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;font-weight:bold;padding:12px 24px;border-radius:6px;">Review in admin</a>
   </div>
 </body></html>`
 
@@ -94,7 +95,7 @@ serve(async (req) => {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: `224 Clubhouse <hello@${MAIL_FROM_DOMAIN}>`,
+        from: `${store.name} <hello@${MAIL_FROM_DOMAIN}>`,
         to,
         subject: `New membership application — ${m.full_name} (${tierName})`,
         html,

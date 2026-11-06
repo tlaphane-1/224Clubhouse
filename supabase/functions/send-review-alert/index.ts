@@ -2,7 +2,8 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, serviceClient } from '../_shared/supabaseClients.ts'
-import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
+import { notifyTelegram, tg } from '../_shared/telegram.ts'
+import { alertStore } from '../_shared/storeAlerts.ts'
 
 // "A review is waiting" alert to the club (migration 20261005160000 reviews).
 // Called by the browser right after submit_product_review. Only { productId }
@@ -11,8 +12,6 @@ import { notifyTelegram, tg, SITE_URL as TG_SITE } from '../_shared/telegram.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
-const ADMIN_ALERT_EMAIL = Deno.env.get('ADMIN_ALERT_EMAIL') ?? ''
-const SITE_URL = 'https://224clubhouse.store'
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -31,24 +30,26 @@ serve(async (req) => {
     const admin = serviceClient()
     const { data: review, error } = await admin
       .from('product_reviews')
-      .select('rating, body, display_name, status, products(name)')
+      .select('rating, body, display_name, status, tenant, products(name)')
       .eq('product_id', productId)
       .eq('user_id', caller.id)
       .maybeSingle()
     if (error) return jsonResponse({ error: error.message }, 500)
     if (!review || review.status !== 'pending') return jsonResponse({ error: 'No pending review' }, 404)
 
+    // The store's own owner alert recipients, never by default 224's.
+    const store = await alertStore(review.tenant)
     {
       // deno-lint-ignore no-explicit-any
       const productName = (review as any).products?.name ?? 'a product'
       await notifyTelegram('reviews',
         `⭐ <b>Review waiting</b> — ${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)} for ${tg(productName)}\n`
         + `“${tg(String(review.body ?? '').slice(0, 300))}” — ${tg(review.display_name)}`,
-        { text: 'Moderate', url: `${TG_SITE}/admin/reviews` })
+        { text: 'Moderate', url: `${store.siteUrl}/admin/reviews` }, store.tenant)
     }
 
-    const to = ADMIN_ALERT_EMAIL.split(',').map((a: string) => a.trim()).filter(Boolean)
-    if (to.length === 0) return jsonResponse({ success: false, reason: 'ADMIN_ALERT_EMAIL not set' })
+    const to = store.to
+    if (to.length === 0) return jsonResponse({ success: false, reason: `no alert email set for ${store.tenant}` })
     if (!RESEND_API_KEY) return jsonResponse({ error: 'RESEND_API_KEY not set' }, 500)
 
     // deno-lint-ignore no-explicit-any
@@ -71,13 +72,13 @@ serve(async (req) => {
       <div style="font-size:13px; color:#666666; margin-top:8px;">— ${escapeHtml(review.display_name)}</div>
       <div style="font-size:12px; color:#8a6d1a; margin-top:16px;">Publish only if it has no health or medical claims and no personal details.</div>
       <div style="margin-top:20px;">
-        <a href="${SITE_URL}/admin/reviews"
+        <a href="${store.siteUrl}/admin/reviews"
            style="display:inline-block; background:#111111; color:#ffffff; text-decoration:none; padding:12px 22px; border-radius:6px; font-size:14px; font-weight:700;">
           Review it
         </a>
       </div>
       <div style="margin-top:20px; padding-top:14px; border-top:1px solid #eeeeee; font-size:11px; color:#999999;">
-        224 Clubhouse &middot; internal review alert
+        ${escapeHtml(store.name)} &middot; internal review alert
       </div>
     </div>
   </div>
@@ -88,7 +89,7 @@ serve(async (req) => {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: `224 Clubhouse <orders@${MAIL_FROM_DOMAIN}>`,
+        from: `${store.name} <orders@${MAIL_FROM_DOMAIN}>`,
         to,
         subject: `New review to approve: ${productName} (${review.rating}★)`,
         html,
