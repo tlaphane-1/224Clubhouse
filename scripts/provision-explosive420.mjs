@@ -22,7 +22,7 @@
  * no JWT claim, so a column default would otherwise resolve to 224):
  *   tenants          the explosive420 row (name, order prefix E420, min age 21)
  *   alert_settings   the store's (empty) alert row
- *   products         the 8 catalogue products (new ones get stock 50; a re-run
+ *   products         the menu products + pictures (new ones get stock 50; a re-run
  *                    updates names/prices/descriptions but never resets stock)
  *   membership_tiers one Monthly Membership tier (the membership page needs one)
  *   storage          tenants/explosive420/assets/* → brand-assets/e420/
@@ -51,24 +51,40 @@ const ADMIN_FILE = join(ROOT, 'scripts', 'explosive420-admin.local')
 
 const TENANT_ROW = { slug: SLUG, name: 'Explosive 420 Cannabis Social Club', order_prefix: 'E420', min_age: 21, active: true }
 
-// Prices are integer cents (around R150 per gram, per the owner). No THC
-// figures: none were supplied, and an invented lab number would read as fact.
-const flower = (name, slug, strain, price) => ({
-  name, slug, price, category: 'flower', strain_type: strain, weight_grams: 1,
-  description: `${strain[0].toUpperCase()}${strain.slice(1)} flower. Premium indoor, from local growers.`,
+// The club's menu as supplied by the owner (2026-11-06). Prices are integer
+// cents. Strain type and THC are left empty: the menu gives neither, and an
+// invented figure would read as fact. Dabs & extracts are on the menu without
+// prices, so they are not listed yet. Each picture is cut from the menu and
+// lives at tenants/explosive420/products/<slug>.jpg.
+const gram = (name, slug, price, notes, grade) => ({
+  name, slug, price, category: 'flower', weight_grams: 1, description: `${notes}. ${grade}`,
 })
+const indoor = (name, slug, notes) => gram(name, slug, 15000, notes, 'Premium indoor, Triple A.')
 const PRODUCTS = [
-  flower('Explosive OG', 'explosive-og', 'hybrid', 15000),
-  flower('Soshanguve Haze', 'soshanguve-haze', 'sativa', 15000),
-  flower('Purple Grenade', 'purple-grenade', 'indica', 16000),
-  flower('Gelato Blast', 'gelato-blast', 'hybrid', 18000),
-  flower('Lemon Fuse', 'lemon-fuse', 'sativa', 15000),
-  flower('Northern Kush', 'northern-kush', 'indica', 15000),
-  flower('Rasta Runtz', 'rasta-runtz', 'hybrid', 20000),
-  { name: 'Explosive Pre-Roll', slug: 'explosive-pre-roll', price: 6000, category: 'joints', strain_type: 'hybrid',
-    weight_grams: 1, description: 'Single 1g pre-roll. Premium indoor, from local growers.' },
-].map(p => ({ ...p, thc_percentage: null, is_available: true, is_member_only: false }))
+  indoor('Strawberry Cough', 'strawberry-cough', 'Sweet · Uplifting · Creative'),
+  indoor('Chem Dawg', 'chem-dawg', 'Pungent · Energetic · Earthy'),
+  indoor('Afghani Purple', 'afghani-purple', 'Body high · Deep relaxation · Sleep'),
+  indoor('UK Cheese', 'uk-cheese', 'Earthy · Lemony · Uplifting'),
+  indoor('Exodus Cheese', 'exodus-cheese', 'Strong · Relaxing · Medicinal'),
+  indoor('Cali Lemon', 'cali-lemon', 'Citrus · Energising · Focused'),
+  indoor('Wedding Cake', 'wedding-cake', 'Sweet · Balanced · Happy'),
+  indoor('Tropic Cake', 'tropic-cake', 'Fruity · Smooth · Uplifting'),
+  // The menu lists two outdoor strains both called "Outdoor"; named by price
+  // until the owner gives them names.
+  gram('Outdoor (R50 grade)', 'outdoor-r50', 5000, 'Natural · Organic · Bold', 'Outdoor grown, from indigenous growers.'),
+  gram('Outdoor (R35 grade)', 'outdoor-r35', 3500, 'Natural · Organic · Bold', 'Outdoor grown, from indigenous growers.'),
+  gram('Green Door', 'green-door', 7000, 'Premium · Smooth · Potent', 'Per gram.'),
+  { name: 'Gummies', slug: 'gummies', price: 8000, category: 'edibles', weight_grams: null,
+    description: 'Infused gummies, assorted flavours. Priced per pack.' },
+  { name: 'Lollipop', slug: 'lollipop', price: 5000, category: 'edibles', weight_grams: null,
+    description: 'Infused lollipop, assorted flavours. Priced each.' },
+].map(p => ({ ...p, strain_type: null, thc_percentage: null, is_available: true, is_member_only: false }))
 const NEW_PRODUCT_STOCK = 50
+const PRODUCT_PICTURES = join(ROOT, 'tenants', SLUG, 'products')
+// Placeholder products from the first pitch build, replaced by the real menu.
+// Deleted on provision; orders keep their own copy of item names and prices.
+const RETIRED_SLUGS = ['explosive-og', 'soshanguve-haze', 'purple-grenade', 'gelato-blast',
+  'lemon-fuse', 'northern-kush', 'rasta-runtz', 'explosive-pre-roll']
 
 const TIER = {
   slug: 'monthly', name: 'Monthly Membership', price_cents: 10000, duration_days: 30, sort_order: 1, is_active: true,
@@ -134,7 +150,7 @@ if (args.has('--assets-only')) {
     + ` product-images/${UPLOAD_FOLDER}/, event-images/${UPLOAD_FOLDER}/), then the tenants row if nothing else references it.`)
 } else {
   console.log(`plan: upsert tenants row ${SLUG} (order prefix ${TENANT_ROW.order_prefix}, min age ${TENANT_ROW.min_age}); alert_settings row;`
-    + ` ${PRODUCTS.length} products; tier "${TIER.name}"; upload ${assetFiles.length} images to brand-assets/${BRAND_FOLDER}/`
+    + ` ${PRODUCTS.length} products with pictures (placeholders ${RETIRED_SLUGS.length} removed); tier "${TIER.name}"; upload ${assetFiles.length} images to brand-assets/${BRAND_FOLDER}/`
     + `${args.has('--admin') ? `; admin ${ADMIN_EMAIL}` : ''}; then verify with the anon key.`)
 }
 if (!WRITE) {
@@ -155,14 +171,18 @@ async function provision() {
   check('slug check', { error: clashErr })
   if (clash.length) console.warn(`note: 224 also has slug(s) ${clash.map(r => r.slug).join(', ')} (allowed: slugs are per store)`)
 
+  const products = await withPictures(PRODUCTS)
   const { data: have, error: haveErr } = await service.from('products').select('slug').eq('tenant', SLUG)
   check('products read', { error: haveErr })
   const existing = new Set(have.map(r => r.slug))
-  const fresh = PRODUCTS.filter(p => !existing.has(p.slug)).map(p => ({ ...p, tenant: SLUG, stock_quantity: NEW_PRODUCT_STOCK }))
+  const fresh = products.filter(p => !existing.has(p.slug)).map(p => ({ ...p, tenant: SLUG, stock_quantity: NEW_PRODUCT_STOCK }))
   if (fresh.length) check('products insert', await service.from('products').insert(fresh))
-  for (const p of PRODUCTS.filter(p => existing.has(p.slug))) {
+  for (const p of products.filter(p => existing.has(p.slug))) {
     check(`products update ${p.slug}`, await service.from('products').update(p).eq('tenant', SLUG).eq('slug', p.slug))
   }
+  const retired = RETIRED_SLUGS.filter(s => existing.has(s))
+  if (retired.length) check('retire placeholders', await service.from('products').delete().eq('tenant', SLUG).in('slug', retired))
+  console.log(`products: ${retired.length} placeholder(s) removed`)
 
   check('membership_tiers', await service.from('membership_tiers')
     .upsert({ ...TIER, tenant: SLUG }, { onConflict: 'tenant,slug' }))
@@ -171,6 +191,18 @@ async function provision() {
   console.log(`wrote: tenants, alert_settings, ${fresh.length} new + ${PRODUCTS.length - fresh.length} updated products, tier, ${assetFiles.length} images`)
 
   if (args.has('--admin')) await provisionAdmin()
+}
+
+// Uploads each product's picture to product-images/<UPLOAD_FOLDER>/<slug>.jpg
+// (the store's own folder, where its admin uploads go too) and returns the
+// products with `images` pointing at it.
+async function withPictures(products) {
+  return Promise.all(products.map(async p => {
+    const path = `${UPLOAD_FOLDER}/${p.slug}.jpg`
+    check(`upload ${path}`, await service.storage.from('product-images').upload(path,
+      readFileSync(join(PRODUCT_PICTURES, `${p.slug}.jpg`)), { contentType: 'image/jpeg', upsert: true, cacheControl: '300' }))
+    return { ...p, images: [service.storage.from('product-images').getPublicUrl(path).data.publicUrl] }
+  }))
 }
 
 async function uploadAssets() {
