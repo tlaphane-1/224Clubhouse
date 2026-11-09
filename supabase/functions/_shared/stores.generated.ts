@@ -48,7 +48,7 @@ export const STORES = {
     "mail": {
       "fromDomain": "explosive420.co.za",
       "fromDomainEnv": null,
-      "resendKeyEnv": "RESEND_API_KEY_EXPLOSIVE420",
+      "resendKeyEnv": "RESEND_API_KEY",
       "bankDetailsEnv": null
     }
   }

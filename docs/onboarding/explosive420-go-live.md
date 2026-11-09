@@ -33,13 +33,14 @@ Nothing on this branch has been pushed or deployed.
 
 ## Owner steps, in order
 
-1. **Verify explosive420.co.za in Explosive 420's Resend account** (Resend →
-   Domains → add, put the DNS records at domains.co.za, Verify).
-2. **Create a Resend API key** in Explosive 420's account (sending access,
-   domain explosive420.co.za) and set it as a function secret. Names only here:
-   - `RESEND_API_KEY_EXPLOSIVE420`
-   Do this **before** step 4: once the new functions are live, E420 emails
-   with no key are skipped (logged), not sent through 224's account.
+1. **Verify explosive420.co.za in the owner's Resend account** (the same
+   account as 224; owner decision 2026-11-09). Added 2026-11-09 in region
+   eu-west-1 with DKIM, two Forge CNAMEs and DMARC at domains.co.za.
+2. **No new key.** Both stores use the existing `RESEND_API_KEY` secret. Check
+   that key is not restricted to 224clubhouse.store only (Resend → API keys);
+   if it is, E420 sends fail with a 403 until a full-access key replaces it.
+   Do not deploy the functions before the domain shows Verified, or E420
+   emails are refused by Resend.
 3. **Check 224's `MAIL_FROM_DOMAIN` secret is set** (it is the domain 224
    sends from today; `supabase secrets list` shows the name). If it were
    unset, 224 now falls back to `224clubhouse.store` (the verified domain)

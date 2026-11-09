@@ -26,12 +26,13 @@ describe('stores.generated.ts', () => {
     expect(onDisk).toBe(generateStoresModule())
   })
 
-  it('has every store, and no two stores share a sending domain or Resend key', () => {
+  // One Resend account may hold every store's domain (owner decision
+  // 2026-11-09), so the key can be shared; the sending domain never is.
+  it('has every store, no two stores share a sending domain, and each names a key', () => {
     expect(allStores().map(s => s.slug).sort()).toEqual(storeSlugs())
     const domains = allStores().map(s => s.mail.fromDomain)
-    const keys = allStores().map(s => s.mail.resendKeyEnv)
     expect(new Set(domains).size).toBe(domains.length)
-    expect(new Set(keys).size).toBe(keys.length)
+    for (const s of allStores()) expect(s.mail.resendKeyEnv).toMatch(/^[A-Z][A-Z0-9_]+$/)
   })
 
   it('treats a missing tenant as 224 and an unknown one as no store', () => {
@@ -63,7 +64,7 @@ const domainOf = (from) => from.match(/@([^>]+)>$/)[1]
 
 describe('mail: a store only sends as itself', () => {
   const stores = [A, B, storeFor('224clubhouse'), storeFor('explosive420')]
-  const env = envOf({ KEY_A: 'key-a', KEY_B: 'key-b', RESEND_API_KEY: 'key-224', RESEND_API_KEY_EXPLOSIVE420: 'key-e420' })
+  const env = envOf({ KEY_A: 'key-a', KEY_B: 'key-b', RESEND_API_KEY: 'key-224' })
 
   for (const store of stores) {
     for (const sender of ['orders', 'hello']) {

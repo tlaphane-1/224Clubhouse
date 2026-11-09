@@ -1,8 +1,9 @@
 import { denoEnv, type EnvGet, type Store } from './stores.ts'
 
 // The ONE place that talks to Resend. Every email goes out from the store it
-// is about: that store's name, its own sending domain and its own Resend key
-// (separate Resend accounts per store). A store whose key is not set sends
+// is about: that store's name, its own sending domain and the Resend key its
+// config names (today both stores share one Resend account, so the same key;
+// a store can move to its own account by naming another key). A store whose key is not set sends
 // nothing and says so; it never falls back to another store's key or domain,
 // so one store's mail can never leave from another's address.
 // src/__tests__/functionStores.unit.test.js checks every function sends

@@ -32,7 +32,7 @@
   "telegram": false,
   "mail": {
     "fromDomain": "explosive420.co.za",
-    "resendKeyEnv": "RESEND_API_KEY_EXPLOSIVE420",
+    "resendKeyEnv": "RESEND_API_KEY",
     "footerHours": "Mon–Sun 09:00–22:00"
   },
   "delivery": {
