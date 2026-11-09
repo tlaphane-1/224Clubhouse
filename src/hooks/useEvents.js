@@ -25,6 +25,28 @@ export function useEvents() {
 }
 
 /**
+ * The most recent events that have already happened, newest first, for the
+ * "Past events" section on /events. Same select and day boundary as
+ * useEvents, so an event is in exactly one of the two lists.
+ */
+export function usePastEvents(limit = 6) {
+  return useQuery({
+    queryKey: ['events', 'past', limit],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0]
+      const { data, error } = await supabase
+        .from('events')
+        .select(EVENT_SELECT)
+        .lt('date', today)
+        .order('date', { ascending: false })
+        .limit(limit)
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+/**
  * A single event for /events/:id.
  *
  * Routed by id, not slug: the events table has no slug column (verified

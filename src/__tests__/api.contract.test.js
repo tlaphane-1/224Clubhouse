@@ -61,6 +61,8 @@ describe.skipIf(SKIP)('API contract — read queries resolve against live DB', (
 
     // useEvents() — upcoming events
     { name: 'useEvents (upcoming)', run: () => supabase.from('events').select('*').gte('date', TODAY).order('date', { ascending: true }).limit(0) },
+    // usePastEvents() — the "Past events" section on /events
+    { name: 'usePastEvents', run: () => supabase.from('events').select('*').lt('date', TODAY).order('date', { ascending: false }).limit(0) },
     // useAllEvents() — admin, all events
     { name: 'useAllEvents', run: () => supabase.from('events').select('*').order('date', { ascending: false }).limit(0) },
 
