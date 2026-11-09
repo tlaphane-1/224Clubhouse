@@ -31,7 +31,7 @@ export const STORES = {
     "slug": "explosive420",
     "name": "Explosive 420 Cannabis Social Club",
     "shortName": "E420",
-    "siteUrl": "https://explosive420.web.app",
+    "siteUrl": "https://explosive420.co.za",
     "logoPath": "brand-assets/e420/e420-logo-wide.png",
     "address": "702 Aubrey Matlakala St, Soshanguve Block L, Soshanguve, 0152",
     "phone": "076 135 2497",
