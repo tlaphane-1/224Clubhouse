@@ -47,7 +47,7 @@ serve(async (req) => {
     const admin = serviceClient()
     const { data: order, error } = await admin
       .from('orders')
-      .select('id, tenant, driver_id, shipping_address, dest_lat, dest_lng')
+      .select('id, tenant, driver_id, shipping_address, dest_lat, dest_lng, pin_lat, pin_lng')
       .eq('id', orderId)
       .single()
     if (error || !order) return jsonResponse({ error: 'Order not found' }, 404)
@@ -69,11 +69,16 @@ serve(async (req) => {
       return jsonResponse({ found: true, lat: order.dest_lat, lng: order.dest_lng, cached: true })
     }
 
-    const a = (order.shipping_address ?? {}) as Address
-    const full = [a.street, a.city, a.province, a.postalCode, 'South Africa'].filter(Boolean).join(', ')
-    const short = [a.street, a.city].filter(Boolean).join(', ')
-    let point = full ? await geocode(full) : null
-    if (!point && short && short !== full) point = await geocode(short)
+    // The customer's checkout pin (20261110120000) is where they actually are;
+    // only look the typed address up when there is none.
+    let point = order.pin_lat != null && order.pin_lng != null ? { lat: order.pin_lat, lng: order.pin_lng } : null
+    if (!point) {
+      const a = (order.shipping_address ?? {}) as Address
+      const full = [a.street, a.city, a.province, a.postalCode, 'South Africa'].filter(Boolean).join(', ')
+      const short = [a.street, a.city].filter(Boolean).join(', ')
+      point = full ? await geocode(full) : null
+      if (!point && short && short !== full) point = await geocode(short)
+    }
     if (!point) return jsonResponse({ found: false })
 
     const { error: upErr } = await admin

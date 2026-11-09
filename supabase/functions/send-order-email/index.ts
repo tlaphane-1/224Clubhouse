@@ -102,6 +102,8 @@ interface OwnerAlert {
   customerEmail: string
   customerPhone: string
   address: string
+  // Google Maps link to the customer's checkout pin (set_order_pin), or null.
+  locationUrl: string | null
   items: OrderItem[]
   subtotal: number
   discountCode: string | null
@@ -203,6 +205,12 @@ function ownerAlertHtml(alert: OwnerAlert): string {
         ${detail('Phone', alert.customerPhone)}
         ${detail('Email', alert.customerEmail)}
         ${detail('Deliver to', alert.address)}
+        <tr>
+          <td style="padding:4px 12px 4px 0; color:#666666; vertical-align:top; white-space:nowrap;">Location</td>
+          <td style="padding:4px 0; color:#111111;">${alert.locationUrl
+            ? `<a href="${escapeHtml(alert.locationUrl)}" style="color:#111111;">Shared by the customer &middot; open map</a>`
+            : 'Not shared'}</td>
+        </tr>
       </table>
 
       <table style="width:100%; border-collapse:collapse; font-size:14px; margin-top:16px;">
@@ -296,7 +304,7 @@ serve(async (req) => {
       .select(
         'order_number, customer_name, customer_email, customer_phone, items, subtotal, ' +
         'discount_code, discount_cents, shipping_fee, total, payment_method, ' +
-        'shipping_address, created_at, user_id, tenant'
+        'shipping_address, pin_lat, pin_lng, created_at, user_id, tenant'
       )
       .eq('id', orderId)
       .single()
@@ -454,11 +462,16 @@ serve(async (req) => {
     // missing alert can be diagnosed without function logs.
     let ownerAlert = 'sent'
     const lowStock = await lowStockFor(items)
+    // The customer's checkout pin (set_order_pin), if they shared one.
+    const locationUrl = order.pin_lat != null && order.pin_lng != null
+      ? `https://www.google.com/maps/search/?api=1&query=${order.pin_lat},${order.pin_lng}`
+      : null
     // Telegram group alert — independent of the email (never throws).
     const telegram = await notifyTelegram('orders',
       `🛒 <b>New order ${tg(orderNumber)}</b> — ${tg(formatZAR(total))} (${tg(paymentLabel(paymentMethod))})\n`
       + `${tg(customerName)} · ${tg(order.customer_phone ?? '')}\n`
-      + `${tg(formatAddress((order.shipping_address ?? null) as ShippingAddress | null))}\n\n`
+      + `${tg(formatAddress((order.shipping_address ?? null) as ShippingAddress | null))}\n`
+      + (locationUrl ? `📍 <a href="${tg(locationUrl)}">Customer's location</a>\n\n` : '📍 No location shared\n\n')
       + items.map(i => `• ${tg(i.quantity)}× ${tg(lineName(i))}`).join('\n')
       + (lowStock.length ? `\n\n⚠️ <b>Low stock</b>\n` + lowStock.map(l => `• ${tg(l.name)}: ${l.left === 0 ? 'SOLD OUT' : `${l.left} left`}`).join('\n') : ''),
       { text: 'Open orders', url: `${store.siteUrl}/admin/orders` }, store.tenant)
@@ -470,6 +483,7 @@ serve(async (req) => {
         customerEmail,
         customerPhone: order.customer_phone ?? 'Not provided',
         address: formatAddress((order.shipping_address ?? null) as ShippingAddress | null),
+        locationUrl,
         items,
         subtotal,
         discountCode,

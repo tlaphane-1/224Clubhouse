@@ -53,6 +53,8 @@ export default function Checkout() {
   const { user, loading: authLoading } = useAuth()
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
+  // Optional "Use my current location" pin: { lat, lng, accuracy }.
+  const [pin, setPin] = useState(null)
   const [agreed, setAgreed] = useState(false)
   const [method, setMethod] = useState('cash_on_delivery')
   const [processing, setProcessing] = useState(false)
@@ -259,6 +261,16 @@ export default function Checkout() {
       customerName: checkoutForm.name.trim(),
     })
 
+    // Attach the location pin BEFORE the emails, so the owner's new-order alert
+    // can show it. The order already stands: a failed pin only means the club
+    // sees "No location shared", so the customer is not held up by it.
+    if (pin) {
+      const { error: pinError } = await supabase.rpc('set_order_pin', {
+        p_order_id: data.id, p_lat: pin.lat, p_lng: pin.lng, p_accuracy_m: pin.accuracy ?? null,
+      })
+      if (pinError) console.error('set_order_pin failed:', pinError.message)
+    }
+
     // Receipt email — fire and forget. The order is already placed; if Resend is
     // misconfigured or slow the customer must still reach their confirmation page,
     // so this never blocks navigation and never surfaces an error to them.
@@ -430,7 +442,7 @@ export default function Checkout() {
                   <span className={stepBadge} aria-hidden="true">1</span>
                   Contact & Delivery
                 </h2>
-                <CheckoutForm form={checkoutForm} onChange={handleFormChange} errors={errors} lockEmail />
+                <CheckoutForm form={checkoutForm} onChange={handleFormChange} errors={errors} lockEmail pin={pin} onPin={setPin} />
                 {needsDob && (
                   <div className="mt-4">
                     <label htmlFor="checkout-dob" className="block text-muted text-xs uppercase tracking-widest mb-1.5">
