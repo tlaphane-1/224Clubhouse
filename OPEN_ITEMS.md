@@ -200,7 +200,7 @@ Owner phone order `224-849A99` stored with `tenant = 224clubhouse`. Pre-push sch
 - **Owner to-do:** rotate the auth hook secret (it was pasted in chat): Auth Hooks → generate a new
   secret → Update, then set `SEND_EMAIL_HOOK_SECRET` to match.
 - **Club inputs still open:** alert email, Capitec details (EFT stays off), dabs/extract prices,
-  names for the two Outdoor grades, keep or drop the Skull T-shirt, own photos, contact email,
+  names for the two Outdoor grades, own photos, contact email,
   socials, POPIA information officer, membership price. The handover pack is in
   `C:\Users\azgcl\Documents\Explosive420-handover\` (outside the repo).
 - **Runbook:** `docs/onboarding/explosive420-go-live.md`.
@@ -210,6 +210,8 @@ Owner phone order `224-849A99` stored with `tenant = 224clubhouse`. Pre-push sch
 - **2026-11-09 — PR #15 (owner-alert outcome in `send-order-email`)** (was §2.1): closed unmerged;
   `master` already returns `ownerAlert` since the per-store email work.
 - **2026-11-09 — Multi-store "must fix before a second store has an admin"** (§7b): fixed in PR #30.
+- **2026-11-09 — Skull Icono T-Shirt** (§7c club input): the club dropped it; hidden on E420
+  (`is_available = false`), not deleted.
 - **2026-11-09 — Another store's login showing its orders on E420; `/membership` crash** (§7c):
   fixed in PRs #33 and #34, deployed to both sites.
 
