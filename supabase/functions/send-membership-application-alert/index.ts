@@ -5,13 +5,14 @@ import { callerClient, serviceClient } from '../_shared/supabaseClients.ts'
 import { emailLogo } from '../_shared/brand.ts'
 import { notifyTelegram, tg } from '../_shared/telegram.ts'
 import { alertStore } from '../_shared/storeAlerts.ts'
+import { sendStoreMail } from '../_shared/mail.ts'
+import { DEFAULT_STORE } from '../_shared/stores.ts'
 
 // Tells the club a membership application is waiting for approval. Invoked by
 // the APPLICANT right after place_membership succeeds (fire-and-forget).
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
-const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
-// Recipients are the store's owner alert addresses (_shared/storeAlerts.ts).
+// Recipients are the store's owner alert addresses (_shared/storeAlerts.ts);
+// the email is branded and sent as that store (_shared/mail.ts).
 // None set = deliberate silent no-op.
 
 // Only alert for fresh applications, so a caller can't re-invoke this to spam
@@ -54,7 +55,7 @@ serve(async (req) => {
     let tierName: string = m.tier
     const { data: tier } = m.tier_id
       ? await admin.from('membership_tiers').select('name').eq('id', m.tier_id).maybeSingle()
-      : await admin.from('membership_tiers').select('name').eq('slug', m.tier).maybeSingle()
+      : await admin.from('membership_tiers').select('name').eq('slug', m.tier).eq('tenant', m.tenant || DEFAULT_STORE).maybeSingle()
     if (tier?.name) tierName = tier.name
 
     const store = await alertStore(m.tenant)
@@ -64,7 +65,8 @@ serve(async (req) => {
       { text: 'Open memberships', url: `${store.siteUrl}/admin/memberships` }, store.tenant)
 
     const to = store.to
-    if (to.length === 0 || !RESEND_API_KEY) return jsonResponse({ skipped: true })
+    const brand = store.brand
+    if (to.length === 0 || !brand) return jsonResponse({ skipped: true })
 
     const row = (label: string, value: string) =>
       `<tr><td style="padding:6px 12px 6px 0;color:#888;font-size:13px;">${label}</td><td style="padding:6px 0;color:#fff;font-size:13px;">${escapeHtml(value)}</td></tr>`
@@ -73,7 +75,7 @@ serve(async (req) => {
 <!DOCTYPE html>
 <html><body style="margin:0;background:#0a0a0a;font-family:Arial,sans-serif;">
   <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
-    <p style="margin:0 0 12px;">${emailLogo(140)}</p>
+    <p style="margin:0 0 12px;">${emailLogo(brand, 140)}</p>
     <h1 style="color:#fff;font-size:20px;margin:0 0 20px;">New membership application</h1>
     <table style="border-collapse:collapse;">
       ${row('Name', m.full_name)}
@@ -87,21 +89,21 @@ serve(async (req) => {
     <p style="color:#888;font-size:13px;margin:24px 0;">
       The applicant pays by EFT or with their next delivery. Approve it once payment is received.
     </p>
-    <a href="${store.siteUrl}/admin/memberships" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;font-weight:bold;padding:12px 24px;border-radius:6px;">Review in admin</a>
+    <a href="${store.siteUrl}/admin/memberships" style="display:inline-block;background:${brand.gold};color:#000;text-decoration:none;font-weight:bold;padding:12px 24px;border-radius:6px;">Review in admin</a>
   </div>
 </body></html>`
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: `${store.name} <hello@${MAIL_FROM_DOMAIN}>`,
+    try {
+      const sent = await sendStoreMail(brand, {
+        sender: 'hello',
         to,
         subject: `New membership application — ${m.full_name} (${tierName})`,
         html,
-      }),
-    })
-    if (!res.ok) return jsonResponse({ error: await res.text() }, 502)
+      })
+      if (!sent.sent) return jsonResponse({ skipped: true, reason: sent.reason })
+    } catch (e) {
+      return jsonResponse({ error: e instanceof Error ? e.message : String(e) }, 502)
+    }
     return jsonResponse({ sent: true })
   } catch (err) {
     return jsonResponse({ error: String(err) }, 500)

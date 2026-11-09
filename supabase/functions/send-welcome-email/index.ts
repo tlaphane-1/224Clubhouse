@@ -2,14 +2,9 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { serviceClient } from '../_shared/supabaseClients.ts'
-import { emailLogo } from '../_shared/brand.ts'
-
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
-// Interim: sends go out from a domain already verified on the Resend account until
-// 224clubhouse.co.za is verified there. Unset MAIL_FROM_DOMAIN to revert to the default.
-const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
-
-const SITE_URL = 'https://224clubhouse.store'
+import { darkFooter, emailLogo } from '../_shared/brand.ts'
+import { sendStoreMail } from '../_shared/mail.ts'
+import { DEFAULT_STORE, storeFor } from '../_shared/stores.ts'
 
 /**
  * `email` is the only field used. `firstName` is still accepted because the
@@ -17,10 +12,16 @@ const SITE_URL = 'https://224clubhouse.store'
  * unsubscribe token are read from the subscriber row instead, so a caller
  * holding the public anon key cannot spoof the greeting or the opt-out link.
  * Home.jsx can drop firstName from its payload whenever it's next touched.
+ *
+ * `tenant` is the store the visitor subscribed in (the browser's store slug).
+ * It only picks WHICH store's list to look in — the row must exist there —
+ * and so which store's branding and sender the email uses. Missing means 224
+ * (bundles from before stores existed); an unknown store is refused.
  */
 interface WelcomeEmailPayload {
   email: string
   firstName?: string
+  tenant?: string
 }
 
 serve(async (req) => {
@@ -35,6 +36,8 @@ serve(async (req) => {
     // 404 the caller ignores, and is told to check an inbox nothing was sent to.
     const email = (payload?.email ?? '').trim().toLowerCase()
     if (!email) return jsonResponse({ error: 'email is required' }, 400)
+    const brand = storeFor(payload?.tenant || DEFAULT_STORE)
+    if (!brand) return jsonResponse({ error: 'Unknown store' }, 400)
 
     // --- Facts come from the DB, never from the payload -------------------
     // The row must already exist (Home.jsx inserts before invoking), which
@@ -44,6 +47,7 @@ serve(async (req) => {
       .from('newsletter_subscribers')
       .select('email, first_name, unsubscribe_token, unsubscribed_at')
       .eq('email', email)
+      .eq('tenant', brand.slug)
       .maybeSingle()
 
     if (lookupError || !subscriber) return jsonResponse({ error: 'Subscriber not found' }, 404)
@@ -57,7 +61,7 @@ serve(async (req) => {
     const recipient: string = subscriber.email
     const greetingName: string = subscriber.first_name || 'there'
     const unsubscribeUrl =
-      `${SITE_URL}/unsubscribe?token=${encodeURIComponent(subscriber.unsubscribe_token)}`
+      `${brand.siteUrl}/unsubscribe?token=${encodeURIComponent(subscriber.unsubscribe_token)}`
 
     const html = `
 <!DOCTYPE html>
@@ -68,35 +72,35 @@ serve(async (req) => {
 
     <!-- Logo -->
     <div style="text-align:center; margin-bottom:40px;">
-      ${emailLogo(200)}
+      ${emailLogo(brand, 200)}
     </div>
 
     <!-- Divider -->
-    <div style="width:48px; height:1px; background:#C9A84C; margin:0 auto 40px;"></div>
+    <div style="width:48px; height:1px; background:${brand.gold}; margin:0 auto 40px;"></div>
 
     <!-- Heading -->
     <h1 style="color:#ffffff; font-family:Georgia,serif; font-size:28px; text-align:center; margin-bottom:8px; font-weight:600;">
-      Welcome to the 224 Family 🔥
+      Welcome to the ${escapeHtml(brand.shortName)} Family 🔥
     </h1>
     <p style="color:#888888; text-align:center; margin-bottom:40px; font-size:15px; line-height:1.6;">
-      Hey ${escapeHtml(greetingName)}! You're in. Thanks for joining the 224 Clubhouse community —<br/>
+      Hey ${escapeHtml(greetingName)}! You're in. Thanks for joining the ${escapeHtml(brand.name)} community —<br/>
       you'll be the first to know about new drops, events, and exclusive offers.
     </p>
 
-    <!-- Promo Code -->
-    <div style="background:#111111; border:1px solid #C9A84C; border-radius:12px; padding:32px; margin-bottom:32px; text-align:center;">
+    <!-- Promo Code: only where the store's site promises it -->${brand.welcomeOffer ? `
+    <div style="background:#111111; border:1px solid ${brand.gold}; border-radius:12px; padding:32px; margin-bottom:32px; text-align:center;">
       <div style="color:#888888; font-size:11px; text-transform:uppercase; letter-spacing:3px; margin-bottom:12px;">Your Welcome Gift</div>
-      <div style="color:#C9A84C; font-size:36px; font-family:'Courier New',monospace; font-weight:900; letter-spacing:6px; margin-bottom:12px;">
+      <div style="color:${brand.gold}; font-size:36px; font-family:'Courier New',monospace; font-weight:900; letter-spacing:6px; margin-bottom:12px;">
         WELCOME10
       </div>
       <div style="color:#ffffff; font-size:14px; margin-bottom:8px; font-weight:600;">10% OFF your first order</div>
       <div style="color:#888888; font-size:12px;">Use this code at checkout — valid for your first purchase only</div>
-    </div>
+    </div>` : ''}
 
     <!-- CTA -->
     <div style="text-align:center; margin-bottom:40px;">
-      <a href="${SITE_URL}/store"
-         style="display:inline-block; background:#C9A84C; color:#000000; text-decoration:none;
+      <a href="${brand.siteUrl}/store"
+         style="display:inline-block; background:${brand.gold}; color:#000000; text-decoration:none;
                 padding:14px 36px; border-radius:8px; font-weight:700; font-size:13px;
                 text-transform:uppercase; letter-spacing:3px;">
         Shop Now
@@ -105,7 +109,7 @@ serve(async (req) => {
 
     <!-- What to Expect -->
     <div style="background:#111111; border:1px solid #222222; border-radius:12px; padding:24px; margin-bottom:32px;">
-      <div style="color:#C9A84C; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:16px;">What to Expect</div>
+      <div style="color:${brand.gold}; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:16px;">What to Expect</div>
       <div style="color:#888888; font-size:13px; line-height:1.8;">
         🌿 Early access to new stock drops<br/>
         🎉 Exclusive member events & invites<br/>
@@ -116,18 +120,21 @@ serve(async (req) => {
 
     <!-- Footer -->
     <div style="text-align:center; border-top:1px solid #222222; padding-top:28px;">
-      ${emailLogo(110, 'margin-bottom:16px;')}
-      <p style="color:#888888; font-size:12px; margin-bottom:4px;">224 Rondebult Road, Libradene, Boksburg, 1459</p>
-      <p style="color:#888888; font-size:12px; margin-bottom:16px;">Mon–Sun 09:00–19:00</p>
+      ${emailLogo(brand, 110, 'margin-bottom:16px;')}
+      <p style="color:#888888; font-size:12px; margin-bottom:4px;">${escapeHtml(brand.address)}</p>
+      <p style="color:#888888; font-size:12px; margin-bottom:16px;">${escapeHtml(brand.hours)}</p>${brand.instagram || brand.facebook ? `
       <div style="display:flex; justify-content:center; gap:16px; margin-bottom:16px;">
-        <a href="https://www.instagram.com/224clubhouse" style="color:#C9A84C; text-decoration:none; font-size:12px;">Instagram</a>
+        ${[
+          brand.instagram ? `<a href="${escapeHtml(brand.instagram)}" style="color:${brand.gold}; text-decoration:none; font-size:12px;">Instagram</a>` : '',
+          brand.facebook ? `<a href="${escapeHtml(brand.facebook)}" style="color:${brand.gold}; text-decoration:none; font-size:12px;">Facebook</a>` : '',
+        ].filter(Boolean).join(`
         <span style="color:#333;">|</span>
-        <a href="https://www.facebook.com/224clubhouse" style="color:#C9A84C; text-decoration:none; font-size:12px;">Facebook</a>
-      </div>
+        `)}
+      </div>` : ''}
       <p style="color:#444; font-size:11px; margin-bottom:12px;">If you didn't sign up, you can safely ignore this email.</p>
       <p style="color:#888888; font-size:11px; line-height:1.6;">
-        You're receiving this because you subscribed to the 224 Clubhouse newsletter.<br/>
-        <a href="${escapeHtml(unsubscribeUrl)}" style="color:#C9A84C; text-decoration:underline;">Unsubscribe</a>
+        You're receiving this because you subscribed to the ${escapeHtml(brand.name)} newsletter.<br/>
+        <a href="${escapeHtml(unsubscribeUrl)}" style="color:${brand.gold}; text-decoration:underline;">Unsubscribe</a>
         — one click, no login needed.
       </p>
     </div>
@@ -136,31 +143,20 @@ serve(async (req) => {
 </body>
 </html>`
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+    const sent = await sendStoreMail(brand, {
+      sender: 'hello',
+      to: recipient,
+      subject: `Welcome to the ${brand.shortName} family 🔥`,
+      html,
+      // Surfaces the opt-out in Gmail/Outlook's own UI. Deliberately WITHOUT
+      // List-Unsubscribe-Post: the /unsubscribe route is a GET-only SPA page,
+      // so advertising one-click POST would let a provider "unsubscribe"
+      // someone without anything actually happening.
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
+        'List-Unsubscribe': `<${unsubscribeUrl}>`,
       },
-      body: JSON.stringify({
-        from: `224 Clubhouse <hello@${MAIL_FROM_DOMAIN}>`,
-        to: recipient,
-        subject: 'Welcome to the 224 family 🔥',
-        html,
-        // Surfaces the opt-out in Gmail/Outlook's own UI. Deliberately WITHOUT
-        // List-Unsubscribe-Post: the /unsubscribe route is a GET-only SPA page,
-        // so advertising one-click POST would let a provider "unsubscribe"
-        // someone without anything actually happening.
-        headers: {
-          'List-Unsubscribe': `<${unsubscribeUrl}>`,
-        },
-      }),
     })
-
-    if (!res.ok) {
-      const err = await res.text()
-      throw new Error(err)
-    }
+    if (!sent.sent) throw new Error(sent.reason)
 
     return jsonResponse({ success: true })
   } catch (error) {

@@ -32,6 +32,18 @@ export function callerClient(authHeader: string) {
   })
 }
 
+/**
+ * The caller's store, as the database resolves it for their JWT
+ * (current_tenant(): the app_metadata.tenant claim, else 224). Null if the
+ * lookup fails, and callers must refuse rather than guess: a guess of 224 is
+ * exactly how another store's admin ends up writing 224's rows.
+ */
+export async function callerTenant(authHeader: string): Promise<string | null> {
+  const { data, error } = await callerClient(authHeader).rpc('current_tenant')
+  if (error || typeof data !== 'string' || !data) return null
+  return data
+}
+
 /** True only for a caller whose JWT resolves to a row in admin_users. */
 export async function callerIsAdmin(authHeader: string): Promise<boolean> {
   const { data, error } = await callerClient(authHeader).rpc('is_admin')

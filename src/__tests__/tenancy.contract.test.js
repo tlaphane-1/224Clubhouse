@@ -442,7 +442,9 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — tables'
     u.adminB = await createTenantUser(admin, 'tiso-adminb', TEST_TENANT)
     // A 224 user whose admin_users and drivers rows belong to vitest-b: proves
     // is_admin()/is_driver() check the row's tenant, not just its existence.
-    u.crossed = await createTenantUser(admin, 'tiso-crossed', '224clubhouse')
+    // Since 20261109130000 such rows cannot be inserted for a 224 login, so the
+    // login starts in vitest-b and is moved to 224 after its rows exist (below).
+    u.crossed = await createTenantUser(admin, 'tiso-crossed', TEST_TENANT)
     // Old session: no tenant claim at all (Ruling 1 — clear it explicitly so the
     // test still means this after Task 8 stamps every new user).
     u.old = await createTestUser(admin, 'tiso-old')
@@ -452,6 +454,8 @@ describe.skipIf(COLUMNS_SKIP)('Tenancy contract — tenant isolation — tables'
     await makeAdmin(u.admin224, '224clubhouse')
     await makeAdmin(u.adminB, TEST_TENANT)
     await makeAdmin(u.crossed, TEST_TENANT)
+    mustSucceed('move crossed login to 224', await admin.auth.admin
+      .updateUserById(u.crossed.id, { app_metadata: { tenant: '224clubhouse' } }))
 
     order.cust224 = await makeOrder('cust224', u.cust224, '224clubhouse', 'eft')
     order.custB = await makeOrder('custb', u.custB, TEST_TENANT, 'eft')

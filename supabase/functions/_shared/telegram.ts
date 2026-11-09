@@ -13,8 +13,6 @@ export type AlertKind =
   | 'deliveries'    // driver started / delivered
   | 'daily'         // 07:00 summary
 
-export const SITE_URL = 'https://224clubhouse.store'
-
 /** Escape for Telegram's HTML parse mode. */
 export function tg(text: unknown): string {
   return String(text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

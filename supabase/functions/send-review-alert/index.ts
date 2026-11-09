@@ -4,14 +4,14 @@ import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, serviceClient } from '../_shared/supabaseClients.ts'
 import { notifyTelegram, tg } from '../_shared/telegram.ts'
 import { alertStore } from '../_shared/storeAlerts.ts'
+import { sendStoreMail } from '../_shared/mail.ts'
 
 // "A review is waiting" alert to the club (migration 20261005160000 reviews).
 // Called by the browser right after submit_product_review. Only { productId }
 // comes from the client: the caller must be signed in and must have a PENDING
 // review on that product — so nobody can use this to spam the club inbox.
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
-const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
+// Sent as the store the review belongs to (_shared/mail.ts).
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -50,7 +50,8 @@ serve(async (req) => {
 
     const to = store.to
     if (to.length === 0) return jsonResponse({ success: false, reason: `no alert email set for ${store.tenant}` })
-    if (!RESEND_API_KEY) return jsonResponse({ error: 'RESEND_API_KEY not set' }, 500)
+    const brand = store.brand
+    if (!brand) return jsonResponse({ success: false, reason: `no email settings for ${store.tenant}` })
 
     // deno-lint-ignore no-explicit-any
     const productName: string = (review as any).products?.name ?? 'a product'
@@ -66,8 +67,8 @@ serve(async (req) => {
     <div style="background:#ffffff; border:1px solid #e2e2e2; border-radius:8px; padding:20px;">
       <div style="font-size:12px; letter-spacing:2px; text-transform:uppercase; color:#777777;">Review waiting for approval</div>
       <div style="font-size:20px; font-weight:700; margin:6px 0 2px;">${escapeHtml(productName)}</div>
-      <div style="font-size:20px; color:#C9A84C;">${stars}</div>
-      <div style="height:2px; background:#C9A84C; margin:16px 0;"></div>
+      <div style="font-size:20px; color:${brand.gold};">${stars}</div>
+      <div style="height:2px; background:${brand.gold}; margin:16px 0;"></div>
       <div style="font-size:14px; color:#333333; white-space:pre-line;">${review.body ? escapeHtml(review.body) : '<em>Rating only, no text.</em>'}</div>
       <div style="font-size:13px; color:#666666; margin-top:8px;">— ${escapeHtml(review.display_name)}</div>
       <div style="font-size:12px; color:#8a6d1a; margin-top:16px;">Publish only if it has no health or medical claims and no personal details.</div>
@@ -85,17 +86,13 @@ serve(async (req) => {
 </body>
 </html>`
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: `${store.name} <orders@${MAIL_FROM_DOMAIN}>`,
-        to,
-        subject: `New review to approve: ${productName} (${review.rating}★)`,
-        html,
-      }),
+    const sent = await sendStoreMail(brand, {
+      sender: 'orders',
+      to,
+      subject: `New review to approve: ${productName} (${review.rating}★)`,
+      html,
     })
-    if (!res.ok) throw new Error(await res.text())
+    if (!sent.sent) return jsonResponse({ success: false, reason: sent.reason })
     return jsonResponse({ success: true })
   } catch (e) {
     return jsonResponse({ error: e instanceof Error ? e.message : String(e) }, 500)
