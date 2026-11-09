@@ -523,7 +523,11 @@ export default function Membership() {
         title={sheetTitle}
         size="md"
         sheet
-        footer={showForm && (
+        // Built on every render, even while the sheet is closed. `tier` is
+        // undefined until the default-selection effect runs, so without the
+        // guard a signed-in customer with no membership crashed the page on
+        // tier.price_cents (2026-11-09).
+        footer={showForm && tier && (
           <div className="flex gap-3">
             <button
               type="button"
