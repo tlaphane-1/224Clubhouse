@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
-import { callerIsAdmin, serviceClient } from '../_shared/supabaseClients.ts'
+import { callerIsAdmin, callerTenant, serviceClient } from '../_shared/supabaseClients.ts'
 import { sendTelegram, tg } from '../_shared/telegram.ts'
 
 // Admin → Alerts setup for Telegram group alerts. Admin only.
@@ -9,6 +9,10 @@ import { sendTelegram, tg } from '../_shared/telegram.ts'
 //   { action: 'select_chat', chatId }    — save the group and post a test message
 //   { action: 'test' }                   — post a test message to the saved group
 // The token never goes back to the browser.
+//
+// Every RPC runs for the CALLER's store (x-tenant via serviceClient(tenant)).
+// With no header the service role resolves to 224, so another store's admin
+// would overwrite 224's bot token and group.
 
 async function tgApi(token: string, method: string, params: Record<string, unknown> = {}) {
   const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
@@ -21,8 +25,8 @@ async function tgApi(token: string, method: string, params: Record<string, unkno
   return body.result
 }
 
-async function config() {
-  const { data, error } = await serviceClient().rpc('telegram_config')
+async function config(tenant: string) {
+  const { data, error } = await serviceClient(tenant).rpc('telegram_config')
   if (error) throw error
   return data ?? {}
 }
@@ -34,9 +38,11 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization') ?? ''
     if (!authHeader) return jsonResponse({ error: 'Not authenticated' }, 401)
     if (!(await callerIsAdmin(authHeader))) return jsonResponse({ error: 'Not authorized' }, 403)
+    const tenant = await callerTenant(authHeader)
+    if (!tenant) return jsonResponse({ error: 'Could not work out your store' }, 500)
 
     const body = await req.json()
-    const admin = serviceClient()
+    const admin = serviceClient(tenant)
 
     if (body.action === 'save_token') {
       const token = String(body.token ?? '').trim()
@@ -51,7 +57,7 @@ serve(async (req) => {
       return jsonResponse({ success: true, botUsername: me.username, botName: me.first_name })
     }
 
-    const cfg = await config()
+    const cfg = await config(tenant)
     if (!cfg.token) return jsonResponse({ error: 'Save the bot token first' }, 400)
 
     if (body.action === 'find_chats') {

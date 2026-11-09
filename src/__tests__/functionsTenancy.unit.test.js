@@ -41,3 +41,18 @@ describe('admin-create-driver stays in the caller\'s store', () => {
     expect(src).toMatch(/\.from\('drivers'\)[\s\S]*tenant \}/)
   })
 })
+
+describe('telegram-connect stays in the caller\'s store', () => {
+  const src = source('telegram-connect')
+
+  it('resolves the caller\'s store and refuses when it cannot', () => {
+    expect(src).toMatch(/const tenant = await callerTenant\(authHeader\)/)
+    expect(src).toMatch(/if \(!tenant\) return jsonResponse\(/)
+  })
+
+  it('never calls the Telegram RPCs without the store (that would be 224\'s settings)', () => {
+    expect(src).not.toMatch(/serviceClient\(\)/)
+    expect(src).toMatch(/serviceClient\(tenant\)\.rpc\('telegram_config'\)/)
+    expect(src).toMatch(/const admin = serviceClient\(tenant\)/)
+  })
+})
