@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { renderAuthEmail, verifyLink } from '../../supabase/functions/_shared/authEmail.ts'
+import { renderAuthEmail, renderDriverWelcome, verifyLink } from '../../supabase/functions/_shared/authEmail.ts'
 import { storeFor } from '../../supabase/functions/_shared/stores.ts'
 
 const SUPABASE = 'https://project.supabase.co'
@@ -64,6 +64,25 @@ describe('renderAuthEmail', () => {
 
   it('sends nothing for action types the project does not use', () => {
     expect(renderAuthEmail(E420, input('password_changed_notification'), SUPABASE)).toBeNull()
+  })
+})
+
+describe('renderDriverWelcome', () => {
+  const link = 'https://project.supabase.co/auth/v1/verify?token=abc&type=recovery'
+
+  it("welcomes the driver by first name in the store's branding, with the portal address", () => {
+    const { subject, html } = renderDriverWelcome(E420, { link, fullName: 'Mpho Mphahlele' }, SUPABASE)
+    expect(subject).toBe("You've been added as a driver for Explosive 420 Cannabis Social Club")
+    expect(html).toContain('Welcome, Mpho')
+    expect(html).toContain('explosive420.co.za/driver')
+    expect(html).toContain('Choose my password')
+    expect(html).toContain(link.replace(/&/g, '&amp;'))
+    expect(html).not.toContain('224')
+  })
+
+  it("escapes the driver's name", () => {
+    const { html } = renderDriverWelcome(E420, { link, fullName: '<img src=x>' }, SUPABASE)
+    expect(html).not.toContain('<img src=x>')
   })
 })
 

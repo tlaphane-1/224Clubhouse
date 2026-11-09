@@ -42,6 +42,31 @@ describe('admin-create-driver stays in the caller\'s store', () => {
   })
 })
 
+describe("send-driver-welcome only emails a driver of the caller's store", () => {
+  const src = source('send-driver-welcome')
+
+  it("takes the store from an admin's JWT, or from the body only for the service-role key", () => {
+    expect(src).toMatch(/safeEqual\(authHeader, `Bearer \$\{SERVICE_ROLE_KEY\}`\)/)
+    expect(src).toMatch(/tenant = await callerTenant\(authHeader\)/)
+    expect(src).toMatch(/if \(!tenant\) return jsonResponse\(/)
+  })
+
+  it('looks the driver up in that store and refuses a login stamped for another', () => {
+    expect(src).toMatch(/\.from\('drivers'\)[\s\S]{0,120}\.eq\('tenant', tenant\)/)
+    expect(src).toMatch(/if \(stamp !== tenant\) return jsonResponse\(/)
+  })
+})
+
+describe('admin-create-driver emails the new driver', () => {
+  const src = source('admin-create-driver')
+
+  it('sends the welcome email for the caller\'s store and reports, not hides, a failure', () => {
+    expect(src).toMatch(/storeFor\(tenant\)/)
+    expect(src).toMatch(/sendDriverWelcome\(store, \{ email, fullName \}\)/)
+    expect(src).toMatch(/return jsonResponse\(\{ success: true, userId, linkedExisting, welcomeEmail \}\)/)
+  })
+})
+
 describe('telegram-connect stays in the caller\'s store', () => {
   const src = source('telegram-connect')
 
@@ -60,7 +85,7 @@ describe('telegram-connect stays in the caller\'s store', () => {
 // is_admin() only proves the caller administers THEIR store, so every function
 // that lets an admin act on a record must also compare the caller's store.
 describe('every admin-gated function checks the caller\'s store', () => {
-  const fns = ['admin-create-driver', 'geocode-order', 'send-membership-email', 'send-payment-email', 'send-status-email', 'telegram-connect']
+  const fns = ['admin-create-driver', 'geocode-order', 'send-driver-welcome', 'send-membership-email', 'send-payment-email', 'send-status-email', 'telegram-connect']
 
   it.each(fns)('%s resolves the caller\'s store', (fn) => {
     const src = source(fn)

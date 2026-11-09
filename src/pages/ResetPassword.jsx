@@ -24,7 +24,7 @@ import { pageTitle } from '../tenant'
  * origin for the email link to land here (configured in the dashboard).
  */
 export default function ResetPassword() {
-  const { session, loading, updatePassword } = useAuth()
+  const { session, loading, updatePassword, isDriver } = useAuth()
   const navigate = useNavigate()
 
   const [password, setPassword] = useState('')
@@ -47,7 +47,8 @@ export default function ResetPassword() {
     try {
       await updatePassword(password)
       toast.success('Password updated — you are signed in')
-      navigate('/orders')
+      // Drivers arrive here from their welcome email; send them to their portal.
+      navigate(isDriver ? '/driver' : '/orders')
     } catch (err) {
       toast.error(err?.message || 'Could not update your password. Please try again.')
     } finally {
