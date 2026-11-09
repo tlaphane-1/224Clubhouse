@@ -59,6 +59,18 @@ describe.skipIf(SKIP)('Anon-role contract — public storefront reads work', () 
     expect(error).toBeNull()
     expect(Array.isArray(data)).toBe(true)
   })
+
+  it('POSITIVE: anon can read past events with seats_remaining (the "Past events" section)', async () => {
+    const today = new Date().toISOString().split('T')[0]
+    const { data, error } = await supabase
+      .from('events')
+      .select('*, seats_remaining:event_seats_remaining')
+      .lt('date', today)
+      .order('date', { ascending: false })
+      .limit(6)
+    expect(error).toBeNull()
+    expect(Array.isArray(data)).toBe(true)
+  })
 })
 
 // ── PII negative controls — the highest-value tests in the suite ─────────

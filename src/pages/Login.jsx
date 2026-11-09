@@ -5,6 +5,7 @@ import ForgotPasswordForm from '../components/auth/ForgotPasswordForm'
 import toast from 'react-hot-toast'
 import BrandLogo from '../components/ui/BrandLogo'
 import { tenant, pageTitle } from '../tenant'
+import { WRONG_STORE } from '../utils/accountStore'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -25,8 +26,8 @@ export default function Login() {
     try {
       await signIn(email, password)
       navigate('/admin/dashboard')
-    } catch {
-      toast.error('Invalid credentials')
+    } catch (err) {
+      toast.error(err?.code === WRONG_STORE ? err.message : 'Invalid credentials')
     } finally {
       setLoading(false)
     }

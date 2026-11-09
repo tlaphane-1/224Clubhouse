@@ -1,12 +1,15 @@
 import { useEffect, useMemo } from 'react'
 import { Calendar, AlertTriangle } from 'lucide-react'
-import { useEvents } from '../hooks/useEvents'
+import { useEvents, usePastEvents } from '../hooks/useEvents'
 import { useMyEventReservations, isLiveReservation } from '../hooks/useEventReservations'
 import EventCard from '../components/events/EventCard'
 import { tenant, pageTitle } from '../tenant'
 
 export default function Events() {
   const { data: events, isLoading, isError, refetch } = useEvents()
+  // Separate query: if it fails or is still loading, the section just doesn't
+  // show — it never blocks or replaces the upcoming list.
+  const { data: pastEvents } = usePastEvents()
   // One query for the whole grid — the cards read their own state out of it.
   // Signed out this never runs (enabled: !!user), so the map is simply empty.
   const { data: reservations } = useMyEventReservations()
@@ -77,6 +80,19 @@ export default function Events() {
             <h3 className="font-heading text-xl font-semibold text-white mb-2">No upcoming events</h3>
             <p className="text-muted text-sm">Check back soon — we host regularly.</p>
           </div>
+        )}
+
+        {pastEvents && pastEvents.length > 0 && (
+          <section aria-labelledby="past-events-heading" className="mt-16 pt-12 border-t border-border">
+            <h2 id="past-events-heading" className="text-gold text-xs uppercase tracking-[0.4em] mb-8">
+              Past Events
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {pastEvents.map((event) => (
+                <EventCard key={event.id} event={event} past />
+              ))}
+            </div>
+          </section>
         )}
       </div>
     </div>

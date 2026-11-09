@@ -8,8 +8,10 @@ import BrandLogo from '../ui/BrandLogo'
  * @param {object}      props.event        events row (may carry seats_remaining)
  * @param {object|null} props.reservation  the signed-in guest's live reservation
  *                                         for this event, if any
+ * @param {boolean}     props.past         the event has happened: shown muted,
+ *                                         with "Ended" instead of price or seats
  */
-export default function EventCard({ event, reservation = null }) {
+export default function EventCard({ event, reservation = null, past = false }) {
   const date = new Date(event.date + 'T00:00:00')
   const day = date.toLocaleDateString('en-ZA', { day: '2-digit' })
   const month = date.toLocaleDateString('en-ZA', { month: 'short' }).toUpperCase()
@@ -22,8 +24,8 @@ export default function EventCard({ event, reservation = null }) {
   return (
     <Link
       to={`/events/${event.id}`}
-      className="block bg-surface border border-border rounded-xl overflow-hidden
-                 transition-all duration-300 hover:border-gold hover:shadow-lg hover:shadow-gold/10 group"
+      className={`block bg-surface border border-border rounded-xl overflow-hidden transition-all duration-300 group
+                  ${past ? 'opacity-70 hover:opacity-100 hover:border-muted' : 'hover:border-gold hover:shadow-lg hover:shadow-gold/10'}`}
     >
       {/* Image */}
       <div className="relative h-48 bg-background overflow-hidden">
@@ -31,7 +33,7 @@ export default function EventCard({ event, reservation = null }) {
           <img
             src={event.image_url}
             alt={event.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${past ? 'grayscale' : ''}`}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -54,7 +56,7 @@ export default function EventCard({ event, reservation = null }) {
 
       {/* Content */}
       <div className="p-5">
-        <h3 className="font-heading text-lg font-semibold text-white mb-3 group-hover:text-gold transition-colors">
+        <h3 className={`font-heading text-lg font-semibold text-white mb-3 transition-colors ${past ? '' : 'group-hover:text-gold'}`}>
           {event.title}
         </h3>
 
@@ -79,7 +81,7 @@ export default function EventCard({ event, reservation = null }) {
 
         {/* Reservation state beats availability copy — a guest already on the
             list doesn't need to be told the event is nearly full. */}
-        {reservation ? (
+        {past ? null : reservation ? (
           <div className="flex items-center gap-1.5 text-gold text-xs mb-3">
             <Check size={13} className="shrink-0" />
             <span>
@@ -97,9 +99,11 @@ export default function EventCard({ event, reservation = null }) {
           {/* Honest copy: there is no online payment yet, so the price is what
               you settle at the door — not something you can buy here. */}
           <span className="text-xs text-muted uppercase tracking-widest">
-            {event.ticket_price
-              ? `${formatZAR(event.ticket_price)} at the door`
-              : 'Free Entry'}
+            {past
+              ? 'Ended'
+              : event.ticket_price
+                ? `${formatZAR(event.ticket_price)} at the door`
+                : 'Free Entry'}
           </span>
           {event.is_members_only && (
             <div className="flex items-center gap-1 text-gold text-xs">

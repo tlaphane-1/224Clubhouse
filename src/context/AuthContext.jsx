@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { CART_KEY, CART_CLEAR_EVENT } from './cartReducer'
 import { AuthContext } from './useAuth'
 import { tenant } from '../tenant'
+import { accountBelongsHere, wrongStoreError } from '../utils/accountStore'
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -52,7 +53,14 @@ export function AuthProvider({ children }) {
     // failed/slow check just falls back to "not admin" (bounce to login).
     async function init() {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        let { data: { session } } = await supabase.auth.getSession()
+        // A stored session from another store's account (see accountStore.js)
+        // is dropped on this site only: scope 'local' keeps it signed in on
+        // its own store's site.
+        if (session?.user && !accountBelongsHere(session.user, tenant.slug)) {
+          await supabase.auth.signOut({ scope: 'local' })
+          session = null
+        }
         const [admin, driver] = await Promise.all([
           withTimeout(resolveAdmin(session), 8000, false),
           withTimeout(resolveDriver(session), 8000, false),
@@ -77,6 +85,16 @@ export function AuthProvider({ children }) {
     // session synchronously, and resolve admin status on the next tick.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return
+      // Another store's account (e.g. arriving from an email link): treat it
+      // as signed out and drop it on the next tick (no awaiting in here).
+      if (session?.user && !accountBelongsHere(session.user, tenant.slug)) {
+        setSession(null)
+        setUser(null)
+        setIsAdmin(false)
+        setIsDriver(false)
+        setTimeout(() => { supabase.auth.signOut({ scope: 'local' }) }, 0)
+        return
+      }
       setSession(session)
       // Token refreshes keep the same identity — no need to re-check admin.
       if (event === 'TOKEN_REFRESHED') return
@@ -104,6 +122,10 @@ export function AuthProvider({ children }) {
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+    if (!accountBelongsHere(data.user, tenant.slug)) {
+      await supabase.auth.signOut({ scope: 'local' })
+      throw wrongStoreError(tenant.name)
+    }
     setSession(data.session)
     setUser(data.user)
     // Resolve admin before returning so callers can navigate without racing
