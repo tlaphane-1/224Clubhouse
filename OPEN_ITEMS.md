@@ -8,7 +8,9 @@
 > list. Where they disagree, trust this file. Resolved items are kept, dated, in §8.
 >
 > **Updated 2026-11-09:** Explosive 420 went live on its own domain (§7c); the multi-store
-> "must fix before a second store has an admin" items are closed.
+> "must fix before a second store has an admin" items are closed. Later that day: a login now
+> works only on its own store's site (PR #33), past events show on both stores (PR #33), and
+> `/membership` no longer crashes for signed-in non-members (PR #34).
 
 ---
 
@@ -180,8 +182,23 @@ Owner phone order `224-849A99` stored with `tenant = 224clubhouse`. Pre-push sch
   hook secret was pasted in chat once, so the owner should rotate it.
 - **Checks:** `predeploy` 576 passed against live. All 13 functions boot; `verify_jwt` is false only
   for `auth-send-email`, `send-cart-reminders` and `send-daily-summary` (pinned in `config.toml`).
-- **Not yet verified:** a real order on each store (receipt, status email, owner alert), and a real
-  E420 sign-up confirmation.
+- **One login, one store (PR #33):** a 224 account signed in on explosive420.co.za read 224's
+  orders and membership there, because `current_tenant()` trusts the account's
+  `app_metadata.tenant` stamp over the site (RLS itself was correct). The site now refuses a session
+  stamped for another store (`src/utils/accountStore.js`, `AuthContext.jsx`); sign-in shows "This
+  email is registered with another club". An unstamped account is still accepted. Customers who use
+  both clubs need a different email per club (a Gmail `+tag` address works).
+- **Past events (PR #33):** `/events` lists the last six past events under the upcoming ones, greyed
+  out and marked "Ended" (`usePastEvents`, `EventCard past`). On both stores.
+- **`/membership` crash (PR #34):** every signed-in customer without a membership got "Something went
+  wrong": the application sheet's footer read `tier.price_cents` before a tier was selected. Guarded
+  (`footer={showForm && tier && (`), pinned by `membershipPage.unit.test.js`. Reproduced and
+  verified on the local E420 stack; not yet re-checked by the owner on the live site.
+- **Not yet verified:** a real order on each store (receipt, status email, owner alert), a real
+  E420 sign-up confirmation, the membership application on live E420, and the first E420 daily
+  summary (07:00, 2026-11-10).
+- **Owner to-do:** rotate the auth hook secret (it was pasted in chat): Auth Hooks → generate a new
+  secret → Update, then set `SEND_EMAIL_HOOK_SECRET` to match.
 - **Club inputs still open:** alert email, Capitec details (EFT stays off), dabs/extract prices,
   names for the two Outdoor grades, keep or drop the Skull T-shirt, own photos, contact email,
   socials, POPIA information officer, membership price. The handover pack is in
@@ -193,6 +210,8 @@ Owner phone order `224-849A99` stored with `tenant = 224clubhouse`. Pre-push sch
 - **2026-11-09 — PR #15 (owner-alert outcome in `send-order-email`)** (was §2.1): closed unmerged;
   `master` already returns `ownerAlert` since the per-store email work.
 - **2026-11-09 — Multi-store "must fix before a second store has an admin"** (§7b): fixed in PR #30.
+- **2026-11-09 — Another store's login showing its orders on E420; `/membership` crash** (§7c):
+  fixed in PRs #33 and #34, deployed to both sites.
 
 - **2026-10-07 — Supabase outstanding invoices** (was §1.1 ⚠️): paid by the owner.
 - **2026-10-07 — Email-only order lookup** (was §2.1): retired by the owner's decision (§7, #13).
