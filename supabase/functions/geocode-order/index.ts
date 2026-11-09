@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
-import { callerClient, callerIsAdmin, serviceClient } from '../_shared/supabaseClients.ts'
+import { callerClient, callerIsAdmin, callerTenant, serviceClient } from '../_shared/supabaseClients.ts'
+import { DEFAULT_STORE } from '../_shared/stores.ts'
 
 // Turns an order's delivery address into a map point (orders.dest_lat/lng,
 // migration 20261008140000) so the customer's live map can show their home,
@@ -46,13 +47,15 @@ serve(async (req) => {
     const admin = serviceClient()
     const { data: order, error } = await admin
       .from('orders')
-      .select('id, driver_id, shipping_address, dest_lat, dest_lng')
+      .select('id, tenant, driver_id, shipping_address, dest_lat, dest_lng')
       .eq('id', orderId)
       .single()
     if (error || !order) return jsonResponse({ error: 'Order not found' }, 404)
 
-    // Same check as send-status-email: an admin, or the assigned driver.
-    let allowed = await callerIsAdmin(authHeader)
+    // Same check as send-status-email: an admin of the order's store, or the
+    // assigned driver. is_admin() only proves the caller administers THEIR store.
+    let allowed = (await callerIsAdmin(authHeader))
+      && (await callerTenant(authHeader)) === (order.tenant || DEFAULT_STORE)
     if (!allowed && order.driver_id) {
       const caller = callerClient(authHeader)
       const jwt = authHeader.replace(/^Bearer\s+/i, '')

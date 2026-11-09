@@ -48,11 +48,13 @@ Nothing on this branch has been pushed or deployed.
    `20261109130000`. The second prints `same-store references: N existing
    row(s) disagree`; N should be 0 (it was 0 locally). It does not fail on N > 0.
 5. **Deploy the functions** (`--use-api --project-ref aogdkqczvlffgydgxsmz`):
-   - normal: `admin-create-driver`, `telegram-connect`, `send-order-email`,
+   - normal: `admin-create-driver`, `telegram-connect`, `geocode-order`, `send-order-email`,
      `send-status-email`, `send-payment-email`, `send-membership-email`,
      `send-welcome-email`, `send-membership-application-alert`, `send-review-alert`
    - with `--no-verify-jwt`: `send-cart-reminders`, `send-daily-summary`,
-     `auth-send-email` (new)
+     `auth-send-email` (new). `supabase/config.toml` now also sets
+     `verify_jwt = false` for these three, so a deploy that forgets the flag
+     cannot lock out sign-ups.
 6. **Deploy both sites** (`npm run build` + 224 deploy; `npm run build:e420` +
    E420 deploy). The only frontend change: the newsletter form tells
    `send-welcome-email` which store it is.
@@ -67,6 +69,11 @@ Nothing on this branch has been pushed or deployed.
    and `supabase/templates/` (left in place for this reason).
 
 ## Behaviour changes to know about
+
+- The daily summary goes to the store's `alert_settings.alert_emails` when set,
+  else (224 only) `ADMIN_ALERT_EMAIL`. 224's `alert_emails` is null today, so
+  224's summary recipient is unchanged; setting it would redirect the summary too.
+- `geocode-order` now also requires an admin to belong to the order's store.
 
 - E420 emails show E420's name, logo, yellow, address and site; no social
   links (none set), no WELCOME10 block (E420's site does not offer it), and

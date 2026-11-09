@@ -384,6 +384,19 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Functions that must be reachable without a user JWT. `functions deploy` reads
+# these, so a deploy that forgets --no-verify-jwt cannot lock them out: the
+# gateway would answer 401 and, for auth-send-email, every sign-up and password
+# reset would fail. Each checks its own caller (hook signature / cron secret).
+[functions.auth-send-email]
+verify_jwt = false
+
+[functions.send-cart-reminders]
+verify_jwt = false
+
+[functions.send-daily-summary]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 56327

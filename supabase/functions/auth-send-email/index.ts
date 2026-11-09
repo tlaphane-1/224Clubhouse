@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0'
 import { renderAuthEmail, verifyLink } from '../_shared/authEmail.ts'
-import { sendStoreMail } from '../_shared/mail.ts'
+import { MailError, sendStoreMail } from '../_shared/mail.ts'
 import { DEFAULT_STORE, storeFor } from '../_shared/stores.ts'
 
 // Supabase Auth "Send Email Hook" (docs: auth/auth-hooks/send-email-hook).
@@ -57,7 +57,9 @@ serve(async (req) => {
     return failure(401, 'Invalid signature')
   }
 
-  const tenant = String(user.app_metadata?.tenant ?? '') || String(user.user_metadata?.tenant ?? '') || DEFAULT_STORE
+  // app_metadata only: user_metadata is user-editable, and current_tenant()
+  // also treats a missing claim as 224. Every account is stamped at creation.
+  const tenant = String(user.app_metadata?.tenant ?? '') || DEFAULT_STORE
   const store = storeFor(tenant)
   if (!store) {
     console.error(`[auth-send-email] unknown store "${tenant}" for a ${data.email_action_type} email`)
@@ -94,6 +96,8 @@ serve(async (req) => {
     }
   } catch (e) {
     console.error('[auth-send-email] send failed:', e)
+    // Auth retries a hook only on 429/503, so pass Resend's rate limit through.
+    if (e instanceof MailError && e.status === 429) return failure(429, 'Email provider rate limited')
     return failure(500, e instanceof Error ? e.message : String(e))
   }
 

@@ -23,6 +23,15 @@ export type SendResult =
   | { sent: true; id: string | null }
   | { sent: false; reason: string }
 
+/** Resend refused the message; status is Resend's HTTP status (429 = rate limited). */
+export class MailError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
+
 export interface MailDeps {
   env?: EnvGet
   fetchImpl?: typeof fetch
@@ -63,7 +72,7 @@ export async function sendStoreMail(store: Store, parts: MailParts, deps: MailDe
       ...(parts.headers ? { headers: parts.headers } : {}),
     }),
   })
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) throw new MailError(res.status, await res.text())
   const body = await res.json().catch(() => ({}))
   return { sent: true, id: body?.id ?? null }
 }

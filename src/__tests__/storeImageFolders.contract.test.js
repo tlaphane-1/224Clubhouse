@@ -3,7 +3,8 @@
  *
  * A store with an upload folder (tenants.upload_folder) may only upload to and
  * delete from that folder in product-images / event-images; a store without
- * one (224) may use the buckets anywhere except another store's folder.
+ * one may use the buckets anywhere except another store's folder only if it is
+ * 224 (default_tenant()); any other store without a folder may use nothing.
  *
  *   POSITIVE — each store's admin uploads inside its own area.
  *   NEGATIVE — each store's admin cannot upload into, or delete from, the
@@ -83,6 +84,20 @@ describe.skipIf(SKIP)('Store image folders contract', () => {
       expect((mainLeft.data ?? []).map(f => f.name)).toContain(mainPath.split('/')[1])
     })
   }
+
+  it('NEGATIVE: a store other than 224 with no folder cannot upload anywhere', async () => {
+    mustSucceed('clear test store folder', await admin.from('tenants')
+      .update({ upload_folder: null }).eq('slug', TEST_TENANT))
+    try {
+      for (const bucket of BUCKETS) {
+        const atRoot = await otherAdmin.storage.from(bucket).upload(`products/nofolder-${RUN_TAG}.png`, PNG)
+        expect(atRoot.error).toBeTruthy()
+      }
+    } finally {
+      mustSucceed('restore test store folder', await admin.from('tenants')
+        .update({ upload_folder: FOLDER }).eq('slug', TEST_TENANT))
+    }
+  })
 })
 
 describeGate('Store image folders contract', gate)

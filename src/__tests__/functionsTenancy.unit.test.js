@@ -56,3 +56,21 @@ describe('telegram-connect stays in the caller\'s store', () => {
     expect(src).toMatch(/const admin = serviceClient\(tenant\)/)
   })
 })
+
+// is_admin() only proves the caller administers THEIR store, so every function
+// that lets an admin act on a record must also compare the caller's store.
+describe('every admin-gated function checks the caller\'s store', () => {
+  const fns = ['admin-create-driver', 'geocode-order', 'send-membership-email', 'send-payment-email', 'send-status-email', 'telegram-connect']
+
+  it.each(fns)('%s resolves the caller\'s store', (fn) => {
+    const src = source(fn)
+    expect(src).toMatch(/callerIsAdmin\(/)
+    expect(src).toMatch(/callerTenant\(authHeader\)/)
+  })
+
+  it('geocode-order only lets an admin of the order\'s store read or write its map point', () => {
+    const src = source('geocode-order')
+    expect(src).toMatch(/\.select\('id, tenant,/)
+    expect(src).toMatch(/\(await callerTenant\(authHeader\)\) === \(order\.tenant \|\| DEFAULT_STORE\)/)
+  })
+})

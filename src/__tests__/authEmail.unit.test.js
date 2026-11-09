@@ -78,6 +78,19 @@ describe('auth-send-email hook', () => {
 
   it('picks the account\'s store and refuses an unknown one rather than borrowing another', () => {
     expect(src).toMatch(/user\.app_metadata\?\.tenant/)
+    // user_metadata is user-editable; a missing claim means 224, as in current_tenant().
+    expect(src).not.toMatch(/user_metadata\?\.tenant/)
     expect(src).toMatch(/if \(!store\)[\s\S]{0,200}return failure\(500/)
+  })
+
+  it('passes a Resend rate limit through as 429, the only status Auth retries besides 503', () => {
+    expect(src).toMatch(/e instanceof MailError && e\.status === 429\) return failure\(429/)
+  })
+
+  it('is reachable without a user JWT even if a deploy forgets --no-verify-jwt', () => {
+    const toml = readFileSync(path.resolve(import.meta.dirname, '../../supabase/config.toml'), 'utf8').replace(/\r\n/g, '\n')
+    for (const fn of ['auth-send-email', 'send-cart-reminders', 'send-daily-summary']) {
+      expect(toml).toMatch(new RegExp(`\\[functions\\.${fn}\\]\\nverify_jwt = false`))
+    }
   })
 })

@@ -100,6 +100,12 @@ describe('mail: a store only sends as itself', () => {
     await expect(sendStoreMail(A, { sender: 'orders', to: 'c@example.com', subject: 's', html: 'h' },
       { env, fetchImpl })).rejects.toThrow(/domain not verified/)
   })
+
+  it('a Resend refusal carries Resend\'s status, so a rate limit can be told apart', async () => {
+    const fetchImpl = async () => new Response('rate limited', { status: 429 })
+    await expect(sendStoreMail(A, { sender: 'orders', to: 'c@example.com', subject: 's', html: 'h' },
+      { env, fetchImpl })).rejects.toMatchObject({ status: 429 })
+  })
 })
 
 describe('bank details', () => {

@@ -14,14 +14,15 @@
 -- So:
 --   * tenants.upload_folder records each store's folder (null for 224);
 --   * a store WITH a folder may only write and delete inside it;
---   * a store WITHOUT one (224) may write and delete anywhere EXCEPT another
---     store's folder. 224's existing paths keep working unchanged.
+--   * 224 (default_tenant(), no folder) may write and delete anywhere EXCEPT
+--     another store's folder. 224's existing paths keep working unchanged;
+--   * any other store without a folder may write and delete nothing.
 -- Public read is unchanged. There is no update policy on these buckets, so
 -- object updates (upsert) stay refused for every admin, as before.
 --
 -- A new store sets upload_folder when it is provisioned (equal to its
--- tenant.json images.uploadFolder); until then it falls in the "no folder"
--- branch, which still cannot touch a store that has one.
+-- tenant.json images.uploadFolder); until then its admins cannot upload or
+-- delete images at all, so they can never reach 224's root-level paths.
 -- ============================================================
 
 alter table public.tenants add column if not exists upload_folder text;
@@ -49,11 +50,12 @@ as $$
   select case
     when t.upload_folder is not null then
       starts_with(coalesce(p_name, ''), t.upload_folder || '/')
-    else not exists (
+    when t.slug = public.default_tenant() then not exists (
       select 1 from public.tenants o
        where o.upload_folder is not null
          and starts_with(coalesce(p_name, ''), o.upload_folder || '/')
     )
+    else false
   end
   from public.tenants t
   where t.slug = public.current_tenant()
