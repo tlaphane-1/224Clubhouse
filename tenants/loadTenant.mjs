@@ -32,6 +32,11 @@ const OPTIONAL_PATHS = [
   'content.home.newsletter.offer',
   'content.home.newsletter.offerSuffix',
   'content.login',
+  // Env overrides only 224 needs: its sending domain and bank details have
+  // been function secrets since before stores existed (MAIL_FROM_DOMAIN,
+  // EFT_BANK_DETAILS). A new store's come from this file.
+  'mail.fromDomainEnv',
+  'mail.bankDetailsEnv',
 ]
 
 // Static files every store must ship in tenants/<slug>/public/ (vite publicDir).

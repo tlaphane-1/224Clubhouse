@@ -1,4 +1,5 @@
 import { serviceClient } from './supabaseClients.ts'
+import { DEFAULT_STORE, storeFor, type Store } from './stores.ts'
 
 // Who gets a store's owner alerts, and what the alert calls the store.
 // Recipients come from alert_settings.alert_emails for that store (migration
@@ -7,20 +8,16 @@ import { serviceClient } from './supabaseClients.ts'
 // store's orders can never land in 224's inbox.
 
 const ADMIN_ALERT_EMAIL = Deno.env.get('ADMIN_ALERT_EMAIL') ?? ''
-export const DEFAULT_TENANT = '224clubhouse'
-
-// Where each store's admin lives, for the "Open admin" links in alerts.
-// Interim until store config reaches the functions (multi-store phase 3).
-const STORE_SITES: Record<string, string> = {
-  '224clubhouse': 'https://224clubhouse.store',
-  explosive420: 'https://explosive420.web.app',
-}
+export const DEFAULT_TENANT = DEFAULT_STORE
 
 export interface AlertStore {
   tenant: string
   name: string
   siteUrl: string
   to: string[]
+  // The store's branding and sender (stores.generated.ts); null for a store
+  // the functions were not deployed with, whose alerts are then not emailed.
+  brand: Store | null
 }
 
 const split = (list: string | null | undefined) =>
@@ -35,10 +32,13 @@ export async function alertStore(tenant: string | null | undefined): Promise<Ale
     admin.from('tenants').select('name').eq('slug', slug).maybeSingle(),
   ])
   const own = split(settings?.alert_emails)
+  const brand = storeFor(slug)
   return {
     tenant: slug,
-    name: store?.name ?? slug,
-    siteUrl: STORE_SITES[slug] ?? STORE_SITES[DEFAULT_TENANT],
+    name: store?.name ?? brand?.name ?? slug,
+    // Where the store's admin lives, for the "Open admin" links in alerts.
+    siteUrl: (brand ?? storeFor(DEFAULT_TENANT))!.siteUrl,
     to: own.length ? own : slug === DEFAULT_TENANT ? split(ADMIN_ALERT_EMAIL) : [],
+    brand,
   }
 }

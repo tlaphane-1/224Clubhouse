@@ -40,6 +40,13 @@
     "instagram": "https://www.instagram.com/224clubhouse"
   },
   "telegram": true,
+  "mail": {
+    "fromDomain": "224clubhouse.store",
+    "fromDomainEnv": "MAIL_FROM_DOMAIN",
+    "resendKeyEnv": "RESEND_API_KEY",
+    "bankDetailsEnv": "EFT_BANK_DETAILS",
+    "footerHours": "Mon–Sun 09:00–19:00"
+  },
   "delivery": {
     "feeCents": 3000,
     "freeFromCents": 50000,
