@@ -38,6 +38,11 @@ export function functionStore(t) {
     facebook: t.social?.facebook ?? null,
     gold: t.theme.colors.gold,
     minimumAge: t.minimumAge,
+    freeDeliveryFromCents: t.delivery.freeFromCents,
+    memberFreeDelivery: t.delivery.promoteMemberFreeDelivery,
+    // The newsletter promises WELCOME10 only where the site does.
+    welcomeOffer: Boolean(t.content.home.newsletter.offer),
+    bankName: t.bank?.bankName ?? null,
     bankDetails: t.bank?.details ?? null,
     mail: {
       fromDomain: t.mail.fromDomain,

@@ -1,10 +1,12 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
-import { callerClient, callerIsAdmin, serviceClient } from '../_shared/supabaseClients.ts'
-import { emailLogo } from '../_shared/brand.ts'
+import { callerClient, callerIsAdmin, callerTenant, serviceClient } from '../_shared/supabaseClients.ts'
+import { ageLine, emailLogo } from '../_shared/brand.ts'
 import { notifyTelegram, tg } from '../_shared/telegram.ts'
 import { alertStore } from '../_shared/storeAlerts.ts'
+import { sendStoreMail } from '../_shared/mail.ts'
+import type { Store } from '../_shared/stores.ts'
 
 // EFT payment emails (migration 20261007120000_eft_payment_verification):
 //   kind 'proof'    — the CUSTOMER uploaded proof of payment → alert the club.
@@ -12,32 +14,29 @@ import { alertStore } from '../_shared/storeAlerts.ts'
 //   kind 'received' — an ADMIN confirmed the payment → tell the customer.
 //                     Caller must be an admin and the order must be paid.
 // Only { orderId, kind } come from the client; every fact is read from the row.
-
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
-const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
-const SITE_URL = 'https://224clubhouse.store'
+// Both emails are branded and sent as the store the order belongs to.
 
 function formatZAR(cents: number): string {
   return `R${(cents / 100).toFixed(2)}`
 }
 
-function shell(heading: string, body: string, ctaUrl: string, ctaLabel: string): string {
+function shell(brand: Store, heading: string, body: string, ctaUrl: string, ctaLabel: string): string {
   return `<!DOCTYPE html>
 <html>
 <body style="margin:0; padding:0; background:#0a0a0a; font-family:'Inter',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a; padding:32px 16px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
-        <tr><td align="center" style="padding-bottom:24px;">${emailLogo(180)}</td></tr>
+        <tr><td align="center" style="padding-bottom:24px;">${emailLogo(brand, 180)}</td></tr>
         <tr><td style="background:#111111; border:1px solid #222222; border-radius:12px; padding:28px;">
           <h1 style="font-family:Georgia, serif; color:#ffffff; font-size:24px; margin:0 0 12px;">${heading}</h1>
           <div style="color:#cccccc; font-size:14px; line-height:1.6; margin:0 0 24px;">${body}</div>
-          <table cellpadding="0" cellspacing="0" align="center"><tr><td style="background:#C9A84C; border-radius:8px;">
+          <table cellpadding="0" cellspacing="0" align="center"><tr><td style="background:${brand.gold}; border-radius:8px;">
             <a href="${ctaUrl}" style="display:inline-block; padding:14px 28px; color:#000000; font-weight:bold; text-decoration:none; text-transform:uppercase; letter-spacing:2px; font-size:13px;">${ctaLabel}</a>
           </td></tr></table>
         </td></tr>
         <tr><td align="center" style="padding-top:20px; color:#444444; font-size:11px;">
-          224 Clubhouse · 224 Rondebult Road, Libradene, Boksburg · Not for persons under 21
+          ${escapeHtml(brand.name)} · ${escapeHtml(shortAddress(brand))} · ${ageLine(brand).replace(/^🔞 /, '')}
         </td></tr>
       </table>
     </td></tr>
@@ -46,13 +45,14 @@ function shell(heading: string, body: string, ctaUrl: string, ctaLabel: string):
 </html>`
 }
 
-async function send(to: string[], subject: string, html: string): Promise<void> {
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: `224 Clubhouse <orders@${MAIL_FROM_DOMAIN}>`, to, subject, html }),
-  })
-  if (!res.ok) throw new Error(await res.text())
+// Street, suburb and city, as the compact footer has always shown them.
+function shortAddress(brand: Store): string {
+  return brand.address.split(', ').slice(0, 3).join(', ')
+}
+
+async function send(brand: Store, to: string[], subject: string, html: string): Promise<void> {
+  const sent = await sendStoreMail(brand, { sender: 'orders', to, subject, html })
+  if (!sent.sent) throw new Error(sent.reason)
 }
 
 serve(async (req) => {
@@ -63,7 +63,6 @@ serve(async (req) => {
     if (!orderId || (kind !== 'proof' && kind !== 'received')) {
       return jsonResponse({ error: 'orderId and kind (proof | received) are required' }, 400)
     }
-    if (!RESEND_API_KEY) return jsonResponse({ error: 'RESEND_API_KEY not set' }, 500)
 
     const authHeader = req.headers.get('Authorization') ?? ''
     if (!authHeader) return jsonResponse({ error: 'Not authenticated' }, 401)
@@ -77,6 +76,12 @@ serve(async (req) => {
     if (error || !order) return jsonResponse({ error: 'Order not found' }, 404)
     if (order.payment_method !== 'eft') return jsonResponse({ error: 'Not an EFT order' }, 400)
 
+    // The store's own owner alert recipients and sender, never by default 224's.
+    const store = await alertStore(order.tenant)
+    const brand = store.brand
+    if (!brand) return jsonResponse({ error: `No email settings for store ${store.tenant}` }, 500)
+    const bank = brand.bankName ?? 'the bank account'
+
     if (kind === 'proof') {
       const jwt = authHeader.replace(/^Bearer\s+/i, '')
       const { data: userData } = await callerClient(authHeader).auth.getUser(jwt)
@@ -85,23 +90,23 @@ serve(async (req) => {
       }
       if (!order.payment_proof_uploaded_at) return jsonResponse({ error: 'No proof on this order' }, 400)
 
-      // The store's own owner alert recipients, never by default 224's.
-      const store = await alertStore(order.tenant)
       const to = store.to
       await notifyTelegram('eft',
         `🧾 <b>Proof of payment</b> for ${tg(order.order_number)} — ${tg(formatZAR(order.total))}\n`
-        + `${tg(order.customer_name)}. Check FNB for the reference <b>${tg(order.customer_name)}</b> before marking it paid.`,
+        + `${tg(order.customer_name)}. Check ${tg(bank)} for the reference <b>${tg(order.customer_name)}</b> before marking it paid.`,
         { text: 'EFT to check', url: `${store.siteUrl}/admin/orders?filter=eft` }, store.tenant)
       if (to.length === 0) return jsonResponse({ success: false, reason: `no alert email set for ${store.tenant}` })
       await send(
+        brand,
         to,
         `Proof of payment: ${order.order_number} — ${formatZAR(order.total)}`,
         shell(
+          brand,
           'Proof of payment uploaded',
           `${escapeHtml(order.customer_name)} uploaded proof of an EFT payment for order
            <strong style="color:#ffffff;">${escapeHtml(order.order_number)}</strong>
            (${formatZAR(order.total)}).<br><br>
-           Check that the money has reflected in the FNB account, then mark the payment received.
+           Check that the money has reflected in the ${escapeHtml(bank === 'the bank account' ? 'bank' : bank)} account, then mark the payment received.
            A proof of payment alone is not confirmation — they can be faked.`,
           `${store.siteUrl}/admin/orders`,
           'Open orders',
@@ -111,20 +116,25 @@ serve(async (req) => {
     }
 
     // kind === 'received'
-    if (!(await callerIsAdmin(authHeader))) return jsonResponse({ error: 'Not authorized' }, 403)
+    // is_admin() only proves the caller administers THEIR store.
+    if (!(await callerIsAdmin(authHeader)) || (await callerTenant(authHeader)) !== store.tenant) {
+      return jsonResponse({ error: 'Not authorized' }, 403)
+    }
     if (!order.paid_at) return jsonResponse({ error: 'Payment not marked received' }, 400)
 
     const firstName = (order.customer_name ?? '').split(' ')[0] || 'there'
     await send(
+      brand,
       [order.customer_email],
       `Payment received for order ${order.order_number}`,
       shell(
+        brand,
         'Payment received ✅',
         `Thanks, ${escapeHtml(firstName)} — we've received your EFT payment of
-         <strong style="color:#C9A84C;">${formatZAR(order.paid_amount_cents ?? order.total)}</strong>
+         <strong style="color:${brand.gold};">${formatZAR(order.paid_amount_cents ?? order.total)}</strong>
          for order <strong style="color:#ffffff;">${escapeHtml(order.order_number)}</strong>.
          We'll start preparing it now and let you know when it's on its way.`,
-        `${SITE_URL}/orders`,
+        `${brand.siteUrl}/orders`,
         'View your order',
       ),
     )

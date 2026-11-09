@@ -15,6 +15,10 @@ export const STORES = {
     "facebook": "https://www.facebook.com/224clubhouse",
     "gold": "#C9A84C",
     "minimumAge": 21,
+    "freeDeliveryFromCents": 50000,
+    "memberFreeDelivery": true,
+    "welcomeOffer": true,
+    "bankName": "FNB",
     "bankDetails": "Bank: FNB\nAccount holder: 224 Clubhouse\nAccount type: Gold Business Account\nAccount number: 63228491138\nBranch code: 250655",
     "mail": {
       "fromDomain": "224clubhouse.store",
@@ -36,6 +40,10 @@ export const STORES = {
     "facebook": null,
     "gold": "#F5C518",
     "minimumAge": 21,
+    "freeDeliveryFromCents": 50000,
+    "memberFreeDelivery": false,
+    "welcomeOffer": false,
+    "bankName": null,
     "bankDetails": null,
     "mail": {
       "fromDomain": "explosive420.co.za",

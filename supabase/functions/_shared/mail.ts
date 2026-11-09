@@ -15,6 +15,8 @@ export interface MailParts {
   to: string | string[]
   subject: string
   html: string
+  // Extra email headers (e.g. List-Unsubscribe), passed to Resend as-is.
+  headers?: Record<string, string>
 }
 
 export type SendResult =
@@ -58,6 +60,7 @@ export async function sendStoreMail(store: Store, parts: MailParts, deps: MailDe
       to: parts.to,
       subject: parts.subject,
       html: parts.html,
+      ...(parts.headers ? { headers: parts.headers } : {}),
     }),
   })
   if (!res.ok) throw new Error(await res.text())

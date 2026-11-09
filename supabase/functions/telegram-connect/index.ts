@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { callerIsAdmin, callerTenant, serviceClient } from '../_shared/supabaseClients.ts'
 import { sendTelegram, tg } from '../_shared/telegram.ts'
+import { storeFor } from '../_shared/stores.ts'
 
 // Admin → Alerts setup for Telegram group alerts. Admin only.
 //   { action: 'save_token', token }      — check with getMe, store in Vault
@@ -58,6 +59,7 @@ serve(async (req) => {
     }
 
     const cfg = await config(tenant)
+    const storeName = storeFor(tenant)?.name ?? tenant
     if (!cfg.token) return jsonResponse({ error: 'Save the bot token first' }, 400)
 
     if (body.action === 'find_chats') {
@@ -82,7 +84,7 @@ serve(async (req) => {
       if (!Number.isFinite(chatId)) return jsonResponse({ error: 'Pick a group' }, 400)
       const chat = await tgApi(cfg.token, 'getChat', { chat_id: chatId })
       await sendTelegram(cfg.token, chatId,
-        `✅ <b>224 Clubhouse alerts connected</b>\nThis group (${tg(chat.title)}) will now get order, payment, review, membership and delivery alerts, plus the 07:00 daily summary.`)
+        `✅ <b>${tg(storeName)} alerts connected</b>\nThis group (${tg(chat.title)}) will now get order, payment, review, membership and delivery alerts, plus the 07:00 daily summary.`)
       const { error } = await admin.rpc('set_telegram_chat', { p_chat_id: chatId, p_title: chat.title ?? 'Group' })
       if (error) return jsonResponse({ error: error.message }, 500)
       return jsonResponse({ success: true, title: chat.title })
@@ -90,7 +92,7 @@ serve(async (req) => {
 
     if (body.action === 'test') {
       if (!cfg.chat_id) return jsonResponse({ error: 'Pick a group first' }, 400)
-      await sendTelegram(cfg.token, cfg.chat_id, '🔔 <b>Test alert</b> from 224 Clubhouse admin.')
+      await sendTelegram(cfg.token, cfg.chat_id, `🔔 <b>Test alert</b> from ${tg(storeName)} admin.`)
       return jsonResponse({ success: true })
     }
 

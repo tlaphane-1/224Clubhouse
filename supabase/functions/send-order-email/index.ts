@@ -2,14 +2,15 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
 import { callerClient, serviceClient } from '../_shared/supabaseClients.ts'
-import { emailLogo } from '../_shared/brand.ts'
+import { darkFooter, emailLogo } from '../_shared/brand.ts'
 import { notifyTelegram, tg } from '../_shared/telegram.ts'
 import { alertStore, type AlertStore } from '../_shared/storeAlerts.ts'
+import { sendStoreMail } from '../_shared/mail.ts'
+import { bankDetailsFor } from '../_shared/stores.ts'
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
-// Interim: sends go out from a domain already verified on the Resend account until
-// 224clubhouse.co.za is verified there. Unset MAIL_FROM_DOMAIN to revert to the default.
-const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
+// The receipt and the owner alert are both branded and sent as the store the
+// order belongs to (orders.tenant): its name, logo, colours, links, sending
+// domain and Resend key. See _shared/mail.ts.
 // Internal owner alert recipients are per store: see _shared/storeAlerts.ts.
 // No recipients = no alert at all (the customer receipt is unaffected).
 
@@ -47,11 +48,6 @@ interface ShippingAddress {
 interface OrderEmailPayload {
   orderId: string
 }
-
-const SITE_URL = 'https://224clubhouse.store'
-// Banking details for EFT orders (use "\n" for new lines). Unset = the customer
-// is told the details will follow.
-const EFT_BANK_DETAILS = (Deno.env.get('EFT_BANK_DETAILS') ?? '').replace(/\\n/g, '\n').trim()
 
 // The values the orders_payment_method_check constraint actually allows are
 // 'cash_on_delivery' / 'card_on_delivery' / 'online'; the short forms are kept
@@ -200,7 +196,7 @@ function ownerAlertHtml(alert: OwnerAlert): string {
         ${escapeHtml(paymentLabel(alert.paymentMethod))} &middot; ${escapeHtml(alert.placedAt)}
       </div>
 
-      <div style="height:2px; background:#C9A84C; margin:16px 0;"></div>
+      <div style="height:2px; background:${alert.store.brand?.gold ?? '#C9A84C'}; margin:16px 0;"></div>
 
       <table style="width:100%; border-collapse:collapse; font-size:14px;">
         ${detail('Customer', alert.customerName)}
@@ -259,26 +255,14 @@ function ownerAlertHtml(alert: OwnerAlert): string {
 async function sendOwnerAlert(alert: OwnerAlert): Promise<string> {
   const to = alert.store.to
   if (to.length === 0) return `skipped: no alert email set for ${alert.store.tenant}`
+  const brand = alert.store.brand
+  if (!brand) return `skipped: no email settings for ${alert.store.tenant}`
 
   const subject = `New order ${alert.orderNumber} — ${formatZAR(alert.total)} (${paymentLabel(alert.paymentMethod).toLowerCase()})`
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: `${alert.store.name} <orders@${MAIL_FROM_DOMAIN}>`,
-      to,
-      subject,
-      html: ownerAlertHtml(alert),
-    }),
-  })
-
-  if (!res.ok) throw new Error(await res.text())
-  const sent = await res.json().catch(() => ({}))
-  return `sent to ${to.length} address(es), id ${sent?.id ?? 'unknown'}`
+  const sent = await sendStoreMail(brand, { sender: 'orders', to, subject, html: ownerAlertHtml(alert) })
+  if (!sent.sent) return sent.reason
+  return `sent to ${to.length} address(es), id ${sent.id ?? 'unknown'}`
 }
 
 serve(async (req) => {
@@ -331,11 +315,18 @@ serve(async (req) => {
     const discountCode: string | null = order.discount_code ?? null
     const paymentMethod: string | undefined = order.payment_method ?? undefined
 
+    // The store this order belongs to: alert recipients, and the branding and
+    // sender of both emails. Never by default 224's.
+    const store = await alertStore(order.tenant)
+    const brand = store.brand
+    if (!brand) return jsonResponse({ error: `No email settings for store ${store.tenant}` }, 500)
+    const bankDetails = bankDetailsFor(brand)
+
     const itemRows = items.map(item => `
       <tr>
         <td style="padding: 8px 0; color: #ffffff; border-bottom: 1px solid #222222;">${escapeHtml(lineName(item))}</td>
         <td style="padding: 8px 0; color: #888888; text-align: center; border-bottom: 1px solid #222222;">${escapeHtml(item.quantity)}</td>
-        <td style="padding: 8px 0; color: #C9A84C; text-align: right; border-bottom: 1px solid #222222;">${formatZAR(item.price * item.quantity)}</td>
+        <td style="padding: 8px 0; color: ${brand.gold}; text-align: right; border-bottom: 1px solid #222222;">${formatZAR(item.price * item.quantity)}</td>
       </tr>
     `).join('')
 
@@ -368,11 +359,11 @@ serve(async (req) => {
 
     <!-- Logo -->
     <div style="text-align:center; margin-bottom:40px;">
-      ${emailLogo(200)}
+      ${emailLogo(brand, 200)}
     </div>
 
     <!-- Divider -->
-    <div style="width:48px; height:1px; background:#C9A84C; margin:0 auto 40px;"></div>
+    <div style="width:48px; height:1px; background:${brand.gold}; margin:0 auto 40px;"></div>
 
     <!-- Heading -->
     <h1 style="color:#ffffff; font-family:Georgia,serif; font-size:28px; text-align:center; margin-bottom:8px; font-weight:600;">
@@ -389,7 +380,7 @@ serve(async (req) => {
            track their order, which is what prompted adding this. -->
       <div style="margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid #222222; text-align:center;">
         <div style="color:#888888; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">Your Order Number</div>
-        <div style="color:#C9A84C; font-family:monospace; font-size:22px; font-weight:700; letter-spacing:1px;">${escapeHtml(orderNumber)}</div>
+        <div style="color:${brand.gold}; font-family:monospace; font-size:22px; font-weight:700; letter-spacing:1px;">${escapeHtml(orderNumber)}</div>
         <div style="color:#888888; font-size:12px; margin-top:8px;">Keep this to track your order.</div>
       </div>
 
@@ -411,41 +402,30 @@ serve(async (req) => {
         <table style="width:100%;">${breakdownRows}
           <tr>
             <td style="color:#ffffff; font-weight:600; font-size:15px;">${paymentMethod === 'eft' ? 'Amount due by EFT' : 'Amount due on delivery'}</td>
-            <td style="color:#C9A84C; font-weight:700; font-size:18px; text-align:right;">${formatZAR(total)}</td>
+            <td style="color:${brand.gold}; font-weight:700; font-size:18px; text-align:right;">${formatZAR(total)}</td>
           </tr>
         </table>
         ${paymentMethod === 'eft'
-          ? `<div style="color:#888888; font-size:12px; margin-top:6px; white-space:pre-line;">${EFT_BANK_DETAILS ? escapeHtml(EFT_BANK_DETAILS) : 'We will send you our banking details shortly.'}<br>Use your name and surname (${escapeHtml(customerName)}) as the payment reference. We dispatch once the payment reflects.</div>`
+          ? `<div style="color:#888888; font-size:12px; margin-top:6px; white-space:pre-line;">${bankDetails ? escapeHtml(bankDetails) : 'We will send you our banking details shortly.'}<br>Use your name and surname (${escapeHtml(customerName)}) as the payment reference. We dispatch once the payment reflects.</div>`
           : `<div style="color:#888888; font-size:12px; margin-top:6px;">${paymentLabel(paymentMethod)} — no payment is needed now.</div>`}
       </div>
     </div>
 
     <!-- Track -->
     <div style="text-align:center; margin-bottom:32px;">
-      <a href="${SITE_URL}/track?order=${encodeURIComponent(orderNumber)}"
-         style="display:inline-block; background:#C9A84C; color:#0a0a0a; text-decoration:none; padding:14px 32px; border-radius:8px; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:2px;">
+      <a href="${brand.siteUrl}/track?order=${encodeURIComponent(orderNumber)}"
+         style="display:inline-block; background:${brand.gold}; color:#0a0a0a; text-decoration:none; padding:14px 32px; border-radius:8px; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:2px;">
         Track your order
       </a>
     </div>
 
     <!-- Delivery -->
     <div style="background:#111111; border:1px solid #222222; border-radius:12px; padding:20px; margin-bottom:32px; text-align:center;">
-      <div style="color:#C9A84C; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">Estimated Delivery</div>
+      <div style="color:${brand.gold}; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">Estimated Delivery</div>
       <div style="color:#ffffff; font-size:15px; font-weight:600;">2–5 Business Days</div>
     </div>
 
-    <!-- Footer -->
-    <div style="text-align:center; border-top:1px solid #222222; padding-top:28px;">
-      ${emailLogo(110, 'margin-bottom:16px;')}
-      <p style="color:#888888; font-size:12px; margin-bottom:4px;">224 Rondebult Road, Libradene, Boksburg, 1459</p>
-      <p style="color:#888888; font-size:12px; margin-bottom:16px;">Mon–Sun 09:00–19:00</p>
-      <div style="display:flex; justify-content:center; gap:16px; margin-bottom:16px;">
-        <a href="https://www.instagram.com/224clubhouse" style="color:#C9A84C; text-decoration:none; font-size:12px;">Instagram</a>
-        <span style="color:#333;">|</span>
-        <a href="https://www.facebook.com/224clubhouse" style="color:#C9A84C; text-decoration:none; font-size:12px;">Facebook</a>
-      </div>
-      <p style="color:#444; font-size:11px;">🔞 Not for persons under 21</p>
-    </div>
+    <!-- Footer -->${darkFooter(brand)}
 
   </div>
 </body>
@@ -456,24 +436,13 @@ serve(async (req) => {
     // order exists — the response shape below is unchanged either way.
     let customerSendError: unknown = null
     try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: `224 Clubhouse <orders@${MAIL_FROM_DOMAIN}>`,
-          to: customerEmail,
-          subject: 'Your 224 Clubhouse order is confirmed 🌿',
-          html,
-        }),
+      const sent = await sendStoreMail(brand, {
+        sender: 'orders',
+        to: customerEmail,
+        subject: `Your ${brand.name} order is confirmed 🌿`,
+        html,
       })
-
-      if (!res.ok) {
-        const err = await res.text()
-        throw new Error(err)
-      }
+      if (!sent.sent) throw new Error(sent.reason)
     } catch (error) {
       customerSendError = error
     }
@@ -485,8 +454,6 @@ serve(async (req) => {
     // missing alert can be diagnosed without function logs.
     let ownerAlert = 'sent'
     const lowStock = await lowStockFor(items)
-    // Alerts go to the store the order belongs to, never by default to 224.
-    const store = await alertStore(order.tenant)
     // Telegram group alert — independent of the email (never throws).
     const telegram = await notifyTelegram('orders',
       `🛒 <b>New order ${tg(orderNumber)}</b> — ${tg(formatZAR(total))} (${tg(paymentLabel(paymentMethod))})\n`

@@ -1,13 +1,12 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { escapeHtml } from '../_shared/escapeHtml.ts'
-import { callerIsAdmin, serviceClient } from '../_shared/supabaseClients.ts'
-import { emailLogo } from '../_shared/brand.ts'
+import { callerIsAdmin, callerTenant, serviceClient } from '../_shared/supabaseClients.ts'
+import { darkFooter, emailLogo } from '../_shared/brand.ts'
+import { sendStoreMail } from '../_shared/mail.ts'
+import { DEFAULT_STORE, storeFor } from '../_shared/stores.ts'
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
-// Interim: sends go out from a domain already verified on the Resend account until
-// 224clubhouse.co.za is verified there. Unset MAIL_FROM_DOMAIN to revert to the default.
-const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za'
+// Branded and sent as the store the membership belongs to (memberships.tenant).
 
 // The ONLY thing the client may supply. Recipient, name, tier and expiry are
 // read from the membership row: with a caller-supplied recipient, anyone
@@ -16,8 +15,6 @@ const MAIL_FROM_DOMAIN = Deno.env.get('MAIL_FROM_DOMAIN') ?? '224clubhouse.co.za
 interface MembershipEmailPayload {
   membershipId: string
 }
-
-const SITE_URL = 'https://224clubhouse.store'
 
 function formatValidUntil(iso?: string): string {
   if (!iso) return '—'
@@ -47,11 +44,17 @@ serve(async (req) => {
     const admin = serviceClient()
     const { data: membership, error: membershipError } = await admin
       .from('memberships')
-      .select('full_name, email, tier, tier_id, expires_at')
+      .select('full_name, email, tier, tier_id, expires_at, tenant')
       .eq('id', membershipId)
       .single()
 
     if (membershipError || !membership) return jsonResponse({ error: 'Membership not found' }, 404)
+    // is_admin() only proves the caller administers THEIR store.
+    if ((await callerTenant(authHeader)) !== (membership.tenant || DEFAULT_STORE)) {
+      return jsonResponse({ error: 'Not authorized' }, 403)
+    }
+    const brand = storeFor(membership.tenant)
+    if (!brand) return jsonResponse({ error: `No email settings for store ${membership.tenant}` }, 500)
 
     // Display name for the tier. Looked up separately rather than embedded so
     // the query can't break on PostgREST relationship ambiguity; legacy rows
@@ -60,7 +63,7 @@ serve(async (req) => {
     let tierName: string = membership.tier
     const { data: tier } = membership.tier_id
       ? await admin.from('membership_tiers').select('name').eq('id', membership.tier_id).maybeSingle()
-      : await admin.from('membership_tiers').select('name').eq('slug', membership.tier).maybeSingle()
+      : await admin.from('membership_tiers').select('name').eq('slug', membership.tier).eq('tenant', brand.slug).maybeSingle()
     if (tier?.name) tierName = tier.name
 
     const memberName: string = membership.full_name
@@ -76,11 +79,11 @@ serve(async (req) => {
 
     <!-- Logo -->
     <div style="text-align:center; margin-bottom:40px;">
-      ${emailLogo(200)}
+      ${emailLogo(brand, 200)}
     </div>
 
     <!-- Divider -->
-    <div style="width:48px; height:1px; background:#C9A84C; margin:0 auto 40px;"></div>
+    <div style="width:48px; height:1px; background:${brand.gold}; margin:0 auto 40px;"></div>
 
     <!-- Heading -->
     <h1 style="color:#ffffff; font-family:Georgia,serif; font-size:28px; text-align:center; margin-bottom:8px; font-weight:600;">
@@ -95,7 +98,7 @@ serve(async (req) => {
 
       <div style="margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid #222222; text-align:center;">
         <div style="color:#888888; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">Your Membership</div>
-        <div style="color:#C9A84C; font-family:Georgia,serif; font-size:22px; font-weight:700; letter-spacing:1px;">${escapeHtml(tierName)}</div>
+        <div style="color:${brand.gold}; font-family:Georgia,serif; font-size:22px; font-weight:700; letter-spacing:1px;">${escapeHtml(tierName)}</div>
       </div>
 
       <table style="width:100%; border-collapse:collapse;">
@@ -105,61 +108,39 @@ serve(async (req) => {
         </tr>
         <tr>
           <td style="padding: 8px 0; color: #888888;">Valid until</td>
-          <td style="padding: 8px 0; color: #C9A84C; text-align: right; font-weight:700;">${formatValidUntil(expiresAt)}</td>
+          <td style="padding: 8px 0; color: ${brand.gold}; text-align: right; font-weight:700;">${formatValidUntil(expiresAt)}</td>
         </tr>
       </table>
     </div>
 
     <!-- What to bring -->
     <div style="background:#111111; border:1px solid #222222; border-radius:12px; padding:20px; margin-bottom:32px; text-align:center;">
-      <div style="color:#C9A84C; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">What to Bring</div>
+      <div style="color:${brand.gold}; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">What to Bring</div>
       <div style="color:#ffffff; font-size:15px; font-weight:600;">Your ID — we check it at the door</div>
       <div style="color:#888888; font-size:12px; margin-top:6px;">Membership is personal and non-transferable.</div>
     </div>
 
     <!-- Visit -->
     <div style="text-align:center; margin-bottom:32px;">
-      <a href="${SITE_URL}/membership"
-         style="display:inline-block; background:#C9A84C; color:#0a0a0a; text-decoration:none; padding:14px 32px; border-radius:8px; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:2px;">
+      <a href="${brand.siteUrl}/membership"
+         style="display:inline-block; background:${brand.gold}; color:#0a0a0a; text-decoration:none; padding:14px 32px; border-radius:8px; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:2px;">
         View member benefits
       </a>
     </div>
 
-    <!-- Footer -->
-    <div style="text-align:center; border-top:1px solid #222222; padding-top:28px;">
-      ${emailLogo(110, 'margin-bottom:16px;')}
-      <p style="color:#888888; font-size:12px; margin-bottom:4px;">224 Rondebult Road, Libradene, Boksburg, 1459</p>
-      <p style="color:#888888; font-size:12px; margin-bottom:16px;">Mon–Sun 09:00–19:00</p>
-      <div style="display:flex; justify-content:center; gap:16px; margin-bottom:16px;">
-        <a href="https://www.instagram.com/224clubhouse" style="color:#C9A84C; text-decoration:none; font-size:12px;">Instagram</a>
-        <span style="color:#333;">|</span>
-        <a href="https://www.facebook.com/224clubhouse" style="color:#C9A84C; text-decoration:none; font-size:12px;">Facebook</a>
-      </div>
-      <p style="color:#444; font-size:11px;">🔞 Not for persons under 21</p>
-    </div>
+    <!-- Footer -->${darkFooter(brand)}
 
   </div>
 </body>
 </html>`
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: `224 Clubhouse <hello@${MAIL_FROM_DOMAIN}>`,
-        to: memberEmail,
-        subject: 'Your 224 Clubhouse membership is confirmed 🌿',
-        html,
-      }),
+    const sent = await sendStoreMail(brand, {
+      sender: 'hello',
+      to: memberEmail,
+      subject: `Your ${brand.name} membership is confirmed 🌿`,
+      html,
     })
-
-    if (!res.ok) {
-      const err = await res.text()
-      throw new Error(err)
-    }
+    if (!sent.sent) throw new Error(sent.reason)
 
     return jsonResponse({ success: true })
   } catch (error) {

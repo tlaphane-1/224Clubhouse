@@ -19,6 +19,10 @@ export interface Store {
   facebook: string | null
   gold: string
   minimumAge: number
+  freeDeliveryFromCents: number
+  memberFreeDelivery: boolean
+  welcomeOffer: boolean
+  bankName: string | null
   bankDetails: string | null
   mail: {
     fromDomain: string

@@ -5,14 +5,20 @@
  *   2. Spec §5.7 rule: a message's from-domain is the recipient store's own
  *      sending domain, and its own Resend key is used — never another store's,
  *      even when that store's key or override is the only one set.
+ *   3. Every function sends through that one mailer (source scan), and every
+ *      function file parses as TypeScript.
  *
  *   npx vitest run src/__tests__/functionStores.unit.test.js
  */
 import { describe, it, expect, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
+import path from 'node:path'
+import { transformWithOxc } from 'vite'
 import { generateStoresModule, storeSlugs, OUT } from '../../scripts/build-function-stores.mjs'
 import { sendStoreMail, fromDomainFor } from '../../supabase/functions/_shared/mail.ts'
 import { storeFor, allStores, bankDetailsFor } from '../../supabase/functions/_shared/stores.ts'
+
+const ROOT = path.resolve(import.meta.dirname, '../..')
 
 describe('stores.generated.ts', () => {
   it('is in sync with tenants/*/tenant.json (run node scripts/build-function-stores.mjs)', () => {
@@ -38,7 +44,7 @@ describe('stores.generated.ts', () => {
 const fakeStore = (slug, domain, keyEnv, domainEnv = null) => ({
   slug, name: `Store ${slug}`, shortName: slug, siteUrl: `https://${slug}.test`,
   logoPath: `brand-assets/${slug}.png`, address: 'x', phone: 'x', hours: 'x',
-  instagram: null, facebook: null, gold: '#000000', minimumAge: 21, bankDetails: null,
+  instagram: null, facebook: null, gold: '#000000', minimumAge: 21, freeDeliveryFromCents: 50000, memberFreeDelivery: false, welcomeOffer: false, bankName: null, bankDetails: null,
   mail: { fromDomain: domain, fromDomainEnv: domainEnv, resendKeyEnv: keyEnv, bankDetailsEnv: null },
 })
 const A = fakeStore('store-a', 'a-mail.test', 'KEY_A', 'DOMAIN_A')
@@ -102,5 +108,51 @@ describe('bank details', () => {
     expect(bankDetailsFor(storeFor('224clubhouse'), env)).toBe('Bank: Secret\nAcc: 1')
     expect(bankDetailsFor(storeFor('224clubhouse'), envOf({}))).toMatch(/^Bank: FNB/)
     expect(bankDetailsFor(storeFor('explosive420'), env)).toBe('')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Every send path goes through _shared/mail.ts. The functions run on Deno and
+// cannot be imported here, so this reads their source: if no function talks to
+// Resend or reads a sender secret itself, the from-domain rule tested above
+// covers every email the functions send.
+// ---------------------------------------------------------------------------
+const FUNCTIONS = path.join(ROOT, 'supabase/functions')
+const sourceFiles = readdirSync(FUNCTIONS, { recursive: true })
+  .map(String)
+  .filter(f => f.endsWith('.ts'))
+  .map(f => ({ rel: f.replace(/\\/g, '/'), code: readFileSync(path.join(FUNCTIONS, f), 'utf8') }))
+
+describe('every Edge Function sends mail through _shared/mail.ts', () => {
+  const others = sourceFiles.filter(f => f.rel !== '_shared/mail.ts')
+
+  it('only the mailer calls Resend or reads a Resend key / sender domain secret', () => {
+    for (const { rel, code } of others) {
+      expect(code, rel).not.toMatch(/api\.resend\.com/)
+      // The key and domain secret NAMES live in stores.generated.ts as data;
+      // only the mailer reads their values.
+      expect(code, rel).not.toMatch(/env\.get\(\s*['"`](RESEND_API_KEY|MAIL_FROM_DOMAIN)/)
+    }
+  })
+
+  it('no function hard-codes 224\'s name, site or brand colour', () => {
+    const allowed = new Set(['_shared/stores.generated.ts', '_shared/stores.ts'])
+    for (const { rel, code } of others.filter(f => !allowed.has(f.rel))) {
+      expect(code, rel).not.toMatch(/224 Clubhouse|224clubhouse\.(store|co\.za)|Rondebult/)
+      // The gold only survives as a fallback for a store with no email settings.
+      expect(code.replace(/\?\? '#C9A84C'/g, ''), rel).not.toMatch(/#C9A84C/i)
+    }
+  })
+
+  it('every function that emails uses sendStoreMail', () => {
+    for (const { rel, code } of sourceFiles.filter(f => f.rel.endsWith('/index.ts'))) {
+      if (/<html|<!DOCTYPE/i.test(code)) expect(code, rel).toMatch(/sendStoreMail\(/)
+    }
+  })
+
+  it('every function file parses as TypeScript', async () => {
+    for (const { rel, code } of sourceFiles) {
+      await expect(transformWithOxc(code, rel, { lang: 'ts' }), rel).resolves.toBeTruthy()
+    }
   })
 })

@@ -52,9 +52,10 @@ export default function Home() {
       })
       if (error) throw error
 
-      // The function reads the name and unsubscribe token from the row itself.
+      // The function reads the name and unsubscribe token from the row itself;
+      // tenant says which store's list (and branding) to use.
       await supabase.functions.invoke('send-welcome-email', {
-        body: { email },
+        body: { email, tenant: tenant.slug },
       })
 
       toast.success(newsletterCopy.welcomeToast, {
