@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { ShoppingBag, Menu, X, User, LogOut, Package, LayoutDashboard, ChevronDown } from 'lucide-react'
+import { ShoppingBag, Menu, X, User, LogOut, Package, LayoutDashboard, ChevronDown, Truck } from 'lucide-react'
 import { useCart } from '../../context/useCart'
 import { useAuth } from '../../context/useAuth'
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
@@ -20,7 +20,7 @@ const trackLink = { to: '/track', label: 'Track Order' }
 
 export default function Navbar() {
   const { cartCount } = useCart()
-  const { user, isAdmin, signOut } = useAuth()
+  const { user, isAdmin, isDriver, signOut } = useAuth()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -56,6 +56,8 @@ export default function Navbar() {
   const accountMenuItems = [
     { to: '/account', label: 'My Account', icon: User },
     { to: '/orders', label: 'My Orders', icon: Package },
+    // Drivers who sign in on the shop would otherwise never find their portal.
+    ...(isDriver ? [{ to: '/driver', label: 'My Deliveries', icon: Truck }] : []),
     ...(isAdmin ? [{ to: '/admin/dashboard', label: 'Admin Dashboard', icon: LayoutDashboard }] : []),
   ]
 

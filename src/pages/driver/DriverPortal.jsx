@@ -10,6 +10,7 @@ import { lineName } from '../../utils/variants'
 import BrandLogo from '../../components/ui/BrandLogo'
 import Badge from '../../components/ui/Badge'
 import InstallDriverApp from '../../components/delivery/InstallDriverApp'
+import ForgotPasswordForm from '../../components/auth/ForgotPasswordForm'
 import { pageTitle } from '../../tenant'
 
 // /driver — the driver's phone is the target device. Big tap targets, one job
@@ -24,6 +25,7 @@ function DriverSignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
+  const [forgot, setForgot] = useState(false)
 
   const submit = async (e) => {
     e.preventDefault()
@@ -36,6 +38,15 @@ function DriverSignIn() {
     } finally {
       setBusy(false)
     }
+  }
+
+  if (forgot) {
+    return (
+      <div className="bg-surface border border-border rounded-2xl p-6">
+        <h1 className="font-heading text-2xl font-bold text-white mb-4">Choose a new password</h1>
+        <ForgotPasswordForm initialEmail={email} onBack={() => setForgot(false)} />
+      </div>
+    )
   }
 
   return (
@@ -52,6 +63,10 @@ function DriverSignIn() {
           onChange={e => setPassword(e.target.value)} className="input-base" />
       </div>
       <button type="submit" disabled={busy} className="btn-gold w-full py-3">{busy ? 'Signing in…' : 'Sign in'}</button>
+      <button type="button" onClick={() => setForgot(true)}
+        className="focus-ring w-full min-h-11 text-sm text-gold underline underline-offset-2">
+        Forgot password?
+      </button>
     </form>
   )
 }

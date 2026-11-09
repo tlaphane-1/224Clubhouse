@@ -179,6 +179,21 @@ export function useCreateDriver() {
   })
 }
 
+// Emails the driver a link to choose their password (send-driver-welcome).
+export function useSendDriverWelcome() {
+  return useMutation({
+    mutationFn: async ({ userId }) => {
+      const { data, error } = await supabase.functions.invoke('send-driver-welcome', { body: { userId } })
+      if (error) {
+        let message = error.message
+        try { message = (await error.context.json()).error ?? message } catch { /* keep generic */ }
+        throw new Error(message)
+      }
+      return data
+    },
+  })
+}
+
 export function useSetDriverActive() {
   const queryClient = useQueryClient()
   return useMutation({

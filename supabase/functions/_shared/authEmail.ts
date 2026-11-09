@@ -124,6 +124,26 @@ export function renderAuthEmail(store: Store, input: AuthEmailInput, supabaseUrl
   }
 }
 
+/**
+ * Sent by send-driver-welcome when an admin adds a driver (or resends it). The
+ * link is a password-recovery link, so it works whether or not the admin set a
+ * password; the driver chooses their own and lands on the driver portal.
+ */
+export function renderDriverWelcome(store: Store, input: { link: string; fullName: string }, supabaseUrl: string): AuthEmail {
+  const n = escapeHtml(store.name)
+  const portal = `${store.siteUrl.replace(/^https?:\/\//, '')}/driver`
+  const first = escapeHtml(input.fullName.trim().split(/\s+/)[0] ?? '')
+  return {
+    subject: `You've been added as a driver for ${store.name}`,
+    html: page(store, supabaseUrl, {
+      heading: first ? `Welcome, ${first}` : 'Welcome to the team',
+      intro: `You've been added as a delivery driver for ${n}. Choose your password, then sign in at <strong style="color:#ffffff;">${escapeHtml(portal)}</strong> to see your deliveries.`,
+      action: button(store, input.link, 'Choose my password'),
+      note: `This link expires in 1 hour. If it has expired, tap &ldquo;Forgot password?&rdquo; on the driver sign-in page.`,
+    }),
+  }
+}
+
 /** GoTrue's verify link (Send Email Hook docs: token = token_hash). */
 export function verifyLink(supabaseUrl: string, tokenHash: string, type: string, redirectTo: string): string {
   const params = new URLSearchParams({ token: tokenHash, type, redirect_to: redirectTo })

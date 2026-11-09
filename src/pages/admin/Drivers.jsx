@@ -1,9 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { Truck, Plus, AlertTriangle, Phone } from 'lucide-react'
+import { Truck, Plus, AlertTriangle, Phone, Mail } from 'lucide-react'
 import toast from 'react-hot-toast'
 import AdminLayout from '../../components/admin/AdminLayout'
 import Modal from '../../components/ui/Modal'
-import { useDrivers, useCreateDriver, useSetDriverActive, useDriverLocations } from '../../hooks/useDelivery'
+import { useDrivers, useCreateDriver, useSetDriverActive, useDriverLocations, useSendDriverWelcome } from '../../hooks/useDelivery'
 import { tenant, adminTitle } from '../../tenant'
 
 const LiveMap = lazy(() => import('../../components/delivery/LiveMap'))
@@ -22,9 +22,12 @@ function AddDriverForm({ onDone }) {
     e.preventDefault()
     try {
       const res = await create.mutateAsync(form)
-      toast.success(res?.linkedExisting
-        ? 'That email already had an account — it is now a driver (their existing password still applies).'
-        : 'Driver added. Share the email and password with them.')
+      const added = res?.linkedExisting ? 'That email already had an account. It is now a driver.' : 'Driver added.'
+      if (res?.welcomeEmail?.sent) {
+        toast.success(`${added} We emailed them a link to choose their password.`)
+      } else {
+        toast.error(`${added} The sign-in email could not be sent. Use "Send sign-in email" to try again.`, { duration: 8000 })
+      }
       onDone()
     } catch (err) {
       toast.error(err.message || 'Could not add the driver')
@@ -47,9 +50,9 @@ function AddDriverForm({ onDone }) {
         <input id="drv-email" type="email" required className="input-base" value={form.email} onChange={set('email')} autoComplete="off" />
       </div>
       <div>
-        <label htmlFor="drv-password" className={field}>Password * (8+ characters)</label>
+        <label htmlFor="drv-password" className={field}>Password (optional, 8+ characters)</label>
         <input id="drv-password" type="text" minLength={8} className="input-base" value={form.password} onChange={set('password')} autoComplete="new-password" />
-        <p className="text-muted text-xs mt-1">They sign in at {tenant.domain.apex}/driver. Not needed if the email already has an account.</p>
+        <p className="text-muted text-xs mt-1">Leave it empty: we email the driver a link to choose their own password, then they sign in at {tenant.domain.apex}/driver.</p>
       </div>
       <button type="submit" disabled={create.isPending} className="btn-gold w-full py-3">
         {create.isPending ? 'Adding…' : 'Add driver'}
@@ -62,6 +65,7 @@ export default function Drivers() {
   const { data: drivers, isLoading, isError, refetch } = useDrivers()
   const { data: locations } = useDriverLocations()
   const setActive = useSetDriverActive()
+  const sendWelcome = useSendDriverWelcome()
   const [adding, setAdding] = useState(false)
 
   useEffect(() => {
@@ -80,6 +84,15 @@ export default function Drivers() {
       toast.success(d.active ? `${d.full_name} can no longer use the driver portal` : `${d.full_name} re-enabled`)
     } catch (err) {
       toast.error(err.message || 'Could not update')
+    }
+  }
+
+  const emailDriver = async (d) => {
+    try {
+      await sendWelcome.mutateAsync({ userId: d.user_id })
+      toast.success(`Sign-in email sent to ${d.full_name}`)
+    } catch (err) {
+      toast.error(err.message || 'Could not send the email')
     }
   }
 
@@ -138,10 +151,19 @@ export default function Drivers() {
                     <p className="text-green-400 text-xs">On the road · {live.orders.join(', ') || '—'} · {ago(live.updated_at)}</p>
                   )}
                 </div>
-                <button type="button" onClick={() => toggle(d)} disabled={setActive.isPending}
-                  className="focus-ring h-11 px-4 rounded-lg text-sm border border-border text-muted hover:text-white disabled:opacity-50">
-                  {d.active ? 'Disable' : 'Enable'}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  {d.active && (
+                    <button type="button" onClick={() => emailDriver(d)} disabled={sendWelcome.isPending}
+                      className="focus-ring h-11 px-4 rounded-lg text-sm border border-border text-muted hover:text-white disabled:opacity-50 inline-flex items-center gap-2">
+                      <Mail size={14} />
+                      {sendWelcome.isPending && sendWelcome.variables?.userId === d.user_id ? 'Sending…' : 'Send sign-in email'}
+                    </button>
+                  )}
+                  <button type="button" onClick={() => toggle(d)} disabled={setActive.isPending}
+                    className="focus-ring h-11 px-4 rounded-lg text-sm border border-border text-muted hover:text-white disabled:opacity-50">
+                    {d.active ? 'Disable' : 'Enable'}
+                  </button>
+                </div>
               </div>
             )
           })

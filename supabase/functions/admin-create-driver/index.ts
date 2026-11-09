@@ -2,6 +2,8 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { callerIsAdmin, callerTenant, serviceClient } from '../_shared/supabaseClients.ts'
 import { DEFAULT_TENANT } from '../_shared/storeAlerts.ts'
+import { storeFor } from '../_shared/stores.ts'
+import { sendDriverWelcome } from '../_shared/driverWelcome.ts'
 
 // Admin creates a driver login (migration 20261007150000_driver_portal).
 // Creating an auth user needs the service role, so this runs server-side and
@@ -9,6 +11,9 @@ import { DEFAULT_TENANT } from '../_shared/storeAlerts.ts'
 //
 // If the email already has an account, it is linked as a driver and its
 // existing password is left alone (the response says so).
+//
+// Either way the driver is emailed a link to choose a password and open the
+// driver portal (send-driver-welcome resends it).
 //
 // Everything happens in the CALLER's store. Without that, the service role
 // (no x-tenant) resolves to 224: an Explosive 420 admin would create 224
@@ -75,12 +80,13 @@ serve(async (req) => {
       userId = existing.id
       linkedExisting = true
     } else {
-      if (password.length < 8) return jsonResponse({ error: 'Password must be at least 8 characters' }, 400)
+      // Optional: with none, the driver chooses one from the welcome email.
+      if (password && password.length < 8) return jsonResponse({ error: 'Password must be at least 8 characters' }, 400)
       // user_metadata.tenant is what stamp_user_tenant reads at insert; passing
       // no app_metadata keeps GoTrue from overwriting that stamp afterwards.
       const { data, error } = await admin.auth.admin.createUser({
         email,
-        password,
+        ...(password ? { password } : {}),
         email_confirm: true, // the admin vouches for the address; no confirmation email
         user_metadata: { full_name: fullName, role: 'driver', tenant },
       })
@@ -95,7 +101,20 @@ serve(async (req) => {
       .upsert({ user_id: userId, full_name: fullName, phone, active: true, tenant }, { onConflict: 'user_id' })
     if (rowError) return jsonResponse({ error: rowError.message }, 500)
 
-    return jsonResponse({ success: true, userId, linkedExisting })
+    // The driver exists either way; a failed email is reported, not fatal, and
+    // the admin can resend it from the Drivers page.
+    let welcomeEmail: { sent: boolean; reason?: string }
+    try {
+      const store = storeFor(tenant)
+      welcomeEmail = store
+        ? await sendDriverWelcome(store, { email, fullName })
+        : { sent: false, reason: `Unknown store ${tenant}` }
+    } catch (e) {
+      console.error('[admin-create-driver] welcome email failed:', e)
+      welcomeEmail = { sent: false, reason: e instanceof Error ? e.message : String(e) }
+    }
+
+    return jsonResponse({ success: true, userId, linkedExisting, welcomeEmail })
   } catch (e) {
     return jsonResponse({ error: e instanceof Error ? e.message : String(e) }, 500)
   }
