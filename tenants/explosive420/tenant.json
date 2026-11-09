@@ -7,9 +7,9 @@
   "storagePrefix": "e420",
   "minimumAge": 21,
   "domain": {
-    "siteUrl": "https://explosive420.web.app",
-    "apex": "explosive420.web.app",
-    "liveHosts": ["explosive420.web.app"]
+    "siteUrl": "https://explosive420.co.za",
+    "apex": "explosive420.co.za",
+    "liveHosts": ["explosive420.co.za", "www.explosive420.co.za", "explosive420.web.app"]
   },
   "contact": {
     "street": "702 Aubrey Matlakala St",
