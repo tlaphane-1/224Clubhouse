@@ -46,7 +46,7 @@ describe("send-driver-welcome only emails a driver of the caller's store", () =>
   const src = source('send-driver-welcome')
 
   it("takes the store from an admin's JWT, or from the body only for the service-role key", () => {
-    expect(src).toMatch(/safeEqual\(authHeader, `Bearer \$\{SERVICE_ROLE_KEY\}`\)/)
+    expect(src).toMatch(/if \(body\.tenant !== undefined\) \{\n\s+if \(!\(await callerIsServiceRole\(authHeader\)\)\) return jsonResponse\(\{ error: 'Not authorized' \}, 403\)/)
     expect(src).toMatch(/tenant = await callerTenant\(authHeader\)/)
     expect(src).toMatch(/if \(!tenant\) return jsonResponse\(/)
   })
