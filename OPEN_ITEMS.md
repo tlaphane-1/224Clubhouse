@@ -6,6 +6,9 @@
 > `tasks/todo.md` remains the older detailed engineering backlog; `tasks/store-upgrades.md` covers
 > the 2026-10-05 upgrades. This file is the shorter "what is actually open and why it matters"
 > list. Where they disagree, trust this file. Resolved items are kept, dated, in §8.
+>
+> **Updated 2026-11-09:** Explosive 420 went live on its own domain (§7c); the multi-store
+> "must fix before a second store has an admin" items are closed.
 
 ---
 
@@ -27,16 +30,13 @@ recompute totals from DB prices.
 - Do one real delivery end to end on a phone before relying on live tracking.
 - Restrict the Google Maps key (now `VITE_GOOGLE_MAPS_KEY` in `.env.local`) in Google Cloud to
   `224clubhouse.store/*`, `www.224clubhouse.store/*` and `224clubhouse.web.app/*`.
-- Multi-store (Explosive 420): buy their domain; confirm bank holder name. See
-  `docs/onboarding/explosive420-inputs.md`.
+- Multi-store (Explosive 420): the club's inputs still open are listed in §7c.
 
 ---
 
 ## 2. Decisions waiting
 
-### 2.1 PR #15 — report the owner-alert outcome in `send-order-email`
-Already deployed (it was needed to diagnose missing alerts on 2026-10-07); the PR is open only
-because the owner hasn't said to merge it. Harmless: the browser ignores the response body.
+None (PR #15 closed 2026-11-09, see §8).
 
 ---
 
@@ -157,14 +157,42 @@ Owner phone order `224-849A99` stored with `tenant = 224clubhouse`. Pre-push sch
 `C:\Users\azgcl\Documents\224-backups\pre-phase2-schema-20261103.sql`. Rollback:
 `docs/superpowers/plans/2026-11-02-phase-2-rollback.md`.
 
-### Multi-store: must fix before a second store has an admin
-(Phase-2 final review, 2026-11-03. Harmless while 224 is the only store with admins.)
-- `product-images` / `event-images` admin upload/delete is cross-store until phase 4 store-prefixes the object paths.
-- Child rows can point at another store's parent (e.g. a store-B `product_variants` row on a 224 product id): add composite FKs or check triggers before phase 5.
-- `supabase/functions/telegram-connect` calls `store_telegram_token`/`set_telegram_chat` as the service role with no `x-tenant`, so a store-B admin would overwrite 224's Telegram token/chat: phase 3 must forward the tenant.
-- A service-role `auth.admin.createUser` that passes any `app_metadata` must include `tenant` (GoTrue replaces the stamp): phase 3/5 callers `admin-create-driver`, `scripts/provision-admin.mjs`.
+### Multi-store: must fix before a second store has an admin — all fixed 2026-11-09 (PR #30)
+- Image upload/delete is limited to each store's folder (`tenants.upload_folder`; 224 keeps the
+  bucket root). Migration `20261109120000_store_image_folders`.
+- Child rows must share their parent's store (check triggers). Migration
+  `20261109130000_same_store_references`; 0 live rows disagreed at push.
+- `telegram-connect` and `geocode-order` act only for the caller's own store.
+- `admin-create-driver` creates the login in the admin's store and refuses another store's
+  account. `scripts/provision-admin.mjs` passes no `app_metadata`, so the stamp is kept.
+
+## 7c. Explosive 420 live on its own domain (2026-11-09)
+- **Site:** https://explosive420.co.za (PR #31; Firebase custom domain, `www` redirects;
+  `explosive420.web.app` still serves). Domain bought at domains.co.za (owner's account, 1 year,
+  protection off).
+- **Email (PR #30):** every customer email, owner alert, cart reminder and daily summary is branded
+  and sent as the record's store. E420 sends from `orders@`/`hello@explosive420.co.za`, verified in
+  the owner's single Resend account (same `RESEND_API_KEY`). E420 alerts go to
+  `alert_settings.alert_emails` (owner's Gmail until the club gives an address).
+- **Auth emails:** Send Email Hook `auth-send-email` enabled 2026-11-09 (secret
+  `SEND_EMAIL_HOOK_SECRET`). Reset emails for both stores verified in the inbox. Rollback:
+  Dashboard → Authentication → Auth Hooks → disable (the SMTP templates are still in place). The
+  hook secret was pasted in chat once, so the owner should rotate it.
+- **Checks:** `predeploy` 576 passed against live. All 13 functions boot; `verify_jwt` is false only
+  for `auth-send-email`, `send-cart-reminders` and `send-daily-summary` (pinned in `config.toml`).
+- **Not yet verified:** a real order on each store (receipt, status email, owner alert), and a real
+  E420 sign-up confirmation.
+- **Club inputs still open:** alert email, Capitec details (EFT stays off), dabs/extract prices,
+  names for the two Outdoor grades, keep or drop the Skull T-shirt, own photos, contact email,
+  socials, POPIA information officer, membership price. The handover pack is in
+  `C:\Users\azgcl\Documents\Explosive420-handover\` (outside the repo).
+- **Runbook:** `docs/onboarding/explosive420-go-live.md`.
 
 ## 8. Resolved
+
+- **2026-11-09 — PR #15 (owner-alert outcome in `send-order-email`)** (was §2.1): closed unmerged;
+  `master` already returns `ownerAlert` since the per-store email work.
+- **2026-11-09 — Multi-store "must fix before a second store has an admin"** (§7b): fixed in PR #30.
 
 - **2026-10-07 — Supabase outstanding invoices** (was §1.1 ⚠️): paid by the owner.
 - **2026-10-07 — Email-only order lookup** (was §2.1): retired by the owner's decision (§7, #13).
