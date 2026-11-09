@@ -54,7 +54,9 @@ const ADMIN_EMAILS = ['tlaphane+explosive420@gmail.com', 'tlzitha98@gmail.com']
 const ALERT_EMAILS = 'tlaphane@gmail.com'
 const ADMIN_FILE = join(ROOT, 'scripts', 'explosive420-admin.local')
 
-const TENANT_ROW = { slug: SLUG, name: 'Explosive 420 Cannabis Social Club', order_prefix: 'E420', min_age: 21, active: true }
+// upload_folder (migration 20261109120000) limits this store's admins to their own
+// folder in product-images / event-images.
+const TENANT_ROW = { slug: SLUG, name: 'Explosive 420 Cannabis Social Club', order_prefix: 'E420', min_age: 21, active: true, upload_folder: UPLOAD_FOLDER }
 
 // The club's menu as supplied by the owner (2026-11-06). Prices are integer
 // cents. Strain type and THC are left empty: the menu gives neither, and an
