@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
-import { callerIsAdmin, callerTenant, serviceClient } from '../_shared/supabaseClients.ts'
+import { callerIsAdmin, callerIsServiceRole, callerTenant, serviceClient } from '../_shared/supabaseClients.ts'
 import { DEFAULT_TENANT } from '../_shared/storeAlerts.ts'
 import { storeFor } from '../_shared/stores.ts'
 import { MailError } from '../_shared/mail.ts'
@@ -12,19 +12,6 @@ import { sendDriverWelcome } from '../_shared/driverWelcome.ts'
 // Callers: an admin, for a driver in THEIR store (store from the JWT, as in
 // admin-create-driver); or an ops script holding the service-role key, which
 // must name the store. The service role can already do anything this does.
-
-const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-
-/** Constant-time compare (same as send-daily-summary). */
-function safeEqual(a: string, b: string): boolean {
-  const enc = new TextEncoder()
-  const x = enc.encode(a)
-  const y = enc.encode(b)
-  if (x.length !== y.length) return false
-  let diff = 0
-  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i]
-  return diff === 0
-}
 
 interface Payload {
   userId?: string
@@ -40,8 +27,10 @@ serve(async (req) => {
     const body: Payload = await req.json()
 
     let tenant: string | null
-    if (SERVICE_ROLE_KEY && safeEqual(authHeader, `Bearer ${SERVICE_ROLE_KEY}`)) {
-      tenant = body.tenant && storeFor(body.tenant) ? body.tenant : null
+    // Only an ops script names the store; an admin's store always comes from their JWT.
+    if (body.tenant !== undefined) {
+      if (!(await callerIsServiceRole(authHeader))) return jsonResponse({ error: 'Not authorized' }, 403)
+      tenant = storeFor(body.tenant) ? body.tenant : null
       if (!tenant) return jsonResponse({ error: 'Name a known store in "tenant"' }, 400)
     } else {
       if (!(await callerIsAdmin(authHeader))) return jsonResponse({ error: 'Not authorized' }, 403)

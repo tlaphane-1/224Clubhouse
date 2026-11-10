@@ -44,6 +44,20 @@ export async function callerTenant(authHeader: string): Promise<string | null> {
   return data
 }
 
+/**
+ * True only when the bearer token is a working service-role key, as Auth
+ * itself judges it: the admin API refuses anything else. (A string compare
+ * with the injected SUPABASE_SERVICE_ROLE_KEY fails when the project's keys
+ * differ in form from the one an ops script holds.)
+ */
+export async function callerIsServiceRole(authHeader: string): Promise<boolean> {
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+  if (!token) return false
+  const client = createClient(SUPABASE_URL, token, { auth: { persistSession: false, autoRefreshToken: false } })
+  const { error } = await client.auth.admin.listUsers({ page: 1, perPage: 1 })
+  return !error
+}
+
 /** True only for a caller whose JWT resolves to a row in admin_users. */
 export async function callerIsAdmin(authHeader: string): Promise<boolean> {
   const { data, error } = await callerClient(authHeader).rpc('is_admin')
