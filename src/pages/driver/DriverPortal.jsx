@@ -130,7 +130,10 @@ function OrderCard({ order }) {
           <a href={`tel:${order.customer_phone}`} className="btn-outline h-12 inline-flex items-center justify-center gap-2 text-sm">
             <Phone size={16} /> Call
           </a>
-          <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`}
+          <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+              // The customer's pinned location beats a typed address the map may misplace.
+              Number.isFinite(order.pin_lat) && Number.isFinite(order.pin_lng) ? `${order.pin_lat},${order.pin_lng}` : address,
+            )}`}
             target="_blank" rel="noopener noreferrer"
             className="btn-outline h-12 inline-flex items-center justify-center gap-2 text-sm">
             <Navigation size={16} /> Navigate

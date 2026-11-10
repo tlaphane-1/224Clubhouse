@@ -46,6 +46,12 @@ export default function PrivacyPolicy() {
             delivery address, the items you ordered, and your order history.
           </li>
           <li>
+            <span className="text-white">Delivery location (optional)</span> — if you tap
+            &ldquo;Use my current location&rdquo; at checkout, your phone&rsquo;s position when you
+            order. We use it to fill in your address, to check the address before we send a driver,
+            and to guide the driver to you.
+          </li>
+          <li>
             <span className="text-white">Membership applications</span> — your full name, phone
             number, <span className="text-white">date of birth</span> (required, to verify you are{' '}
             {MIN_AGE} or older) and, optionally, your{' '}
@@ -145,6 +151,11 @@ export default function PrivacyPolicy() {
             notifications.
           </li>
           <li>
+            <span className="text-white">OpenStreetMap (Nominatim)</span> — if you share your
+            location at checkout, your browser sends that position to OpenStreetMap&rsquo;s address
+            service to look up your street. It is not sent with your name or account.
+          </li>
+          <li>
             <span className="text-white">A payment processor</span> — only if and when online card
             payments are enabled on this site (currently orders are paid on delivery, so no
             payment card details pass through this website at all).
@@ -175,6 +186,10 @@ export default function PrivacyPolicy() {
           </li>
           <li>
             <span className="text-white">Site usage records</span> — deleted after 13 months.
+          </li>
+          <li>
+            <span className="text-white">Delivery location</span> — deleted 30 days after the order
+            was placed, once it has been delivered or cancelled.
           </li>
           <li>
             <span className="text-white">Saved carts</span> — deleted when you empty your cart or

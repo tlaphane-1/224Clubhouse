@@ -17,7 +17,7 @@ export function useDriverOrders() {
       since.setHours(0, 0, 0, 0)
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, status, customer_name, customer_phone, shipping_address, items, total, payment_method, paid_at, delivery_started_at, created_at, status_history')
+        .select('id, order_number, status, customer_name, customer_phone, shipping_address, pin_lat, pin_lng, items, total, payment_method, paid_at, delivery_started_at, created_at, status_history')
         .eq('driver_id', user.id)
         .or(`status.in.(${ACTIVE_STATUSES.join(',')}),and(status.eq.delivered,created_at.gte.${since.toISOString()})`)
         .order('created_at', { ascending: true })

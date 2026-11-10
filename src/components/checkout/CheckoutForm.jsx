@@ -1,13 +1,9 @@
 import { checkoutFieldId } from './checkoutFields'
+import UseMyLocation from './UseMyLocation'
 import { tenant } from '../../tenant'
+import { SA_PROVINCES } from '../../utils/geo'
 
-const SA_PROVINCES = [
-  'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
-  'Limpopo', 'Mpumalanga', 'Northern Cape', 'North West', 'Western Cape',
-]
-
-
-export default function CheckoutForm({ form, onChange, errors, lockEmail = false }) {
+export default function CheckoutForm({ form, onChange, errors, lockEmail = false, pin = null, onPin }) {
   const set = (key, value) => onChange({ ...form, [key]: value })
   const inputCls = (key) => `input-base text-sm ${errors?.[key] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`
   const labelCls = 'block text-muted text-xs uppercase tracking-widest mb-1.5'
@@ -55,6 +51,7 @@ export default function CheckoutForm({ form, onChange, errors, lockEmail = false
 
       <div className="border-t border-border pt-5">
         <h3 className="text-white font-semibold mb-4 text-sm uppercase tracking-widest">Delivery Address</h3>
+        {onPin && <UseMyLocation pin={pin} onPin={onPin} onAddress={(addr) => onChange({ ...form, ...addr })} />}
 
         <div className="space-y-4">
           <div>

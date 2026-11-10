@@ -11,6 +11,7 @@ import EftAdminPanel, { EftPill } from '../../components/admin/EftAdminPanel'
 import DriverAssign from '../../components/admin/DriverAssign'
 import OrderWhatsAppActions from '../../components/admin/OrderWhatsAppActions'
 import { useDrivers } from '../../hooks/useDelivery'
+import OrderLocation from '../../components/admin/OrderLocation'
 import toast from 'react-hot-toast'
 import { adminTitle } from '../../tenant'
 
@@ -222,6 +223,7 @@ export default function Orders() {
                           {order.shipping_address?.city}, {order.shipping_address?.province}<br />
                           {order.shipping_address?.postalCode}
                         </address>
+                        <OrderLocation order={order} />
                         <div className="mt-3 space-y-1 text-sm">
                           <p className="text-muted">Order #: <span className="text-white">{order.order_number || order.id.slice(0, 8)}</span></p>
                           <p className="text-muted">Payment: <span className="text-white">{paymentLabel(order.payment_method)}</span></p>
