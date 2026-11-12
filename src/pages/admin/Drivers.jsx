@@ -111,12 +111,12 @@ export default function Drivers() {
       <section className="bg-surface border border-border rounded-xl p-4 sm:p-6 mb-6">
         <h2 className="font-heading text-lg font-semibold text-white mb-1">On the road now</h2>
         <p className="text-muted text-xs mb-4">Drivers with an order out for delivery who shared a location in the last 15 minutes. Updates every 15 seconds.</p>
-        {markers.length > 0 ? (
-          <Suspense fallback={<div className="h-80 skeleton rounded-xl" />}>
-            <LiveMap markers={markers} className="h-80" ariaLabel="Map of drivers currently on deliveries" />
-          </Suspense>
-        ) : (
-          <p className="text-muted text-sm">No drivers on deliveries right now.</p>
+        {/* Always shown, so the map is visibly there before anyone is out. */}
+        <Suspense fallback={<div className="h-80 skeleton rounded-xl" />}>
+          <LiveMap markers={markers} className="h-80" ariaLabel="Map of drivers currently on deliveries" />
+        </Suspense>
+        {markers.length === 0 && (
+          <p className="text-muted text-sm mt-3">No drivers on deliveries right now. A driver appears here once they tap Start delivery on an order that is out for delivery.</p>
         )}
       </section>
 
