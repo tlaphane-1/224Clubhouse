@@ -57,13 +57,7 @@ network freeze (seen again 2026-10-05 on one newsletter test, passed on re-run).
 `/driver` is a web page: the phone only shares location while it is open and visible (it keeps
 the screen awake via the Wake Lock API where supported). Background tracking needs a native app.
 
-### 3.3 `.claude/settings.local.json` holds an admin password and is tracked by git
-Its permission rules contain an admin password typed into earlier commands. It is still tracked
-and shows as modified on every branch, so never `git add -A` / `git commit -a`. Offered on
-2026-11-12 to untrack it (`git rm --cached`) and add it to `.gitignore`; owner hasn't answered.
-Prune the password from the rules while doing so.
-
-### 3.4 Checkout never showed the confirmation page (fixed and live 2026-11-03)
+### 3.3 Checkout never showed the confirmation page (fixed and live 2026-11-03)
 Phone order `224-849A99` was stored, but the phone stayed on a blank checkout with an empty cart.
 Cause (pre-existing, not stage 2): the router applies navigations as transitions, so clearing the
 cart let Checkout's empty-cart redirect replace `/order-confirmation/...` with `/cart` ~10 ms later.
@@ -250,6 +244,9 @@ Owner phone order `224-849A99` stored with `tenant = 224clubhouse`. Pre-push sch
 
 ## 8. Resolved
 
+- **2026-11-23 — `.claude/settings.local.json` tracked by git** (was §3.3): untracked and added to
+  `.gitignore`; the local file stays. Only the first commit (2026-03-29) ever held it (18 lines, no
+  secrets); the admin password in its permission rules was never committed. Prune it locally.
 - **2026-11-12 — Drivers added in admin got no email; the driver map looked missing** (§7d):
   PRs #37, #38 and #40.
 - **2026-11-09 — PR #15 (owner-alert outcome in `send-order-email`)** (was §2.1): closed unmerged;

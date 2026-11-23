@@ -38,3 +38,6 @@ playwright-report/
 
 # Other stores build into dist-<slug>/ (scripts/build-store.mjs)
 dist-*
+
+# Claude Code per-machine settings (permission rules can hold typed secrets)
+.claude/settings.local.json
