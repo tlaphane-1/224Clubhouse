@@ -11,6 +11,9 @@
 > "must fix before a second store has an admin" items are closed. Later that day: a login now
 > works only on its own store's site (PR #33), past events show on both stores (PR #33), and
 > `/membership` no longer crashes for signed-in non-members (PR #34).
+>
+> **Updated 2026-11-23:** PRs #37–#40, all live since 2026-11-12: drivers get a sign-in email,
+> customers can share their location at checkout, and Admin → Drivers always shows the map (§7d).
 
 ---
 
@@ -29,7 +32,9 @@ recompute totals from DB prices.
   white logo.
 - Rename the auto-created admin driver profile (it is called "admin"): Admin → Drivers → Add driver
   with the admin's own email and real name (leaves the password alone).
-- Do one real delivery end to end on a phone before relying on live tracking.
+- Do one real delivery end to end on a phone before relying on live tracking (still not done as
+  of 2026-11-23: the only E420 delivery, E420-1ECF17, was marked Delivered before its driver
+  first signed in, so no location was ever shared). Use it to check the location pin too (§7d).
 - Restrict the Google Maps key (now `VITE_GOOGLE_MAPS_KEY` in `.env.local`) in Google Cloud to
   `224clubhouse.store/*`, `www.224clubhouse.store/*` and `224clubhouse.web.app/*`.
 - Multi-store (Explosive 420): the club's inputs still open are listed in §7c.
@@ -52,7 +57,13 @@ network freeze (seen again 2026-10-05 on one newsletter test, passed on re-run).
 `/driver` is a web page: the phone only shares location while it is open and visible (it keeps
 the screen awake via the Wake Lock API where supported). Background tracking needs a native app.
 
-### 3.3 Checkout never showed the confirmation page (fixed and live 2026-11-03)
+### 3.3 `.claude/settings.local.json` holds an admin password and is tracked by git
+Its permission rules contain an admin password typed into earlier commands. It is still tracked
+and shows as modified on every branch, so never `git add -A` / `git commit -a`. Offered on
+2026-11-12 to untrack it (`git rm --cached`) and add it to `.gitignore`; owner hasn't answered.
+Prune the password from the rules while doing so.
+
+### 3.4 Checkout never showed the confirmation page (fixed and live 2026-11-03)
 Phone order `224-849A99` was stored, but the phone stayed on a blank checkout with an empty cart.
 Cause (pre-existing, not stage 2): the router applies navigations as transitions, so clearing the
 cart let Checkout's empty-cart redirect replace `/order-confirmation/...` with `/cart` ~10 ms later.
@@ -67,7 +78,9 @@ Deployed in PR #26; owner phone order confirmed the "Order Confirmed!" page.
 ### 4.1 Personal data held
 SA ID numbers (memberships), dates of birth (memberships + `customer_profiles`, used for the
 21+ check), delivery addresses and their geocoded points, proof-of-payment files (private
-bucket `payment-proofs`), the latest driver position (deleted after each delivery round, swept
+bucket `payment-proofs`), the customer's optional checkout location pin (`orders.pin_*`, nulled
+with `dest_lat/dest_lng` 30 days after a delivered or cancelled order, cron `purge-order-pins`
+02:50 daily), the latest driver position (deleted after each delivery round, swept
 daily), saved carts (30-day purge) and anonymous site-usage events (13-month purge). Keep POPIA in
 mind for any change touching these; the privacy policy (`src/pages/legal/PrivacyPolicy.jsx`)
 describes each and must be kept in step.
@@ -113,7 +126,13 @@ describes each and must be kept in step.
   admins and `/admin` are excluded. Links shared with `?utm_source=whatsapp` are attributed.
 - **Driver portal:** `/driver`. Admins create driver logins at Admin → Drivers (Edge Function
   `admin-create-driver`); every admin is also a driver (trigger on `admin_users`). Orders are
-  assigned on Admin → Orders. Map tiles: OpenStreetMap via Leaflet (no key).
+  assigned on Admin → Orders. Map tiles: OpenStreetMap via Leaflet (no key). Drivers sign in at
+  `<store domain>/driver`, not the shop login. A driver appears on the map only after **Start delivery**
+  on an order that is Out for Delivery, and only while the page stays open (§3.2).
+- **Ops calls with the service-role key:** the `SUPABASE_SERVICE_ROLE_KEY` injected into Edge
+  Functions is **not** the same string as the one in `.env.local` (both are valid). Never compare
+  a caller's key to the env var; ask Auth instead (`callerIsServiceRole` in
+  `_shared/supabaseClients.ts`, PR #38).
 - **Store upgrades (2026-10-05):** product options (price/stock derived by trigger while options
   exist), cart reminders (hourly, `purge-saved-carts` daily), reviews (moderated), SEO prerender on
   every build (`scripts/prerender-seo.mjs`), invoices at `/orders/:id/invoice`.
@@ -194,9 +213,8 @@ Owner phone order `224-849A99` stored with `tenant = 224clubhouse`. Pre-push sch
   wrong": the application sheet's footer read `tier.price_cents` before a tier was selected. Guarded
   (`footer={showForm && tier && (`), pinned by `membershipPage.unit.test.js`. Reproduced and
   verified on the local E420 stack; not yet re-checked by the owner on the live site.
-- **Not yet verified:** a real order on each store (receipt, status email, owner alert), a real
-  E420 sign-up confirmation, the membership application on live E420, and the first E420 daily
-  summary (07:00, 2026-11-10).
+- **Not yet verified:** see §7d (most E420 emails now verified; a 224 order and the live E420
+  membership application are still open).
 - **Owner to-do:** rotate the auth hook secret (it was pasted in chat): Auth Hooks → generate a new
   secret → Update, then set `SEND_EMAIL_HOOK_SECRET` to match.
 - **Club inputs still open:** alert email, Capitec details (EFT stays off), dabs/extract prices,
@@ -205,8 +223,35 @@ Owner phone order `224-849A99` stored with `tenant = 224clubhouse`. Pre-push sch
   `C:\Users\azgcl\Documents\Explosive420-handover\` (outside the repo).
 - **Runbook:** `docs/onboarding/explosive420-go-live.md`.
 
+## 7d. Drivers and delivery location (PRs #37–#40, live 2026-11-12)
+- **Driver sign-in email (PR #37):** Admin → Drivers → Add driver no longer needs a password; the
+  driver is emailed "You've been added as a driver" with a 1-hour link to choose one
+  (`_shared/driverWelcome.ts`, `generateLink({type:'recovery'})` → `/reset-password`, which sends
+  drivers on to `/driver`). Each active driver has a **Send sign-in email** button
+  (`send-driver-welcome`). `/driver` has **Forgot password?**; the navbar shows **My Deliveries**
+  to drivers. On 2026-11-12 the email went to all 3 active E420 drivers (owner's request).
+- **Ops path fix (PR #38):** `send-driver-welcome` with `{userId, tenant}` accepts any key Auth
+  accepts as service role (see §6). The first bulk send had failed with 403 because of the key
+  mismatch; nothing was sent until this was fixed.
+- **Location pin at checkout (PR #39):** optional **Use my current location** fills the address
+  (Nominatim reverse lookup; OSM ward names such as "Tshwane Ward 34" are never used as City) and,
+  after `place_cod_order`, saves the point with `set_order_pin` (own order, `pending`, once, within
+  15 minutes; migration `20261110120000_order_location_pin`). Admin → Orders shows "Customer's
+  location" with a Maps link and the distance to the typed address (green ≤1 km, yellow ≤5 km, red
+  beyond: "Call the customer before sending a driver"). The owner alert email/Telegram carry the
+  link; the driver's Navigate and `geocode-order` prefer the pin. Privacy policy updated. Checked
+  live: `orderPin.contract.test.js` 3/3. **Not seen on screen yet:** the admin location panel.
+- **Always-on driver map (PR #40):** Admin → Drivers "On the road now" shows the map centred on
+  `contact.mapCentre` even with nobody out, with a line explaining how a driver appears.
+- **Verified from the owner's inbox (2026-11-12):** for E420, the order confirmation, owner alert,
+  out-for-delivery and delivered emails, sign-up confirmation, cart reminder and the 07:00 daily
+  summary (10 and 11 Nov). Still unverified: a 224 order since the 2026-11-09 email changes (last
+  one 2026-11-03) and the membership application on live E420.
+
 ## 8. Resolved
 
+- **2026-11-12 — Drivers added in admin got no email; the driver map looked missing** (§7d):
+  PRs #37, #38 and #40.
 - **2026-11-09 — PR #15 (owner-alert outcome in `send-order-email`)** (was §2.1): closed unmerged;
   `master` already returns `ownerAlert` since the per-store email work.
 - **2026-11-09 — Multi-store "must fix before a second store has an admin"** (§7b): fixed in PR #30.
