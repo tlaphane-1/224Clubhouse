@@ -129,6 +129,11 @@ begin
   if not found then
     raise exception 'Staff member not found';
   end if;
+  -- A disabled person can't reach the counter to clock out: close it for them.
+  if not coalesce(p_active, false) then
+    update shifts set ended_at = now()
+     where user_id = p_user_id and tenant = public.current_tenant() and ended_at is null;
+  end if;
 end;
 $$;
 
@@ -201,6 +206,31 @@ as $$
    limit 1;
 $$;
 
+-- Admin closes someone's shift (forgot to clock out, left early).
+create or replace function public.admin_end_shift(p_shift_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_row shifts%rowtype;
+begin
+  if not public.is_admin() then
+    raise exception 'Not authorized';
+  end if;
+  update shifts set ended_at = now()
+   where id = p_shift_id and tenant = public.current_tenant() and ended_at is null
+  returning * into v_row;
+  if not found then
+    raise exception 'No open shift';
+  end if;
+  return jsonb_build_object('id', v_row.id, 'started_at', v_row.started_at, 'ended_at', v_row.ended_at);
+end;
+$$;
+revoke execute on function public.admin_end_shift(uuid) from public, anon;
+grant execute on function public.admin_end_shift(uuid) to authenticated;
+
 revoke execute on function public.admin_add_staff(text, text), public.admin_set_staff_active(uuid, boolean),
   public.start_shift(text), public.end_shift(), public.my_open_shift() from public, anon;
 grant execute on function public.admin_add_staff(text, text), public.admin_set_staff_active(uuid, boolean),
@@ -245,3 +275,52 @@ create policy shift_selfies_admin_delete on storage.objects
     and (storage.foldername(name))[1] = (select public.current_tenant())
     and public.is_admin()
   );
+
+-- ---- selfie retention (POPIA) ---------------------------------------------------
+-- Selfies are kept 90 days. Uploads no shift points to (a refused or retried
+-- start) are removed after a day. Storage forbids deleting rows from
+-- storage.objects directly, so this only LISTS them; the purge-shift-selfies
+-- Edge Function (service role, daily cron below) removes them through the
+-- Storage API. Every store at once: it is a housekeeping job, not a user call.
+create or replace function public.shift_selfies_to_purge(
+  p_orphan_after interval default interval '1 day',
+  p_keep interval default interval '90 days'
+)
+returns setof text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select o.name
+    from storage.objects o
+   where o.bucket_id = 'shift-selfies'
+     and (
+       o.created_at < now() - p_keep
+       or (o.created_at < now() - p_orphan_after
+           and not exists (select 1 from shifts s where s.selfie_path = o.name))
+     )
+   order by o.created_at
+   limit 1000;
+$$;
+revoke execute on function public.shift_selfies_to_purge(interval, interval) from public, anon, authenticated;
+grant execute on function public.shift_selfies_to_purge(interval, interval) to service_role;
+
+-- Daily at 01:10 UTC (03:10 in South Africa).
+select cron.unschedule(jobid) from cron.job where jobname = 'purge-shift-selfies';
+select cron.schedule(
+  'purge-shift-selfies',
+  '10 1 * * *',
+  $cron$
+  select net.http_post(
+    url := 'https://aogdkqczvlffgydgxsmz.supabase.co/functions/v1/purge-shift-selfies',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets
+                         where name = 'cart_reminders_cron_secret')
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
+  );
+  $cron$
+);

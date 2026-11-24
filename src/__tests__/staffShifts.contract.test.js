@@ -170,4 +170,53 @@ describe.skipIf(SKIP)('Staff shifts contract', () => {
     const { error } = await c.cashier.rpc('start_shift', { p_selfie_path: p })
     expect(error?.message).toMatch(/Not authorized/)
   })
+
+  // ---- Review fixes: admins can close shifts; selfies are cleaned up ----
+
+  async function openShiftFor(label) {
+    mustSucceed('re-add', await c.boss.rpc('admin_add_staff', {
+      p_email: u[label].email, p_full_name: `Vitest ${label}`,
+    }))
+    const p = path(u[label], `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`)
+    expect((await upload(c[label], p)).error).toBeNull()
+    const start = await c[label].rpc('start_shift', { p_selfie_path: p })
+    expect(start.error).toBeNull()
+    return { id: start.data.id, path: p }
+  }
+
+  it('the admin can end a staff member open shift; staff cannot end someone else one', async () => {
+    const { id } = await openShiftFor('cashier')
+    const byCustomer = await c.customer.rpc('admin_end_shift', { p_shift_id: id })
+    expect(byCustomer.error?.message).toMatch(/Not authorized/)
+    const byAdmin = await c.boss.rpc('admin_end_shift', { p_shift_id: id })
+    expect(byAdmin.error).toBeNull()
+    expect(byAdmin.data.ended_at).toBeTruthy()
+    expect((await c.cashier.rpc('my_open_shift')).data).toBeNull()
+  })
+
+  it('disabling a staff member ends their open shift', async () => {
+    await openShiftFor('cashier')
+    mustSucceed('disable', await c.boss.rpc('admin_set_staff_active', {
+      p_user_id: u.cashier.id, p_active: false,
+    }))
+    const { data } = await admin.from('shifts').select('ended_at')
+      .eq('user_id', u.cashier.id).is('ended_at', null)
+    expect(data).toHaveLength(0)
+  })
+
+  it('shift_selfies_to_purge lists unused uploads but not a selfie a shift still uses; only the service role may call it', async () => {
+    const used = await openShiftFor('cashier')
+    const orphan = path(u.cashier, `${Date.now()}-orphan.jpg`)
+    expect((await upload(c.cashier, orphan)).error).toBeNull()
+
+    const denied = await c.boss.rpc('shift_selfies_to_purge', { p_orphan_after: '0 seconds', p_keep: '90 days' })
+    expect(denied.error).not.toBeNull()
+
+    const { data, error } = await admin.rpc('shift_selfies_to_purge', { p_orphan_after: '0 seconds', p_keep: '90 days' })
+    expect(error).toBeNull()
+    const names = (data ?? []).map(r => r.name ?? r)
+    expect(names).toContain(orphan)
+    expect(names).not.toContain(used.path)
+    await c.cashier.rpc('end_shift')
+  })
 })
