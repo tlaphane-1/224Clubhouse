@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { tenant, storageKey, pageTitle, adminTitle } from '../tenant.js'
+import { tenant, storageKey, pageTitle, adminTitle, IS_COLLECT, FULFILMENT } from '../tenant.js'
 
 // Returning visitors keep their cart, age confirmation, recent orders and
 // analytics ids only if every key stays byte-identical to what 224 shipped.
@@ -31,5 +31,12 @@ describe('tenant', () => {
   it('is deeply frozen', () => {
     expect(Object.isFrozen(tenant)).toBe(true)
     expect(Object.isFrozen(tenant.contact)).toBe(true)
+  })
+})
+
+describe('fulfilment mode', () => {
+  it('is delivery for the default store (224)', () => {
+    expect(FULFILMENT).toBe('delivery')
+    expect(IS_COLLECT).toBe(false)
   })
 })

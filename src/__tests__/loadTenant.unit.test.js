@@ -43,6 +43,15 @@ describe('validateTenant', () => {
     return () => validateTenant(copy, '224clubhouse')
   }
 
+  it('rejects a delivery.mode other than "delivery" or "collect"', () => {
+    expect(broken(t => { t.delivery.mode = 'pickup' })).toThrow(/delivery.mode must be "delivery" or "collect"/)
+  })
+
+  it('loads both real stores with their fulfilment mode', () => {
+    expect(loadTenant('224clubhouse').delivery.mode).toBe('delivery')
+    expect(loadTenant('explosive420').delivery.mode).toBe('collect')
+  })
+
   it('accepts the 224 config', () => {
     expect(() => validateTenant(structuredClone(valid), '224clubhouse')).not.toThrow()
   })

@@ -35,6 +35,11 @@ describe('stores.generated.ts', () => {
     for (const s of allStores()) expect(s.mail.resendKeyEnv).toMatch(/^[A-Z][A-Z0-9_]+$/)
   })
 
+  it('carries each store fulfilment mode', () => {
+    expect(storeFor('explosive420')?.fulfilment).toBe('collect')
+    expect(storeFor('224clubhouse')?.fulfilment).toBe('delivery')
+  })
+
   it('treats a missing tenant as 224 and an unknown one as no store', () => {
     expect(storeFor(null)?.slug).toBe('224clubhouse')
     expect(storeFor('no-such-store')).toBeNull()

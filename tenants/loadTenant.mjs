@@ -116,6 +116,12 @@ export function validateTenant(obj, slug) {
   if (!Number.isInteger(obj.minimumAge) || obj.minimumAge < 18 || obj.minimumAge > 25) {
     throw new Error(`${where}: minimumAge must be a whole number from 18 to 25 (got ${JSON.stringify(obj.minimumAge)})`)
   }
+  // Fulfilment mode: 'collect' stores take orders for collection at the club
+  // (no address, no fee, no drivers). tenants.fulfilment must agree
+  // (src/__tests__/fulfilmentDrift.unit.test.js).
+  if (!['delivery', 'collect'].includes(obj.delivery.mode)) {
+    throw new Error(`${where}: delivery.mode must be "delivery" or "collect" (got ${JSON.stringify(obj.delivery.mode)})`)
+  }
   // Delivery fee and free-delivery threshold are integer cents (ZAR), like every
   // other amount in the app; place_cod_order charges the same numbers.
   for (const key of ['feeCents', 'freeFromCents']) {

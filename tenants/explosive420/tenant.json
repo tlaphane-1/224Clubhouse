@@ -36,6 +36,7 @@
     "footerHours": "Mon–Sun 09:00–22:00"
   },
   "delivery": {
+    "mode": "collect",
     "feeCents": 3000,
     "freeFromCents": 50000,
     "promoteMemberFreeDelivery": false
