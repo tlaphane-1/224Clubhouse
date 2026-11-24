@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Clock, AlertTriangle } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import Modal from '../../components/ui/Modal'
-import { useShiftsForDay, useSelfieUrl } from '../../hooks/useShifts'
+import toast from 'react-hot-toast'
+import { useShiftsForDay, useSelfieUrl, useAdminEndShift } from '../../hooks/useShifts'
 import { formatSastTime, shiftDuration, sortShifts, todaySast } from '../../utils/shifts'
 import { adminTitle } from '../../tenant'
 
@@ -25,6 +26,16 @@ export default function AdminShifts() {
   const [openUrl, setOpenUrl] = useState(null)
   const { data, isLoading, isError, refetch } = useShiftsForDay(day)
   const shifts = useMemo(() => sortShifts(data ?? []), [data])
+  const endShift = useAdminEndShift()
+
+  const end = async (s) => {
+    try {
+      await endShift.mutateAsync(s.id)
+      toast.success(`Ended ${s.full_name}'s shift`)
+    } catch (err) {
+      toast.error(err.message || 'Could not end the shift')
+    }
+  }
 
   useEffect(() => {
     document.title = adminTitle('Shifts')
@@ -69,7 +80,13 @@ export default function AdminShifts() {
                 </p>
               </div>
               {!s.ended_at && (
-                <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">Still on shift</span>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">Still on shift</span>
+                  <button type="button" onClick={() => end(s)} disabled={endShift.isPending}
+                    className="focus-ring h-11 px-4 rounded-lg text-sm border border-border text-muted hover:text-white disabled:opacity-50">
+                    End shift
+                  </button>
+                </div>
               )}
             </div>
           ))

@@ -48,3 +48,14 @@ export function sortShifts(rows) {
 export function todaySast(nowMs = Date.now()) {
   return new Date(nowMs + SAST_OFFSET_MS).toISOString().slice(0, 10)
 }
+
+/** Size that fits a photo inside max×max without changing its shape. */
+export function fitWithin(width, height, max) {
+  const scale = Math.min(1, max / Math.max(width, height))
+  return { width: Math.round(width * scale), height: Math.round(height * scale) }
+}
+
+/** PostgREST or() filter: shifts started in [from, to), plus any still open from before. */
+export function shiftsDayFilter(from, to) {
+  return `and(started_at.gte.${from},started_at.lt.${to}),and(ended_at.is.null,started_at.lt.${to})`
+}

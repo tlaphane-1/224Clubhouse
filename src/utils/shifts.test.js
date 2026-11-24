@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { selfiePath, shiftDuration, dayBoundsSast, shiftStatusLabel, formatSastTime, sortShifts } from './shifts'
+import { selfiePath, shiftDuration, dayBoundsSast, shiftStatusLabel, formatSastTime, sortShifts, fitWithin, shiftsDayFilter } from './shifts'
 
 describe('selfiePath', () => {
   it('puts the selfie in <tenant>/<uid>/<time>.<ext>', () => {
@@ -61,5 +61,22 @@ describe('sortShifts', () => {
       { id: 'c', started_at: '2026-11-25T09:00:00Z', ended_at: '2026-11-25T10:00:00Z' },
     ]
     expect(sortShifts(rows).map(r => r.id)).toEqual(['b', 'c', 'a'])
+  })
+})
+
+describe('fitWithin', () => {
+  it('shrinks the long side to the limit, keeping the shape', () => {
+    expect(fitWithin(4032, 3024, 1280)).toEqual({ width: 1280, height: 960 })
+    expect(fitWithin(3024, 4032, 1280)).toEqual({ width: 960, height: 1280 })
+  })
+
+  it('leaves a small photo alone', () => {
+    expect(fitWithin(800, 600, 1280)).toEqual({ width: 800, height: 600 })
+  })
+})
+
+describe('shiftsDayFilter', () => {
+  it('shifts that started that day, plus any still open from before', () => {
+    expect(shiftsDayFilter('A', 'B')).toBe('and(started_at.gte.A,started_at.lt.B),and(ended_at.is.null,started_at.lt.B)')
   })
 })

@@ -287,12 +287,14 @@ Owner feedback 2026-11-24. Spec `docs/superpowers/specs/2026-11-24-e420-in-store
   day's shifts with selfies. Selfies: private bucket `shift-selfies`, owner + admins only.
 - Per-store switch `features.inStore` in `tenant.json` (E420 on, 224 off).
 
-**Rollout:** migration `20261125100000_staff_shifts.sql`, then the E420 build; the owner adds the
-cashier's account in Admin → Staff; test a clock-in on the tablet.
+**Rollout:** migration `20261125100000_staff_shifts.sql` (also schedules the daily
+`purge-shift-selfies` job), deploy the `purge-shift-selfies` function with `--no-verify-jwt`, then
+the E420 build; the owner adds the cashier's account in Admin → Staff; test a clock-in on the tablet.
+Admins can end anyone's open shift in Admin → Shifts; disabling staff ends theirs.
 
 **Open:**
-- Selfies are not yet deleted automatically after 90 days (spec says 90 days) — needs a scheduled
-  storage clean-up; until then an admin can delete them.
+- Selfie clean-up runs daily: selfies older than 90 days, and uploads no shift uses after a day.
+  Not yet seen running (the job calls production; first check after deploy).
 - Staff selfies are staff personal information: the owner should tell staff in writing why they are
   taken and how long they are kept (not covered by the customer privacy policy).
 - Next: part 2 (cashier sales, QR labels, stock-take, live dashboard), part 3 (table menu).
