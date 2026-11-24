@@ -275,6 +275,28 @@ Owner feedback 2026-11-24: stop deliveries because of risk. Spec
    one real order end to end (placed → ready-for-collection email → collected).
 6. Then update the E420 handover pack (drivers no longer used).
 
+## 7f. E420 in-store system, part 1: staff + selfie shifts (branch `feat/e420-in-store`, NOT deployed)
+
+Owner feedback 2026-11-24. Spec `docs/superpowers/specs/2026-11-24-e420-in-store-design.md`, plan
+`docs/superpowers/plans/2026-11-25-staff-shifts.md`. Built on top of `feat/e420-collect-only`
+(merge #44 first).
+
+- Staff accounts (`staff_members`, `is_staff()`), managed in Admin → Staff (by email of an existing
+  account in the store). Admins count as staff.
+- `/counter` (staff only): start a shift with a selfie, end it; server clock. Admin → Shifts lists a
+  day's shifts with selfies. Selfies: private bucket `shift-selfies`, owner + admins only.
+- Per-store switch `features.inStore` in `tenant.json` (E420 on, 224 off).
+
+**Rollout:** migration `20261125100000_staff_shifts.sql`, then the E420 build; the owner adds the
+cashier's account in Admin → Staff; test a clock-in on the tablet.
+
+**Open:**
+- Selfies are not yet deleted automatically after 90 days (spec says 90 days) — needs a scheduled
+  storage clean-up; until then an admin can delete them.
+- Staff selfies are staff personal information: the owner should tell staff in writing why they are
+  taken and how long they are kept (not covered by the customer privacy policy).
+- Next: part 2 (cashier sales, QR labels, stock-take, live dashboard), part 3 (table menu).
+
 ## 8. Resolved
 
 - **2026-11-23 — `.claude/settings.local.json` tracked by git** (was §3.3): untracked and added to
