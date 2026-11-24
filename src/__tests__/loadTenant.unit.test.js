@@ -52,6 +52,15 @@ describe('validateTenant', () => {
     expect(loadTenant('explosive420').delivery.mode).toBe('collect')
   })
 
+  it('rejects a non-boolean features.inStore', () => {
+    expect(broken(t => { t.features.inStore = 'yes' })).toThrow(/features\.inStore/)
+  })
+
+  it('E420 has the in-store features on, 224 off', () => {
+    expect(loadTenant('explosive420').features.inStore).toBe(true)
+    expect(loadTenant('224clubhouse').features.inStore).toBe(false)
+  })
+
   it('accepts the 224 config', () => {
     expect(() => validateTenant(structuredClone(valid), '224clubhouse')).not.toThrow()
   })

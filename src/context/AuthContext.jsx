@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { CART_KEY, CART_CLEAR_EVENT } from './cartReducer'
 import { AuthContext } from './useAuth'
-import { tenant } from '../tenant'
+import { tenant, IN_STORE } from '../tenant'
 import { accountBelongsHere, wrongStoreError } from '../utils/accountStore'
 
 export function AuthProvider({ children }) {
@@ -12,6 +12,9 @@ export function AuthProvider({ children }) {
   // Driver portal access (is_driver() — the drivers table under RLS). Like
   // isAdmin it only drives UI; the driver RPCs enforce it server-side.
   const [isDriver, setIsDriver] = useState(false)
+  // Counter / shift access (is_staff() — staff_members, or the store's admin).
+  // UI only; the shift and counter RPCs enforce it server-side.
+  const [isStaff, setIsStaff] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -48,6 +51,17 @@ export function AuthProvider({ children }) {
       }
     }
 
+    // Only stores with the in-store system have staff; elsewhere skip the call.
+    async function resolveStaff(session) {
+      if (!session?.user || !IN_STORE) return false
+      try {
+        const { data, error } = await supabase.rpc('is_staff')
+        return !error && data === true
+      } catch {
+        return false
+      }
+    }
+
     // Initial load. `loading` is ALWAYS cleared (finally), and the admin check
     // is time-boxed, so the ProtectedRoute spinner can never spin forever — a
     // failed/slow check just falls back to "not admin" (bounce to login).
@@ -61,15 +75,17 @@ export function AuthProvider({ children }) {
           await supabase.auth.signOut({ scope: 'local' })
           session = null
         }
-        const [admin, driver] = await Promise.all([
+        const [admin, driver, staff] = await Promise.all([
           withTimeout(resolveAdmin(session), 8000, false),
           withTimeout(resolveDriver(session), 8000, false),
+          withTimeout(resolveStaff(session), 8000, false),
         ])
         if (!active) return
         setSession(session)
         setUser(session?.user ?? null)
         setIsAdmin(admin)
         setIsDriver(driver)
+        setIsStaff(staff)
       } catch {
         if (active) setIsAdmin(false)
       } finally {
@@ -92,6 +108,7 @@ export function AuthProvider({ children }) {
         setUser(null)
         setIsAdmin(false)
         setIsDriver(false)
+        setIsStaff(false)
         setTimeout(() => { supabase.auth.signOut({ scope: 'local' }) }, 0)
         return
       }
@@ -102,13 +119,15 @@ export function AuthProvider({ children }) {
       if (!session?.user) {
         setIsAdmin(false)
         setIsDriver(false)
+        setIsStaff(false)
         return
       }
       setTimeout(async () => {
-        const [admin, driver] = await Promise.all([resolveAdmin(session), resolveDriver(session)])
+        const [admin, driver, staff] = await Promise.all([resolveAdmin(session), resolveDriver(session), resolveStaff(session)])
         if (active) {
           setIsAdmin(admin)
           setIsDriver(driver)
+          setIsStaff(staff)
         }
       }, 0)
     })
@@ -135,10 +154,13 @@ export function AuthProvider({ children }) {
       supabase.rpc(rpc),
       new Promise(resolve => setTimeout(() => resolve({ data: false }), 8000)),
     ]).then(res => res?.data === true, () => false)
-    const [admin, driver] = await Promise.all([timeBoxed('is_admin'), timeBoxed('is_driver')])
+    const [admin, driver, staff] = await Promise.all([
+      timeBoxed('is_admin'), timeBoxed('is_driver'), IN_STORE ? timeBoxed('is_staff') : false,
+    ])
     setIsAdmin(admin)
     setIsDriver(driver)
-    return { ...data, isAdmin: admin, isDriver: driver }
+    setIsStaff(staff)
+    return { ...data, isAdmin: admin, isDriver: driver, isStaff: staff }
   }
 
   // Email confirmation is ON in Supabase Auth, so signUp returns NO session —
@@ -197,6 +219,7 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
     setIsAdmin(false)
     setIsDriver(false)
+    setIsStaff(false)
     setUser(null)
     setSession(null)
     // Shared-device privacy: the cart must not survive sign-out. Clear the
@@ -207,7 +230,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, resendConfirmation, resetPassword, updatePassword, signOut, isAdmin, isDriver }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, resendConfirmation, resetPassword, updatePassword, signOut, isAdmin, isDriver, isStaff }}>
       {children}
     </AuthContext.Provider>
   )
