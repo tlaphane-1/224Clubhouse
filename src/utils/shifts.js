@@ -25,3 +25,26 @@ export function dayBoundsSast(dateIso) {
     to: new Date(from + 24 * 60 * 60 * 1000).toISOString(),
   }
 }
+
+/** "09:02" — a time of day in South Africa. */
+export function formatSastTime(iso) {
+  const d = new Date(Date.parse(iso) + SAST_OFFSET_MS)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
+}
+
+/** What the counter's shift card says. */
+export function shiftStatusLabel(openShift, nowMs = Date.now()) {
+  if (!openShift) return 'Not on shift'
+  return `On shift since ${formatSastTime(openShift.started_at)} · ${shiftDuration(openShift.started_at, null, nowMs)}`
+}
+
+/** Admin list order: people still on shift first, then the newest start. */
+export function sortShifts(rows) {
+  return [...rows].sort((a, b) =>
+    (a.ended_at ? 1 : 0) - (b.ended_at ? 1 : 0) || Date.parse(b.started_at) - Date.parse(a.started_at))
+}
+
+/** Today's date (YYYY-MM-DD) in South Africa. */
+export function todaySast(nowMs = Date.now()) {
+  return new Date(nowMs + SAST_OFFSET_MS).toISOString().slice(0, 10)
+}

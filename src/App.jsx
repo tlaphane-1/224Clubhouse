@@ -12,7 +12,8 @@ import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotFound from './pages/NotFound'
-import { IS_COLLECT } from './tenant'
+import { IS_COLLECT, IN_STORE } from './tenant'
+import StaffRoute from './components/counter/StaffRoute'
 
 // Pages are lazy-loaded: each becomes its own chunk fetched on demand, so the
 // storefront's initial bundle no longer ships the admin panel, checkout,
@@ -53,6 +54,7 @@ const AdminAnalytics = lazy(() => import('./pages/admin/Analytics'))
 const AdminDrivers = lazy(() => import('./pages/admin/Drivers'))
 const AdminAlerts = lazy(() => import('./pages/admin/Alerts'))
 const DriverPortal = lazy(() => import('./pages/driver/DriverPortal'))
+const Counter = lazy(() => import('./pages/counter/Counter'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -156,6 +158,8 @@ export default function App() {
 
                 {/* Driver portal: its own phone-first layout; the page handles sign-in and access. */}
                 {!IS_COLLECT && <Route path="/driver" element={<DriverPortal />} />}
+                {/* Counter tablet: staff accounts only (shift clock-in; sales next). */}
+                {IN_STORE && <Route path="/counter" element={<StaffRoute><Counter /></StaffRoute>} />}
                 <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
 
                 {/* Fallback */}

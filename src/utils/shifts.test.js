@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { selfiePath, shiftDuration, dayBoundsSast } from './shifts'
+import { selfiePath, shiftDuration, dayBoundsSast, shiftStatusLabel, formatSastTime, sortShifts } from './shifts'
 
 describe('selfiePath', () => {
   it('puts the selfie in <tenant>/<uid>/<time>.<ext>', () => {
@@ -32,5 +32,34 @@ describe('dayBoundsSast', () => {
       from: '2026-11-24T22:00:00.000Z',
       to: '2026-11-25T22:00:00.000Z',
     })
+  })
+})
+
+describe('formatSastTime', () => {
+  it('shows the time in South Africa', () => {
+    expect(formatSastTime('2026-11-25T07:02:00Z')).toBe('09:02')
+    expect(formatSastTime('2026-11-25T22:30:00Z')).toBe('00:30')
+  })
+})
+
+describe('shiftStatusLabel', () => {
+  it('not on shift', () => {
+    expect(shiftStatusLabel(null, 0)).toBe('Not on shift')
+  })
+
+  it('on shift since the start time, with how long so far', () => {
+    expect(shiftStatusLabel({ started_at: '2026-11-25T07:02:00Z' }, Date.parse('2026-11-25T09:16:00Z')))
+      .toBe('On shift since 09:02 · 2h 14m')
+  })
+})
+
+describe('sortShifts', () => {
+  it('open shifts first, then the newest start first', () => {
+    const rows = [
+      { id: 'a', started_at: '2026-11-25T06:00:00Z', ended_at: '2026-11-25T08:00:00Z' },
+      { id: 'b', started_at: '2026-11-25T07:00:00Z', ended_at: null },
+      { id: 'c', started_at: '2026-11-25T09:00:00Z', ended_at: '2026-11-25T10:00:00Z' },
+    ]
+    expect(sortShifts(rows).map(r => r.id)).toEqual(['b', 'c', 'a'])
   })
 })
