@@ -13,6 +13,7 @@ import { memberPurchaseGate } from '../utils/memberGate'
 import { supabase } from '../lib/supabase'
 import CheckoutForm from '../components/checkout/CheckoutForm'
 import { CHECKOUT_FIELD_ORDER, checkoutFieldId } from '../components/checkout/checkoutFields'
+import { validateCheckout } from '../components/checkout/checkoutValidation'
 import StickyActionBar from '../components/ui/StickyActionBar'
 import Checkbox from '../components/ui/Checkbox'
 import { focusField } from '../utils/focusField'
@@ -29,23 +30,11 @@ import { formatZAR } from '../utils/formatCurrency'
 import { rememberOrder } from '../utils/recentOrders'
 import { trackEvent } from '../utils/analytics'
 import toast from 'react-hot-toast'
-import { tenant, pageTitle } from '../tenant'
+import { tenant, pageTitle, IS_COLLECT } from '../tenant'
 
 const emptyForm = {
   name: '', email: '', phone: '',
   street: '', apartment: '', city: '', province: '', postalCode: '',
-}
-
-function validate(form) {
-  const errors = {}
-  if (!form.name.trim()) errors.name = 'Full name is required'
-  if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) errors.email = 'Valid email required'
-  if (!form.phone.trim()) errors.phone = 'Phone number is required'
-  if (!form.street.trim()) errors.street = 'Street address is required'
-  if (!form.city.trim()) errors.city = 'City is required'
-  if (!form.province) errors.province = 'Province is required'
-  if (!form.postalCode.trim()) errors.postalCode = 'Postal code is required'
-  return errors
 }
 
 export default function Checkout() {
@@ -160,7 +149,7 @@ export default function Checkout() {
       setShowJoinPrompt(true)
       return
     }
-    const validationErrors = validate(checkoutForm)
+    const validationErrors = validateCheckout(checkoutForm, { collect: IS_COLLECT })
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
       toast.error('Please fill in all required fields')
@@ -264,7 +253,8 @@ export default function Checkout() {
     // Attach the location pin BEFORE the emails, so the owner's new-order alert
     // can show it. The order already stands: a failed pin only means the club
     // sees "No location shared", so the customer is not held up by it.
-    if (pin) {
+    // Collect stores gather no location (set_order_pin refuses there too).
+    if (pin && !IS_COLLECT) {
       const { error: pinError } = await supabase.rpc('set_order_pin', {
         p_order_id: data.id, p_lat: pin.lat, p_lng: pin.lng, p_accuracy_m: pin.accuracy ?? null,
       })
@@ -309,7 +299,9 @@ export default function Checkout() {
   const itemCount = items.reduce((n, i) => n + i.quantity, 0)
   const paymentNote = method === 'eft'
     ? 'No payment now — pay by EFT using your name and surname as the reference.'
-    : `No payment now — you'll pay by ${method ? paymentLabel(method) : 'cash/card'} on delivery.`
+    : IS_COLLECT
+      ? "No payment now — you'll pay by cash/card when you collect."
+      : `No payment now — you'll pay by ${method ? paymentLabel(method) : 'cash/card'} on delivery.`
 
   // One place-order control, rendered inline on desktop and in the phone's
   // sticky bar (each copy hidden at the other size).
@@ -440,7 +432,7 @@ export default function Checkout() {
               <section className="bg-surface border border-border rounded-xl p-4 sm:p-6" aria-labelledby="checkout-step-1">
                 <h2 id="checkout-step-1" className={`${stepHeading} mb-5 sm:mb-6`}>
                   <span className={stepBadge} aria-hidden="true">1</span>
-                  Contact & Delivery
+                  {IS_COLLECT ? 'Contact & Collection' : 'Contact & Delivery'}
                 </h2>
                 <CheckoutForm form={checkoutForm} onChange={handleFormChange} errors={errors} lockEmail pin={pin} onPin={setPin} />
                 {needsDob && (
@@ -539,8 +531,8 @@ export default function Checkout() {
             {tenant.content.checkout.joinPrompt}
           </p>
           <p className="text-muted text-sm leading-relaxed mb-6">
-            Apply in a minute — pay {EFT_AVAILABLE ? 'by EFT or ' : ''}with your next delivery.
-            {PROMOTE_MEMBER_FREE_DELIVERY && (
+            Apply in a minute — pay {EFT_AVAILABLE ? 'by EFT or ' : ''}{IS_COLLECT ? 'when you next collect' : 'with your next delivery'}.
+            {PROMOTE_MEMBER_FREE_DELIVERY && !IS_COLLECT && (
               <> Members also get <span className="text-white font-semibold">free delivery</span>.</>
             )}{' '}
             Your cart is saved.

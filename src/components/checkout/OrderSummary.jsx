@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { formatZAR } from '../../utils/formatCurrency'
-import { SHIPPING_THRESHOLD, SHIPPING_FEE, PROMOTE_MEMBER_FREE_DELIVERY, shippingFeeFor } from '../../utils/shipping'
+import { SHIPPING_THRESHOLD, SHIPPING_FEE, PROMOTE_MEMBER_FREE_DELIVERY, SHOW_DELIVERY_FEE, shippingFeeFor } from '../../utils/shipping'
 import BrandLogo from '../ui/BrandLogo'
 import { cartLineKey, lineName } from '../../utils/variants'
 
@@ -76,6 +76,8 @@ export default function OrderSummary({
             <span className="text-gold font-medium">−{formatZAR(discount)}</span>
           </div>
         )}
+        {/* Collect stores have no delivery line (the fee is always 0). */}
+        {SHOW_DELIVERY_FEE && (<>
         <div className="flex justify-between text-sm">
           <span className="text-muted">Delivery</span>
           <span className={shippingFee === 0 ? 'text-green-400 font-medium' : 'text-white'}>
@@ -93,6 +95,7 @@ export default function OrderSummary({
             Add {formatZAR(SHIPPING_THRESHOLD - subtotal)} more for free delivery.
           </p>
         ))}
+        </>)}
         <div className="flex justify-between pt-3 border-t border-border">
           <span className="text-white font-semibold">Total</span>
           <span className="text-gold font-bold text-lg">{formatZAR(total)}</span>
