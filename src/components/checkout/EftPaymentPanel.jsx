@@ -5,6 +5,7 @@ import EftDetails from './EftDetails'
 import { useUploadPaymentProof, PROOF_ACCEPT } from '../../hooks/useEftPayments'
 import { eftAwaitingPayment } from '../../utils/orderStatus'
 import { formatZAR } from '../../utils/formatCurrency'
+import { IS_COLLECT } from '../../tenant'
 
 const dateFmt = (iso) => new Date(iso).toLocaleString('en-ZA', {
   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
@@ -65,8 +66,8 @@ export default function EftPaymentPanel({ order }) {
         </p>
       ) : (
         <p className="text-muted text-sm">
-          Paid already? Upload your proof of payment so we can match it faster. We dispatch once
-          the money reflects in our account.
+          Paid already? Upload your proof of payment so we can match it faster.{' '}
+          {IS_COLLECT ? 'Your order is ready to collect once' : 'We dispatch once'} the money reflects in our account.
         </p>
       )}
 

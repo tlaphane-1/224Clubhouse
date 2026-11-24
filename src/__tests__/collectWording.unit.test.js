@@ -31,6 +31,9 @@ const CUSTOMER_FILES = [
   'src/pages/Membership.jsx',
   'src/components/layout/Footer.jsx',
   'src/components/store/WhatsAppOrderPanel.jsx',
+  'src/components/checkout/PaymentMethodSelect.jsx',
+  'src/components/checkout/EftPaymentPanel.jsx',
+  'src/components/store/ProductReviews.jsx',
 ]
 
 describe('collect-mode wording', () => {
