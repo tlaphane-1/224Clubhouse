@@ -1,3 +1,5 @@
+import { FULFILMENT } from '../tenant'
+
 /**
  * Shared order status + payment-method vocabulary for the Cash/Card-on-Delivery
  * flow. Used by checkout, the customer tracking page, and the admin orders page
@@ -12,8 +14,8 @@ export const ALL_STATUSES = [
   'pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled',
 ]
 
-// Human labels.
-export const STATUS_LABELS = {
+// Human labels for a delivery store.
+const DELIVERY_STATUS_LABELS = {
   pending: 'Order Placed',
   confirmed: 'Confirmed',
   preparing: 'Preparing',
@@ -41,12 +43,37 @@ export const STATUS_BADGE = {
 
 export const PAYMENT_METHODS = ['cash_on_delivery', 'card_on_delivery', 'eft']
 
-export const PAYMENT_LABELS = {
+const DELIVERY_PAYMENT_LABELS = {
   cash_on_delivery: 'Cash on Delivery',
   card_on_delivery: 'Card on Delivery',
   eft: 'EFT (Bank Transfer)',
   online: 'Paid Online',
 }
+
+// A collect store (order online, collect at the club) keeps the same stored
+// values and relabels them (approach A in
+// docs/superpowers/specs/2026-11-24-collect-only-fulfilment-design.md): in a
+// collect store, status 'delivered' MEANS "collected" and 'out_for_delivery'
+// means "ready for collection".
+const COLLECT_STATUS_LABELS = {
+  ...DELIVERY_STATUS_LABELS,
+  out_for_delivery: 'Ready for Collection',
+  delivered: 'Collected',
+}
+const COLLECT_PAYMENT_LABELS = {
+  ...DELIVERY_PAYMENT_LABELS,
+  cash_on_delivery: 'Cash on Collection',
+  card_on_delivery: 'Card on Collection',
+}
+
+export function labelsFor(mode) {
+  return mode === 'collect'
+    ? { status: COLLECT_STATUS_LABELS, payment: COLLECT_PAYMENT_LABELS }
+    : { status: DELIVERY_STATUS_LABELS, payment: DELIVERY_PAYMENT_LABELS }
+}
+
+export const STATUS_LABELS = labelsFor(FULFILMENT).status
+export const PAYMENT_LABELS = labelsFor(FULFILMENT).payment
 
 export const statusLabel = (s) => STATUS_LABELS[s] ?? s
 export const paymentLabel = (m) => PAYMENT_LABELS[m] ?? m
