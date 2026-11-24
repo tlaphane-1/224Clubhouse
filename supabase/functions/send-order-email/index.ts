@@ -7,6 +7,11 @@ import { notifyTelegram, tg } from '../_shared/telegram.ts'
 import { alertStore, type AlertStore } from '../_shared/storeAlerts.ts'
 import { sendStoreMail } from '../_shared/mail.ts'
 import { bankDetailsFor } from '../_shared/stores.ts'
+import { amountDueLabel, paymentLabelFor, type Fulfilment } from '../_shared/fulfilmentCopy.ts'
+
+// A collect store (order online, collect at the club) has no address, no
+// location pin and no delivery fee.
+const modeOf = (store: AlertStore): Fulfilment => store.brand?.fulfilment ?? 'delivery'
 
 // The receipt and the owner alert are both branded and sent as the store the
 // order belongs to (orders.tenant): its name, logo, colours, links, sending
@@ -49,15 +54,6 @@ interface OrderEmailPayload {
   orderId: string
 }
 
-// The values the orders_payment_method_check constraint actually allows are
-// 'cash_on_delivery' / 'card_on_delivery' / 'online'; the short forms are kept
-// for any legacy row.
-function paymentLabel(method?: string): string {
-  if (method === 'card' || method === 'card_on_delivery') return 'Card on delivery'
-  if (method === 'cash' || method === 'cash_on_delivery') return 'Cash on delivery'
-  if (method === 'eft') return 'EFT (bank transfer)'
-  return 'On delivery'
-}
 
 // "Name — Option" for lines bought as a product option (migration 20261005140000).
 function lineName(item: OrderItem): string {
@@ -195,7 +191,7 @@ function ownerAlertHtml(alert: OwnerAlert): string {
       <div style="font-family:monospace; font-size:24px; font-weight:700; margin:4px 0 2px;">${escapeHtml(alert.orderNumber)}</div>
       <div style="font-size:22px; font-weight:700;">${escapeHtml(formatZAR(alert.total))}</div>
       <div style="font-size:14px; color:#555555; margin-top:2px;">
-        ${escapeHtml(paymentLabel(alert.paymentMethod))} &middot; ${escapeHtml(alert.placedAt)}
+        ${escapeHtml(paymentLabelFor(modeOf(alert.store), alert.paymentMethod))} &middot; ${escapeHtml(alert.placedAt)}
       </div>
 
       <div style="height:2px; background:${alert.store.brand?.gold ?? '#C9A84C'}; margin:16px 0;"></div>
@@ -204,13 +200,13 @@ function ownerAlertHtml(alert: OwnerAlert): string {
         ${detail('Customer', alert.customerName)}
         ${detail('Phone', alert.customerPhone)}
         ${detail('Email', alert.customerEmail)}
-        ${detail('Deliver to', alert.address)}
+        ${modeOf(alert.store) === 'collect' ? detail('Fulfilment', 'Collection at the club') : `${detail('Deliver to', alert.address)}
         <tr>
           <td style="padding:4px 12px 4px 0; color:#666666; vertical-align:top; white-space:nowrap;">Location</td>
           <td style="padding:4px 0; color:#111111;">${alert.locationUrl
             ? `<a href="${escapeHtml(alert.locationUrl)}" style="color:#111111;">Shared by the customer &middot; open map</a>`
             : 'Not shared'}</td>
-        </tr>
+        </tr>`}
       </table>
 
       <table style="width:100%; border-collapse:collapse; font-size:14px; margin-top:16px;">
@@ -219,13 +215,13 @@ function ownerAlertHtml(alert: OwnerAlert): string {
           <tr>
             <td colspan="2" style="padding:6px 0 0; color:#666666;">Subtotal</td>
             <td style="padding:6px 0 0; text-align:right;">${escapeHtml(formatZAR(alert.subtotal))}</td>
-          </tr>${discountRow}
+          </tr>${discountRow}${modeOf(alert.store) === 'collect' ? '' : `
           <tr>
             <td colspan="2" style="padding:2px 0; color:#666666;">Delivery</td>
             <td style="padding:2px 0; text-align:right;">${escapeHtml(formatZAR(alert.shippingFee))}</td>
-          </tr>
+          </tr>`}
           <tr>
-            <td colspan="2" style="padding:6px 0 0; font-weight:700; border-top:1px solid #dddddd;">To collect on delivery</td>
+            <td colspan="2" style="padding:6px 0 0; font-weight:700; border-top:1px solid #dddddd;">${modeOf(alert.store) === 'collect' ? 'To collect at the counter' : 'To collect on delivery'}</td>
             <td style="padding:6px 0 0; font-weight:700; text-align:right; border-top:1px solid #dddddd;">${escapeHtml(formatZAR(alert.total))}</td>
           </tr>
         </tfoot>
@@ -266,7 +262,7 @@ async function sendOwnerAlert(alert: OwnerAlert): Promise<string> {
   const brand = alert.store.brand
   if (!brand) return `skipped: no email settings for ${alert.store.tenant}`
 
-  const subject = `New order ${alert.orderNumber} — ${formatZAR(alert.total)} (${paymentLabel(alert.paymentMethod).toLowerCase()})`
+  const subject = `New order ${alert.orderNumber} — ${formatZAR(alert.total)} (${paymentLabelFor(modeOf(alert.store), alert.paymentMethod).toLowerCase()})`
 
   const sent = await sendStoreMail(brand, { sender: 'orders', to, subject, html: ownerAlertHtml(alert) })
   if (!sent.sent) return sent.reason
@@ -327,6 +323,8 @@ serve(async (req) => {
     // sender of both emails. Never by default 224's.
     const store = await alertStore(order.tenant)
     const brand = store.brand
+    const mode = modeOf(store)
+    const collect = mode === 'collect'
     if (!brand) return jsonResponse({ error: `No email settings for store ${store.tenant}` }, 500)
     const bankDetails = bankDetailsFor(brand)
 
@@ -409,13 +407,13 @@ serve(async (req) => {
       <div style="margin-top:20px; padding-top:16px; border-top:1px solid #333333;">
         <table style="width:100%;">${breakdownRows}
           <tr>
-            <td style="color:#ffffff; font-weight:600; font-size:15px;">${paymentMethod === 'eft' ? 'Amount due by EFT' : 'Amount due on delivery'}</td>
+            <td style="color:#ffffff; font-weight:600; font-size:15px;">${amountDueLabel(mode, paymentMethod)}</td>
             <td style="color:${brand.gold}; font-weight:700; font-size:18px; text-align:right;">${formatZAR(total)}</td>
           </tr>
         </table>
         ${paymentMethod === 'eft'
           ? `<div style="color:#888888; font-size:12px; margin-top:6px; white-space:pre-line;">${bankDetails ? escapeHtml(bankDetails) : 'We will send you our banking details shortly.'}<br>Use your name and surname (${escapeHtml(customerName)}) as the payment reference. We dispatch once the payment reflects.</div>`
-          : `<div style="color:#888888; font-size:12px; margin-top:6px;">${paymentLabel(paymentMethod)} — no payment is needed now.</div>`}
+          : `<div style="color:#888888; font-size:12px; margin-top:6px;">${paymentLabelFor(mode, paymentMethod)} — no payment is needed now.</div>`}
       </div>
     </div>
 
@@ -427,11 +425,17 @@ serve(async (req) => {
       </a>
     </div>
 
-    <!-- Delivery -->
+    ${collect ? `<!-- Collect from -->
+    <div style="background:#111111; border:1px solid #222222; border-radius:12px; padding:20px; margin-bottom:32px; text-align:center;">
+      <div style="color:${brand.gold}; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">Collect from</div>
+      <div style="color:#ffffff; font-size:15px; font-weight:600;">${escapeHtml(brand.address)}</div>
+      <div style="color:#888888; font-size:13px; margin-top:6px;">${escapeHtml(brand.hours)}</div>
+      <div style="color:#888888; font-size:13px; margin-top:6px;">We&rsquo;ll email you when your order is ready.</div>
+    </div>` : `<!-- Delivery -->
     <div style="background:#111111; border:1px solid #222222; border-radius:12px; padding:20px; margin-bottom:32px; text-align:center;">
       <div style="color:${brand.gold}; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">Estimated Delivery</div>
       <div style="color:#ffffff; font-size:15px; font-weight:600;">2–5 Business Days</div>
-    </div>
+    </div>`}
 
     <!-- Footer -->${darkFooter(brand)}
 
@@ -468,9 +472,9 @@ serve(async (req) => {
       : null
     // Telegram group alert — independent of the email (never throws).
     const telegram = await notifyTelegram('orders',
-      `🛒 <b>New order ${tg(orderNumber)}</b> — ${tg(formatZAR(total))} (${tg(paymentLabel(paymentMethod))})\n`
+      `🛒 <b>New order ${tg(orderNumber)}</b> — ${tg(formatZAR(total))} (${tg(paymentLabelFor(mode, paymentMethod))})\n`
       + `${tg(customerName)} · ${tg(order.customer_phone ?? '')}\n`
-      + `${tg(formatAddress((order.shipping_address ?? null) as ShippingAddress | null))}\n`
+      + `${tg(collect ? 'Collection at the club' : formatAddress((order.shipping_address ?? null) as ShippingAddress | null))}\n`
       + (locationUrl ? `📍 <a href="${tg(locationUrl)}">Customer's location</a>\n\n` : '📍 No location shared\n\n')
       + items.map(i => `• ${tg(i.quantity)}× ${tg(lineName(i))}`).join('\n')
       + (lowStock.length ? `\n\n⚠️ <b>Low stock</b>\n` + lowStock.map(l => `• ${tg(l.name)}: ${l.left === 0 ? 'SOLD OUT' : `${l.left} left`}`).join('\n') : ''),
