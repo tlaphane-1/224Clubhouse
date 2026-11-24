@@ -5,6 +5,7 @@ import { useAuth } from '../../context/useAuth'
 import { useProductReviews, useMyReviewStatus, useSubmitReview } from '../../hooks/useProductReviews'
 import { Stars, StarPicker } from './StarRating'
 import { focusField } from '../../utils/focusField'
+import { IS_COLLECT } from '../../tenant'
 
 const dateFmt = new Intl.DateTimeFormat('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })
 
@@ -73,7 +74,7 @@ export default function ProductReviews({ productId }) {
           )}
           {user && mine.data && !mine.data.eligible && (
             <p className="text-muted text-xs leading-relaxed">
-              Reviews are from customers whose order for this product has been delivered.
+              Reviews are from customers whose order for this product has been {IS_COLLECT ? 'collected' : 'delivered'}.
             </p>
           )}
         </div>
@@ -143,7 +144,7 @@ function ReviewForm({ productId, existing }) {
           value={body}
           onChange={e => setBody(e.target.value)}
           className="input-base text-sm"
-          placeholder="Taste, quality, delivery…"
+          placeholder={IS_COLLECT ? 'Taste, quality, service…' : 'Taste, quality, delivery…'}
         />
         <p className="text-muted text-xs mt-1">
           Please don't include health or medical claims, or personal details. Reviews are checked before they appear.

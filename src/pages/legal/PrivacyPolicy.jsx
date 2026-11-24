@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import LegalPage, { LegalSection } from './LegalPage'
-import { tenant } from '../../tenant'
+import { tenant, IS_COLLECT } from '../../tenant'
 import { MIN_AGE } from '../../utils/age'
 
 const { contact } = tenant
@@ -42,15 +42,19 @@ export default function PrivacyPolicy() {
             order is accepted.
           </li>
           <li>
-            <span className="text-white">Order details</span> — your name, email, phone number,
-            delivery address, the items you ordered, and your order history.
+            <span className="text-white">Order details</span> — your name, email, phone number,{' '}
+            {IS_COLLECT
+              ? 'the items you ordered, and your order history. We do not deliver, so we do not ask for your address (orders placed while we still delivered also hold the delivery address given then).'
+              : 'delivery address, the items you ordered, and your order history.'}
           </li>
+          {!IS_COLLECT && (
           <li>
             <span className="text-white">Delivery location (optional)</span> — if you tap
             &ldquo;Use my current location&rdquo; at checkout, your phone&rsquo;s position when you
             order. We use it to fill in your address, to check the address before we send a driver,
             and to guide the driver to you.
           </li>
+          )}
           <li>
             <span className="text-white">Membership applications</span> — your full name, phone
             number, <span className="text-white">date of birth</span> (required, to verify you are{' '}
@@ -99,9 +103,9 @@ export default function PrivacyPolicy() {
             your ID number) on membership applications.
           </li>
           <li>
-            <span className="text-white">Order fulfilment</span> — we need your name, contact
-            details and delivery address to process, deliver and confirm your orders (performance
-            of a contract with you).
+            <span className="text-white">Order fulfilment</span> — we need your name and contact
+            details{IS_COLLECT ? ' to process, confirm and hand over your orders' : ' and delivery address to process, deliver and confirm your orders'}{' '}
+            (performance of a contract with you).
           </li>
           <li>
             <span className="text-white">Membership administration</span> — processing your
@@ -150,14 +154,16 @@ export default function PrivacyPolicy() {
             processes your email address and order details in order to send you receipts and
             notifications.
           </li>
+          {!IS_COLLECT && (
           <li>
             <span className="text-white">OpenStreetMap (Nominatim)</span> — if you share your
             location at checkout, your browser sends that position to OpenStreetMap&rsquo;s address
             service to look up your street. It is not sent with your name or account.
           </li>
+          )}
           <li>
             <span className="text-white">A payment processor</span> — only if and when online card
-            payments are enabled on this site (currently orders are paid on delivery, so no
+            payments are enabled on this site (currently orders are paid {IS_COLLECT ? 'at collection or by EFT' : 'on delivery'}, so no
             payment card details pass through this website at all).
           </li>
           <li>

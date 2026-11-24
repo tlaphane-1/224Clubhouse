@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import LegalPage, { LegalSection } from './LegalPage'
-import { tenant } from '../../tenant'
+import { tenant, IS_COLLECT } from '../../tenant'
 import { MIN_AGE } from '../../utils/age'
 import { SHIPPING_FEE, SHIPPING_THRESHOLD } from '../../utils/shipping'
 import { EFT_AVAILABLE } from '../../utils/bankDetails'
@@ -30,8 +30,9 @@ export default function Terms() {
           framework of the Cannabis for Private Purposes Act. Our products and services are
           strictly for adults aged <span className="text-white font-semibold">{MIN_AGE} years or older</span>.
           By using this site, placing an order, or applying for membership you confirm that you are
-          at least {MIN_AGE} years old. We verify age on membership applications and on delivery, and we
-          refuse sale or delivery where age cannot be verified.
+          at least {MIN_AGE} years old. We verify age on membership applications and{' '}
+          {IS_COLLECT ? 'at collection' : 'on delivery'}, and we refuse sale{' '}
+          {IS_COLLECT ? 'or hand-over' : 'or delivery'} where age cannot be verified.
         </p>
         <p>
           Certain products are available to club members only, in line with our private-club
@@ -52,14 +53,14 @@ export default function Terms() {
         <p>
           Placing an order on this site is an offer to purchase. Your order is accepted when the
           store confirms it — until then we may decline or cancel an order, for example where an
-          item is out of stock, a price was displayed in error, we cannot verify your age, or the
-          delivery address falls outside our delivery area. If we cancel an order you have already
+          item is out of stock, a price was displayed in error, we cannot verify your age
+          {IS_COLLECT ? '' : ', or the delivery address falls outside our delivery area'}. If we cancel an order you have already
           paid for, you will be refunded in full.
         </p>
         <p>
-          Payment is currently <span className="text-white">cash or card on delivery</span>
+          Payment is currently <span className="text-white">{IS_COLLECT ? 'cash or card when you collect' : 'cash or card on delivery'}</span>
           {EFT_AVAILABLE ? <>, or <span className="text-white">EFT</span> (bank transfer)</> : null} — no payment is taken online. The
-          total shown at checkout (including any delivery fee) is what you pay.
+          total shown at checkout{IS_COLLECT ? '' : ' (including any delivery fee)'} is what you pay.
         </p>
       </LegalSection>
 
@@ -90,6 +91,18 @@ export default function Terms() {
         </p>
       </LegalSection>
 
+      {IS_COLLECT ? (
+      <LegalSection title="6. Collection">
+        <p>
+          We do not deliver. Orders are collected from the club at {contact.street}, {contact.suburb},{' '}
+          {contact.city}, and we email you when your order is ready. The person collecting must be{' '}
+          {MIN_AGE} or older and may be asked to show ID. Full details are in our{' '}
+          <Link to="/delivery-returns" className="text-gold hover:text-gold-light transition-colors">
+            Collection &amp; Returns policy
+          </Link>.
+        </p>
+      </LegalSection>
+      ) : (
       <LegalSection title="6. Delivery">
         <p>
           Orders are typically delivered within <span className="text-white">2–5 business days</span>.
@@ -102,6 +115,7 @@ export default function Terms() {
           </Link>.
         </p>
       </LegalSection>
+      )}
 
       <LegalSection title="7. Returns and cooling-off">
         <p>
@@ -109,7 +123,7 @@ export default function Terms() {
           Transactions Act, your rights in respect of defective goods under the Consumer
           Protection Act, and the applicable exclusions are set out in our{' '}
           <Link to="/delivery-returns" className="text-gold hover:text-gold-light transition-colors">
-            Delivery &amp; Returns policy
+            {IS_COLLECT ? 'Collection' : 'Delivery'} &amp; Returns policy
           </Link>, which forms part of these terms.
         </p>
       </LegalSection>
