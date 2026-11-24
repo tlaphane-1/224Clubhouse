@@ -14,6 +14,10 @@
 >
 > **Updated 2026-11-23:** PRs #37–#40, all live since 2026-11-12: drivers get a sign-in email,
 > customers can share their location at checkout, and Admin → Drivers always shows the map (§7d).
+>
+> **Updated 2026-11-24:** Explosive 420 asked to stop delivering ("too risky"). Branch
+> `feat/e420-collect-only` makes it a **collect-only** store (order online, collect at the club):
+> no address, no fee, no drivers. **Not deployed** — see §7e for the rollout checklist.
 
 ---
 
@@ -241,6 +245,32 @@ Owner phone order `224-849A99` stored with `tenant = 224clubhouse`. Pre-push sch
   out-for-delivery and delivered emails, sign-up confirmation, cart reminder and the 07:00 daily
   summary (10 and 11 Nov). Still unverified: a 224 order since the 2026-11-09 email changes (last
   one 2026-11-03) and the membership application on live E420.
+
+## 7e. Explosive 420 collect-only (branch `feat/e420-collect-only`, NOT deployed)
+
+Owner feedback 2026-11-24: stop deliveries because of risk. Spec
+`docs/superpowers/specs/2026-11-24-collect-only-fulfilment-design.md`, plan
+`docs/superpowers/plans/2026-11-24-collect-only-fulfilment.md`.
+
+- Per-store switch: `delivery.mode` in `tenant.json` and `tenants.fulfilment` (migration
+  `20261124120000_collect_fulfilment.sql`); `fulfilmentDrift.unit.test.js` fails if they disagree.
+- Collect stores: `place_cod_order` charges no fee and stores `shipping_address = {}`;
+  `set_order_pin` refuses; `is_driver()` is false, so all driver RPCs and policies are off.
+- Statuses are relabelled, not changed: `out_for_delivery` shows as "Ready for Collection",
+  `delivered` as "Collected". E420 driver accounts are left in place but cannot act.
+
+**Rollout checklist (owner present):**
+1. List E420 orders still `confirmed` / `preparing` / `out_for_delivery`; the club finishes or
+   contacts those customers before the switch.
+2. Account checks (CLAUDE.md), then deploy the migration **and both store builds together**, plus
+   the `send-order-email` and `send-status-email` functions.
+3. Same session: Admin → Memberships, edit each E420 tier's perks — replace free delivery with
+   "Free rolling paper when you stay at the lounge".
+4. Bump E420 `legal.lastUpdated` if deploying after 24 November 2026; owner to read the new
+   Collection & Returns, Terms §6 and Privacy wording.
+5. Firebase preview channel for E420: check checkout on a phone (390 px — not yet checked), then
+   one real order end to end (placed → ready-for-collection email → collected).
+6. Then update the E420 handover pack (drivers no longer used).
 
 ## 8. Resolved
 
