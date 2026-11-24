@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  statusCopyFor, paymentLabelFor, amountDueLabel, DELIVERY_STATUS_COPY,
+  statusCopyFor, paymentLabelFor, amountDueLabel, DELIVERY_STATUS_COPY, cartReminderLine,
 } from '../../supabase/functions/_shared/fulfilmentCopy.ts'
 
 describe('statusCopyFor', () => {
@@ -47,5 +47,18 @@ describe('payment wording', () => {
     expect(paymentLabelFor('delivery', 'cash_on_delivery')).toBe('Cash on delivery')
     expect(paymentLabelFor('delivery', 'card')).toBe('Card on delivery')
     expect(amountDueLabel('delivery', 'card_on_delivery')).toBe('Amount due on delivery')
+  })
+})
+
+describe('cartReminderLine', () => {
+  it('delivery: unchanged free-delivery wording', () => {
+    expect(cartReminderLine('delivery', 'R500', false)).toBe('delivery is free on orders of R500 or more.')
+    expect(cartReminderLine('delivery', 'R500', true)).toBe('delivery is free for members and on orders of R500 or more.')
+  })
+
+  it('collect: promises collection, never delivery', () => {
+    const line = cartReminderLine('collect', 'R500', true)
+    expect(line).toMatch(/collect/i)
+    expect(line).not.toMatch(/deliver/i)
   })
 })

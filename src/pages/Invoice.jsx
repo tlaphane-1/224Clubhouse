@@ -7,6 +7,7 @@ import { formatZAR } from '../utils/formatCurrency'
 import { statusLabel, paymentLabel } from '../utils/orderStatus'
 import { BANK_DETAILS } from '../utils/bankDetails'
 import { tenant, pageTitle, IS_COLLECT } from '../tenant'
+import { showFeeLine } from '../utils/fulfilmentView'
 import { MIN_AGE } from '../utils/age'
 
 // Seller details printed on every invoice. Same facts as Contact.jsx / Footer.jsx
@@ -254,7 +255,7 @@ function InvoiceSheet({ order }) {
             <dd className="tabular-nums">−{formatZAR(discount_cents)}</dd>
           </div>
         )}
-        {!IS_COLLECT && (
+        {showFeeLine(order, IS_COLLECT) && (
         <div className="flex justify-between gap-4">
           <dt className="text-neutral-600">Delivery</dt>
           <dd className="tabular-nums">{shipping_fee === 0 ? 'Free' : formatZAR(shipping_fee)}</dd>

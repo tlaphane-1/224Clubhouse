@@ -12,7 +12,7 @@ import { STATUS_STEPS, statusLabel, paymentLabel } from '../utils/orderStatus'
 import EftPaymentPanel from '../components/checkout/EftPaymentPanel'
 import DeliveryTracker from '../components/delivery/DeliveryTracker'
 import CollectFromCard from '../components/checkout/CollectFromCard'
-import { showCollectFrom } from '../utils/fulfilmentView'
+import { showCollectFrom, showFeeLine } from '../utils/fulfilmentView'
 import { IS_COLLECT } from '../tenant'
 import { pageTitle } from '../tenant'
 
@@ -304,7 +304,7 @@ function OrderDetailBody({ order }) {
               <span className="text-gold font-medium">−{formatZAR(discount_cents)}</span>
             </div>
           )}
-          {!IS_COLLECT && (
+          {showFeeLine(order, IS_COLLECT) && (
           <div className="flex justify-between">
             <span className="text-muted">Shipping</span>
             <span className={shipping_fee === 0 ? 'text-green-400' : 'text-white'}>

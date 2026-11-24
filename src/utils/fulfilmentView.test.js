@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { showCollectFrom } from './fulfilmentView'
+import { showCollectFrom, showFeeLine } from './fulfilmentView'
 
 describe('showCollectFrom', () => {
   it('collect: an open order shows where to collect, even an old one with an address', () => {
@@ -14,5 +14,19 @@ describe('showCollectFrom', () => {
 
   it('delivery store: never', () => {
     expect(showCollectFrom({ status: 'preparing' }, false)).toBe(false)
+  })
+})
+
+describe('showFeeLine', () => {
+  it('collect: hidden for collection orders (fee 0)', () => {
+    expect(showFeeLine({ shipping_fee: 0 }, true)).toBe(false)
+  })
+
+  it('collect: shown on an old order that was charged delivery, so the total adds up', () => {
+    expect(showFeeLine({ shipping_fee: 3000 }, true)).toBe(true)
+  })
+
+  it('delivery store: always shown (free shows as FREE)', () => {
+    expect(showFeeLine({ shipping_fee: 0 }, false)).toBe(true)
   })
 })

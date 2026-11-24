@@ -262,8 +262,11 @@ Owner feedback 2026-11-24: stop deliveries because of risk. Spec
 **Rollout checklist (owner present):**
 1. List E420 orders still `confirmed` / `preparing` / `out_for_delivery`; the club finishes or
    contacts those customers before the switch.
-2. Account checks (CLAUDE.md), then deploy the migration **and both store builds together**, plus
-   the `send-order-email` and `send-status-email` functions.
+2. Account checks (CLAUDE.md), then deploy in this order, back to back: **the migration first**,
+   then the edge functions (`send-order-email`, `send-status-email`, `send-cart-reminders`), then
+   both store builds. Never the E420 site before the migration: the new checkout shows no fee
+   while the old `place_cod_order` would still charge R30 under R500. Migration first is harmless
+   (the old site shows R30, the server charges 0).
 3. Same session: Admin → Memberships, edit each E420 tier's perks — replace free delivery with
    "Free rolling paper when you stay at the lounge".
 4. Bump E420 `legal.lastUpdated` if deploying after 24 November 2026; owner to read the new

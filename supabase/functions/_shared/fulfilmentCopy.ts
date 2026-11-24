@@ -80,3 +80,12 @@ export function amountDueLabel(mode: Fulfilment, method?: string): string {
   if (method === 'eft') return 'Amount due by EFT'
   return mode === 'collect' ? 'Amount due on collection' : 'Amount due on delivery'
 }
+
+// The closing clause of the abandoned-cart reminder ("Pick up where you left
+// off — …"). `from` is the store's free-delivery threshold, already formatted.
+export function cartReminderLine(mode: Fulfilment, from: string, memberFreeDelivery: boolean): string {
+  if (mode === 'collect') return 'order online and collect it at the club.'
+  return memberFreeDelivery
+    ? `delivery is free for members and on orders of ${from} or more.`
+    : `delivery is free on orders of ${from} or more.`
+}

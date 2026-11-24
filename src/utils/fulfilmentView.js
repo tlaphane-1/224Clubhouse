@@ -5,3 +5,10 @@
 export function showCollectFrom(order, collect) {
   return Boolean(collect) && !['delivered', 'cancelled'].includes(order?.status)
 }
+
+// Whether an order's delivery-fee line is shown. Collect orders have no fee,
+// so the line is hidden; but an order placed before the store switched to
+// collection may have been charged one, and its total must still add up.
+export function showFeeLine(order, collect) {
+  return !collect || (order?.shipping_fee ?? 0) > 0
+}

@@ -15,7 +15,7 @@ import {
 import EftDetails from '../components/checkout/EftDetails'
 import DeliveryTracker from '../components/delivery/DeliveryTracker'
 import CollectFromCard from '../components/checkout/CollectFromCard'
-import { showCollectFrom } from '../utils/fulfilmentView'
+import { showCollectFrom, showFeeLine } from '../utils/fulfilmentView'
 import { tenant, pageTitle, IS_COLLECT } from '../tenant'
 
 export default function TrackOrder() {
@@ -371,7 +371,7 @@ function OrderTracking({ order, email }) {
               <span className="text-gold font-medium">−{formatZAR(discount_cents)}</span>
             </div>
           )}
-          {!IS_COLLECT && (
+          {showFeeLine(order, IS_COLLECT) && (
           <div className="flex justify-between">
             <span className="text-muted">Shipping</span>
             <span className={shipping_fee === 0 ? 'text-green-400' : 'text-white'}>
