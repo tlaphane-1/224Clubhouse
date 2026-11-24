@@ -281,7 +281,7 @@ create policy shift_selfies_admin_delete on storage.objects
 -- start) are removed after a day. Storage forbids deleting rows from
 -- storage.objects directly, so this only LISTS them; the purge-shift-selfies
 -- Edge Function (service role, daily cron below) removes them through the
--- Storage API. Every store at once: it is a housekeeping job, not a user call.
+-- Storage API, calling once per store with that store's x-tenant.
 create or replace function public.shift_selfies_to_purge(
   p_orphan_after interval default interval '1 day',
   p_keep interval default interval '90 days'
@@ -295,10 +295,12 @@ as $$
   select o.name
     from storage.objects o
    where o.bucket_id = 'shift-selfies'
+     and split_part(o.name, '/', 1) = public.current_tenant()
      and (
        o.created_at < now() - p_keep
        or (o.created_at < now() - p_orphan_after
-           and not exists (select 1 from shifts s where s.selfie_path = o.name))
+           and not exists (select 1 from shifts s
+                            where s.selfie_path = o.name and s.tenant = public.current_tenant()))
      )
    order by o.created_at
    limit 1000;

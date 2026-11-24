@@ -12,9 +12,10 @@
  *   npm run test:local -- src/__tests__/staffShifts.contract.test.js
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { createClient } from '@supabase/supabase-js'
 import {
   serviceClient, probeMigration, describeGate, mustSucceed, ensureTestTenant, TEST_TENANT,
-  createTenantUser, signInClient, deleteTestUsers, TEST_PASSWORD,
+  createTenantUser, signInClient, deleteTestUsers, TEST_PASSWORD, URL, SERVICE, liveClientOptions,
 } from './helpers/liveFixtures.js'
 
 const gate = await probeMigration({
@@ -212,11 +213,18 @@ describe.skipIf(SKIP)('Staff shifts contract', () => {
     const denied = await c.boss.rpc('shift_selfies_to_purge', { p_orphan_after: '0 seconds', p_keep: '90 days' })
     expect(denied.error).not.toBeNull()
 
-    const { data, error } = await admin.rpc('shift_selfies_to_purge', { p_orphan_after: '0 seconds', p_keep: '90 days' })
+    const asStore = createClient(URL, SERVICE, {
+      ...liveClientOptions,
+      global: { ...liveClientOptions.global, headers: { 'x-tenant': TEST_TENANT } },
+    })
+    const { data, error } = await asStore.rpc('shift_selfies_to_purge', { p_orphan_after: '0 seconds', p_keep: '90 days' })
     expect(error).toBeNull()
     const names = (data ?? []).map(r => r.name ?? r)
     expect(names).toContain(orphan)
     expect(names).not.toContain(used.path)
+    // Another store's listing never includes this store's files.
+    const { data: other } = await admin.rpc('shift_selfies_to_purge', { p_orphan_after: '0 seconds', p_keep: '90 days' })
+    expect((other ?? []).map(r => r.name ?? r)).not.toContain(orphan)
     await c.cashier.rpc('end_shift')
   })
 })
