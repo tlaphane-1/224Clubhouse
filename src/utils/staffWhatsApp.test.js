@@ -67,3 +67,27 @@ describe('messages', () => {
     expect(dailySummaryMessage({ ...base, low_stock: [{ name: 'Gelato', left: 0 }] })).toContain('• Gelato: SOLD OUT')
   })
 })
+
+describe('messages in a collect store', () => {
+  it('order message says collection, shows no address and never mentions delivery', () => {
+    const m = orderMessage(order, 'collect')
+    expect(m).toContain('*Order 224-ABC123*')
+    expect(m).toContain('Collection at the club')
+    expect(m).not.toContain('12 Main Rd')
+    expect(m).not.toMatch(/deliver/i)
+    expect(m).toContain('Cash on Collection')
+  })
+
+  it('unpaid EFT tells staff not to hand the order over', () => {
+    const m = orderMessage({ ...order, payment_method: 'eft', paid_at: null }, 'collect')
+    expect(m).toContain('EFT NOT paid yet — do not hand over')
+    expect(m).not.toMatch(/deliver/i)
+  })
+
+  it('daily summary counts collected orders', () => {
+    const base = { day: '2026-10-08', visitors: 3, page_views: 9, new_accounts: 1, orders: 2, booked_cents: 20000, delivered: 1, delivered_cents: 6000, eft_proof: 0, eft_awaiting: 1, reviews_pending: 0, memberships_pending: 2, low_stock: [] }
+    const m = dailySummaryMessage(base, 'collect')
+    expect(m).toContain('1 collected')
+    expect(m).not.toMatch(/deliver/i)
+  })
+})

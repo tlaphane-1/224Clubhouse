@@ -10,8 +10,8 @@
 import { buildWhatsAppLink } from './whatsappOrder'
 import { formatZAR } from './formatCurrency'
 import { lineName } from './variants'
-import { paymentLabel } from './orderStatus'
-import { tenant } from '../tenant'
+import { labelsFor } from './orderStatus'
+import { tenant, FULFILMENT } from '../tenant'
 
 const SITE = tenant.domain.siteUrl
 
@@ -36,25 +36,30 @@ function addressLine(a = {}) {
 
 const mapsLink = (a) => `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addressLine(a))}`
 
-function collectLine(order) {
+// `mode` is the store's fulfilment ('delivery' | 'collect'); in a collect store
+// the customer collects at the club, so there is no address and no driver.
+const payment = (method, mode) => labelsFor(mode).payment[method] ?? method
+
+function collectLine(order, mode = FULFILMENT) {
   if (order.payment_method === 'eft') {
-    return order.paid_at ? 'Paid by EFT — collect nothing' : 'EFT NOT paid yet — do not deliver'
+    if (order.paid_at) return 'Paid by EFT — collect nothing'
+    return mode === 'collect' ? 'EFT NOT paid yet — do not hand over' : 'EFT NOT paid yet — do not deliver'
   }
-  return `Collect *${formatZAR(order.total)}* (${paymentLabel(order.payment_method)})`
+  return `Collect *${formatZAR(order.total)}* (${payment(order.payment_method, mode)})`
 }
 
 const itemsBlock = (items = []) => items.map(i => `• ${i.quantity}× ${lineName(i)}`).join('\n')
 
 /** New / open order, for the staff group. */
-export function orderMessage(order) {
+export function orderMessage(order, mode = FULFILMENT) {
   return [
-    `🛒 *Order ${order.order_number}* — ${formatZAR(order.total)} (${paymentLabel(order.payment_method)})`,
+    `🛒 *Order ${order.order_number}* — ${formatZAR(order.total)} (${payment(order.payment_method, mode)})`,
     `${order.customer_name} · ${order.customer_phone ?? ''}`,
-    addressLine(order.shipping_address),
+    mode === 'collect' ? '🏪 Collection at the club' : addressLine(order.shipping_address),
     '',
     itemsBlock(order.items),
     '',
-    collectLine(order),
+    collectLine(order, mode),
     `${SITE}/admin/orders`,
   ].join('\n')
 }
@@ -96,11 +101,12 @@ export function deliveryUpdateMessage(order, driverName) {
 }
 
 /** Today-so-far summary for the staff group (from admin_daily_summary). */
-export function dailySummaryMessage(s) {
+export function dailySummaryMessage(s, mode = FULFILMENT) {
+  const done = mode === 'collect' ? 'collected' : 'delivered'
   const lines = [
     `☀️ *${tenant.shortName} summary — ${s.day}*`,
     `👀 ${s.visitors} visitors · ${s.page_views} page views · ${s.new_accounts} new accounts`,
-    `🛒 ${s.orders} orders · ${formatZAR(s.booked_cents)} booked · ${s.delivered} delivered (${formatZAR(s.delivered_cents)})`,
+    `🛒 ${s.orders} orders · ${formatZAR(s.booked_cents)} booked · ${s.delivered} ${done} (${formatZAR(s.delivered_cents)})`,
     '',
     '*Waiting*',
     `🧾 EFT: ${s.eft_proof} proof${s.eft_proof === 1 ? '' : 's'} to check, ${s.eft_awaiting} awaiting payment`,

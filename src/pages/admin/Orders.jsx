@@ -13,7 +13,7 @@ import OrderWhatsAppActions from '../../components/admin/OrderWhatsAppActions'
 import { useDrivers } from '../../hooks/useDelivery'
 import OrderLocation from '../../components/admin/OrderLocation'
 import toast from 'react-hot-toast'
-import { adminTitle } from '../../tenant'
+import { adminTitle, IS_COLLECT } from '../../tenant'
 
 export default function Orders() {
   const { data: orders, isLoading, isError, refetch } = useOrders()
@@ -217,6 +217,10 @@ export default function Orders() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-5">
                       <div>
                         <h4 className="text-gold text-xs uppercase tracking-widest mb-3">Shipping Address</h4>
+                        {/* Collect stores: no address, no location pin. */}
+                        {IS_COLLECT ? (
+                          <p className="text-white text-sm">Collection at the club</p>
+                        ) : (<>
                         <address className="text-white text-sm not-italic leading-relaxed">
                           {order.shipping_address?.street}<br />
                           {order.shipping_address?.apartment && <>{order.shipping_address.apartment}<br /></>}
@@ -224,6 +228,7 @@ export default function Orders() {
                           {order.shipping_address?.postalCode}
                         </address>
                         <OrderLocation order={order} />
+                        </>)}
                         <div className="mt-3 space-y-1 text-sm">
                           <p className="text-muted">Order #: <span className="text-white">{order.order_number || order.id.slice(0, 8)}</span></p>
                           <p className="text-muted">Payment: <span className="text-white">{paymentLabel(order.payment_method)}</span></p>
@@ -255,7 +260,7 @@ export default function Orders() {
                       </div>
                     </div>
                     <EftAdminPanel order={order} />
-                    <DriverAssign order={order} drivers={drivers} />
+                    {!IS_COLLECT && <DriverAssign order={order} drivers={drivers} />}
                     <OrderWhatsAppActions order={order} drivers={drivers} />
                   </div>
                 )}

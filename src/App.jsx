@@ -12,6 +12,7 @@ import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotFound from './pages/NotFound'
+import { IS_COLLECT } from './tenant'
 
 // Pages are lazy-loaded: each becomes its own chunk fetched on demand, so the
 // storefront's initial bundle no longer ships the admin panel, checkout,
@@ -149,11 +150,12 @@ export default function App() {
                 <Route path="/admin/discounts" element={<ProtectedRoute><AdminDiscounts /></ProtectedRoute>} />
                 <Route path="/admin/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
                 <Route path="/admin/analytics" element={<ProtectedRoute><AdminAnalytics /></ProtectedRoute>} />
-                <Route path="/admin/drivers" element={<ProtectedRoute><AdminDrivers /></ProtectedRoute>} />
+                {/* Collect stores have no drivers: no driver admin, no driver portal. */}
+                {!IS_COLLECT && <Route path="/admin/drivers" element={<ProtectedRoute><AdminDrivers /></ProtectedRoute>} />}
                 <Route path="/admin/alerts" element={<ProtectedRoute><AdminAlerts /></ProtectedRoute>} />
 
                 {/* Driver portal: its own phone-first layout; the page handles sign-in and access. */}
-                <Route path="/driver" element={<DriverPortal />} />
+                {!IS_COLLECT && <Route path="/driver" element={<DriverPortal />} />}
                 <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
 
                 {/* Fallback */}
