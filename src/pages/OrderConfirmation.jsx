@@ -6,7 +6,8 @@ import { formatZAR } from '../utils/formatCurrency'
 import { paymentLabel } from '../utils/orderStatus'
 import { getLastOrder } from '../utils/recentOrders'
 import EftDetails from '../components/checkout/EftDetails'
-import { pageTitle } from '../tenant'
+import { pageTitle, IS_COLLECT } from '../tenant'
+import CollectFromCard from '../components/checkout/CollectFromCard'
 
 export default function OrderConfirmation() {
   const { state } = useLocation()
@@ -119,12 +120,14 @@ export default function OrderConfirmation() {
                 <span className="text-gold font-medium">−{formatZAR(order.discount_cents)}</span>
               </div>
             )}
+            {!IS_COLLECT && (
             <div className="flex justify-between">
               <span className="text-muted">Shipping</span>
               <span className={order.shipping_fee === 0 ? 'text-green-400' : 'text-white'}>
                 {order.shipping_fee === 0 ? 'FREE' : formatZAR(order.shipping_fee)}
               </span>
             </div>
+            )}
             <div className="flex justify-between pt-3 border-t border-border">
               <span className="text-white font-semibold">Total</span>
               <span className="text-gold font-bold text-lg">{formatZAR(order.total)}</span>
@@ -135,7 +138,7 @@ export default function OrderConfirmation() {
           {paymentMethod === 'eft' ? (
             <div className="p-6 border-b border-border">
               <EftDetails reference={customer.name?.trim() || 'your name and surname'} amountLabel={formatZAR(order.total)} />
-              <p className="text-muted text-xs mt-3">We dispatch your order once the payment reflects.</p>
+              <p className="text-muted text-xs mt-3">{IS_COLLECT ? 'Your order is ready to collect once the payment reflects.' : 'We dispatch your order once the payment reflects.'}</p>
               {order.id && (
                 <Link
                   to={`/orders/${order.id}`}
@@ -150,14 +153,20 @@ export default function OrderConfirmation() {
               <Package size={20} className="text-gold flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-white text-sm font-medium">
-                  Pay {formatZAR(order.total)} by {paymentLabel(paymentMethod)} when your order is delivered.
+                  Pay {formatZAR(order.total)} by {paymentLabel(paymentMethod)} {IS_COLLECT ? 'when you collect your order' : 'when your order is delivered'}.
                 </p>
                 <p className="text-muted text-xs mt-1">No payment needed now.</p>
               </div>
             </div>
           )}
 
-          {/* Estimated delivery */}
+          {/* Collect stores: where and when to collect, and that we'll email when it's ready. */}
+          {IS_COLLECT ? (
+            <div className="p-6">
+              <CollectFromCard />
+              <p className="text-muted text-xs mt-3">We&apos;ll email you when your order is ready for collection.</p>
+            </div>
+          ) : (
           <div className="p-6 flex items-center gap-3">
             <Truck size={20} className="text-gold flex-shrink-0" />
             <div>
@@ -167,6 +176,7 @@ export default function OrderConfirmation() {
               </p>
             </div>
           </div>
+          )}
         </div>
 
         {/* CTAs */}
