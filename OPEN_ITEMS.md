@@ -306,6 +306,10 @@ tapping, cash/card, tick the ID check. Saved as `orders.channel = 'counter'`, al
 paid; stock drops. Admin → Orders marks them "In store"; Reports shows online vs in-store.
 - **Not checked on screen yet** (browser tool could not load the local site): check a full sale on
   the E420 preview on the tablet before go-live, including camera scanning.
+- Small leftovers from review (not fixed): changing a walk-in counter sale's status tries to email a
+  blank address; cart stock limits don't refresh until the cart is cleared; two sales locking the
+  same products in opposite order can show a raw "deadlock" error (also true online); `served_by`
+  (a staff id) is visible to the customer on their own order row.
 - `npm audit` lists 8 older vulnerabilities in Firebase / React Router dependencies (not from the
   new QR libraries) — worth a separate update pass.
 
