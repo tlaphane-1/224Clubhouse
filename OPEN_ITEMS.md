@@ -304,6 +304,16 @@ tablet into a menu: browse; scan the club card to see their orders, "order again
 the counter, and rate products they've had (ratings wait for approval in Admin → Reviews). Table
 orders show at the top of the counter's Sale tab ("Load" fills the sale; they disappear after 30
 minutes). Leaving table mode needs the staff password. Not yet checked on a screen.
+- **Must before go-live: lock the tablet to the browser** — Android "screen pinning" (Settings →
+  Security → App pinning) or iPad "Guided Access" (Settings → Accessibility). The table lock is only
+  on screen; the tablet still holds the cashier's staff login, so someone with the address bar or
+  developer tools could use counter functions (search customers, record sales). A dedicated
+  low-rights "table account" would remove this — not built yet.
+- The tablet must be signed in with a **staff** account, never the owner's admin account (table mode
+  refuses admin accounts; admin pages also ask for the password while the tablet is in table mode).
+- Club card codes don't expire; customers are told to keep them private and can make a new one.
+- Small leftovers: the "rate what you've had" list isn't capped at 20; a table order whose option was
+  deleted loads as the base product; repeated wrong unlock passwords can hit the sign-in rate limit.
 
 **Part 2b, stock-take + live dashboard (same branch, NOT deployed):** migration
 `20261125130000_stocktake_today.sql`. Counter → Stock: scan or pick a product, type the counted

@@ -9,7 +9,8 @@ import { StarPicker } from '../../components/store/StarRating'
 import { useProducts } from '../../hooks/useProducts'
 import { useTableIdentify, useSubmitTableRequest, useSubmitTableReview } from '../../hooks/useTable'
 import { counterCartReducer, cartTotal, toSaleItems, productLine, pickerOptions, memberBadge } from '../../utils/counter'
-import { parseMemberCode, IDLE_MS } from '../../utils/table'
+import { parseMemberCode, idleMsFor, SENT_RESET_MS, canUseTableMode } from '../../utils/table'
+import { useAuth } from '../../context/useAuth'
 import { lockTable } from '../../utils/tableLock'
 import { formatZAR } from '../../utils/formatCurrency'
 import { lineName } from '../../utils/variants'
@@ -52,6 +53,8 @@ function RateCard({ item, token, onDone }) {
 
 export default function TableMode() {
   const navigate = useNavigate()
+  const { isAdmin } = useAuth()
+  const allowed = canUseTableMode({ isAdmin })
   const { data: products, isLoading, isError, refetch } = useProducts()
   const identify = useTableIdentify()
   const submit = useSubmitTableRequest()
@@ -66,8 +69,9 @@ export default function TableMode() {
 
   useEffect(() => {
     document.title = pageTitle('Menu')
-    lockTable()
-  }, [])
+    // Never lock an admin login into table mode: /admin would stay reachable.
+    if (allowed) lockTable()
+  }, [allowed])
 
   const reset = useCallback(() => {
     setGuest(null)
@@ -77,11 +81,13 @@ export default function TableMode() {
     setRated([])
   }, [])
 
-  // Back to the plain menu after 3 minutes without a touch.
+  // Back to the plain menu after a while without a touch: 1 minute while a
+  // customer is shown (the next person may sit down), 3 minutes otherwise.
+  const idleMs = idleMsFor(guest)
   useEffect(() => {
     const arm = () => {
       clearTimeout(idleRef.current)
-      idleRef.current = setTimeout(reset, IDLE_MS)
+      idleRef.current = setTimeout(reset, idleMs)
     }
     arm()
     window.addEventListener('pointerdown', arm)
@@ -91,7 +97,14 @@ export default function TableMode() {
       window.removeEventListener('pointerdown', arm)
       window.removeEventListener('keydown', arm)
     }
-  }, [reset])
+  }, [reset, idleMs])
+
+  // After an order is sent, show the confirmation briefly, then clear the customer.
+  useEffect(() => {
+    if (!sent) return undefined
+    const id = setTimeout(reset, SENT_RESET_MS)
+    return () => clearTimeout(id)
+  }, [sent, reset])
 
   const categories = useMemo(() => ['all', ...new Set((products ?? []).map(p => p.category))], [products])
   const shown = (products ?? []).filter(p => category === 'all' || p.category === category)
@@ -147,6 +160,20 @@ export default function TableMode() {
     } catch (err) {
       toast.error(err.message || 'Could not send your order')
     }
+  }
+
+  if (!allowed) {
+    return (
+      <div className="min-h-screen bg-background px-4 py-10">
+        <div className="max-w-md mx-auto bg-surface border border-border rounded-2xl p-6 text-center space-y-4">
+          <h1 className="font-heading text-xl text-white">Use a staff account</h1>
+          <p className="text-muted text-sm">
+            Table mode puts the tablet in customers&apos; hands. Sign in with a staff account, not an admin account.
+          </p>
+          <button type="button" onClick={() => navigate('/counter')} className="btn-gold min-h-11 px-6">Back to the counter</button>
+        </div>
+      </div>
+    )
   }
 
   if (exiting) {

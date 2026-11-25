@@ -37,7 +37,8 @@ export default function MemberCard() {
   return (
     <div className="bg-surface border border-border rounded-2xl p-6">
       <h2 className="text-white font-semibold text-sm uppercase tracking-widest mb-2">Club card</h2>
-      <p className="text-muted text-xs mb-5">Show this at the counter, or scan it on the table tablet to see your orders and order again.</p>
+      <p className="text-muted text-xs mb-2">Show this at the counter, or scan it on the table tablet to see your orders and order again.</p>
+      <p className="text-muted text-xs mb-5">Keep it to yourself: anyone with this code can see your orders at the club. If you shared it by mistake, tap New code.</p>
       {isLoading ? (
         <div className="w-48 h-48 mx-auto skeleton rounded-xl" aria-busy="true" />
       ) : isError ? (

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { memberCardUrl, parseMemberCode, requestToLines, firstName, IDLE_MS } from './table'
+import { memberCardUrl, parseMemberCode, requestToLines, firstName, IDLE_MS, idleMsFor, SENT_RESET_MS, canUseTableMode } from './table'
 
 const HOSTS = ['explosive420.co.za', 'www.explosive420.co.za']
 const T = '3f2b1c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d'
@@ -49,5 +49,19 @@ describe('firstName', () => {
 describe('IDLE_MS', () => {
   it('is 3 minutes', () => {
     expect(IDLE_MS).toBe(180000)
+  })
+})
+
+describe('table mode timing and access', () => {
+  it('clears a shown customer after 1 minute untouched; the plain menu after 3', () => {
+    expect(idleMsFor({ first_name: 'Thabo' })).toBe(60000)
+    expect(idleMsFor(null)).toBe(IDLE_MS)
+  })
+  it('clears the customer 8 seconds after their order is sent', () => {
+    expect(SENT_RESET_MS).toBe(8000)
+  })
+  it('table mode is for staff accounts, never an admin account', () => {
+    expect(canUseTableMode({ isAdmin: true })).toBe(false)
+    expect(canUseTableMode({ isAdmin: false })).toBe(true)
   })
 })

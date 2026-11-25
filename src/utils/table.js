@@ -49,3 +49,16 @@ export function requestToLines(items) {
 export function firstName(full) {
   return String(full ?? '').trim().split(/\s+/)[0] || 'there'
 }
+
+/** While a customer is shown, clear them after 1 minute untouched (the next person may sit down). */
+export function idleMsFor(guest) {
+  return guest ? 60 * 1000 : IDLE_MS
+}
+
+/** After "Send order", the confirmation shows briefly, then the customer is cleared. */
+export const SENT_RESET_MS = 8000
+
+/** The tablet must be on a staff account in table mode: an admin login would open /admin. */
+export function canUseTableMode({ isAdmin }) {
+  return !isAdmin
+}

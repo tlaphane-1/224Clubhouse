@@ -14,6 +14,8 @@ import ErrorBoundary from './components/ErrorBoundary'
 import NotFound from './pages/NotFound'
 import { IS_COLLECT, IN_STORE } from './tenant'
 import StaffRoute from './components/counter/StaffRoute'
+import StaffUnlock from './components/counter/StaffUnlock'
+import { isTableLocked } from './utils/tableLock'
 
 // Pages are lazy-loaded: each becomes its own chunk fetched on demand, so the
 // storefront's initial bundle no longer ships the admin panel, checkout,
@@ -92,6 +94,15 @@ function ProtectedRoute({ children }) {
 
   if (!user || !isAdmin) {
     return <Navigate to="/admin/login" replace />
+  }
+
+  // The tablet is in table mode (customers use it): admin pages need the password.
+  if (isTableLocked()) {
+    return (
+      <div className="min-h-screen bg-background px-4 py-10">
+        <StaffUnlock onUnlocked={() => window.location.reload()} />
+      </div>
+    )
   }
 
   return children
