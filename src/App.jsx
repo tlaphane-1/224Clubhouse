@@ -55,6 +55,7 @@ const AdminDrivers = lazy(() => import('./pages/admin/Drivers'))
 const AdminStaff = lazy(() => import('./pages/admin/Staff'))
 const AdminShifts = lazy(() => import('./pages/admin/Shifts'))
 const AdminLabels = lazy(() => import('./pages/admin/Labels'))
+const AdminStock = lazy(() => import('./pages/admin/Stock'))
 const AdminAlerts = lazy(() => import('./pages/admin/Alerts'))
 const DriverPortal = lazy(() => import('./pages/driver/DriverPortal'))
 const Counter = lazy(() => import('./pages/counter/Counter'))
@@ -161,6 +162,7 @@ export default function App() {
                 {IN_STORE && <Route path="/admin/staff" element={<ProtectedRoute><AdminStaff /></ProtectedRoute>} />}
                 {IN_STORE && <Route path="/admin/shifts" element={<ProtectedRoute><AdminShifts /></ProtectedRoute>} />}
                 {IN_STORE && <Route path="/admin/labels" element={<ProtectedRoute><AdminLabels /></ProtectedRoute>} />}
+                {IN_STORE && <Route path="/admin/stock" element={<ProtectedRoute><AdminStock /></ProtectedRoute>} />}
 
                 {/* Driver portal: its own phone-first layout; the page handles sign-in and access. */}
                 {!IS_COLLECT && <Route path="/driver" element={<DriverPortal />} />}

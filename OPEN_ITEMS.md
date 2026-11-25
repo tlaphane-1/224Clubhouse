@@ -297,7 +297,13 @@ Admins can end anyone's open shift in Admin → Shifts; disabling staff ends the
   Not yet seen running (the job calls production; first check after deploy).
 - Staff selfies are staff personal information: the owner should tell staff in writing why they are
   taken and how long they are kept (not covered by the customer privacy policy).
-- Next: part 2b (stock-take, live dashboard), part 3 (table menu, ordering, ratings, membership QR).
+- Next: part 3 (table menu, ordering, ratings, membership QR).
+
+**Part 2b, stock-take + live dashboard (same branch, NOT deployed):** migration
+`20261125130000_stocktake_today.sql`. Counter → Stock: scan or pick a product, type the counted
+number and a reason; every change is logged (Admin → Stock). Counter → Today and the admin
+Dashboard show today's sales (total, orders, in store vs online, top sellers, low stock), refreshed
+every 30 seconds. Not yet checked on a screen — include in the tablet test before go-live.
 
 **Part 2a, counter sales (same branch, NOT deployed):** migration `20261125120000_counter_sales.sql`.
 Staff on shift ring up sales at `/counter` → Sale: find the customer (name/phone/email) or walk-in,
