@@ -297,7 +297,13 @@ Admins can end anyone's open shift in Admin → Shifts; disabling staff ends the
   Not yet seen running (the job calls production; first check after deploy).
 - Staff selfies are staff personal information: the owner should tell staff in writing why they are
   taken and how long they are kept (not covered by the customer privacy policy).
-- Next: part 3 (table menu, ordering, ratings, membership QR).
+
+**Part 3, table menu (same branch, NOT deployed):** migration `20261125140000_table_menu.sql`.
+Customers get a club card QR on My Account (with "New code"). Counter → "Table mode" turns the
+tablet into a menu: browse; scan the club card to see their orders, "order again", send an order to
+the counter, and rate products they've had (ratings wait for approval in Admin → Reviews). Table
+orders show at the top of the counter's Sale tab ("Load" fills the sale; they disappear after 30
+minutes). Leaving table mode needs the staff password. Not yet checked on a screen.
 
 **Part 2b, stock-take + live dashboard (same branch, NOT deployed):** migration
 `20261125130000_stocktake_today.sql`. Counter → Stock: scan or pick a product, type the counted
