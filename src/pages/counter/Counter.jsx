@@ -5,15 +5,20 @@ import { useMyOpenShift } from '../../hooks/useShifts'
 import BrandLogo from '../../components/ui/BrandLogo'
 import ShiftPanel from '../../components/counter/ShiftPanel'
 import SalePanel from '../../components/counter/SalePanel'
+import StockPanel from '../../components/counter/StockPanel'
+import TodayPanel from '../../components/counter/TodayPanel'
 import { pageTitle } from '../../tenant'
 
 const TABS = [
   { id: 'sale', label: 'Sale' },
+  { id: 'stock', label: 'Stock' },
+  { id: 'today', label: 'Today' },
   { id: 'shift', label: 'Shift' },
 ]
 
 // /counter — the shared counter tablet (staff accounts only, see StaffRoute).
-// Sale: ring up in-store sales. Shift: selfie clock-in/out.
+// Sale: ring up in-store sales. Stock: stock-take. Today: live sales.
+// Shift: selfie clock-in/out.
 export default function Counter() {
   const { user, signOut } = useAuth()
   const shift = useMyOpenShift()
@@ -43,7 +48,7 @@ export default function Counter() {
           </button>
         </header>
 
-        <div role="tablist" aria-label="Counter" className="flex gap-2">
+        <div role="tablist" aria-label="Counter" className="flex flex-wrap gap-2">
           {TABS.map(t => (
             <button key={t.id} type="button" role="tab" aria-selected={active === t.id} onClick={() => setTab(t.id)}
               className={`focus-ring min-h-11 px-5 rounded-xl text-xs uppercase tracking-widest border ${
@@ -53,9 +58,10 @@ export default function Counter() {
           ))}
         </div>
 
-        {active === 'sale'
-          ? <SalePanel onShift={!!shift.data} onGoToShift={() => setTab('shift')} />
-          : <div className="max-w-lg"><ShiftPanel /></div>}
+        {active === 'sale' && <SalePanel onShift={!!shift.data} onGoToShift={() => setTab('shift')} />}
+        {active === 'stock' && <StockPanel onShift={!!shift.data} onGoToShift={() => setTab('shift')} />}
+        {active === 'today' && <TodayPanel />}
+        {active === 'shift' && <div className="max-w-lg"><ShiftPanel /></div>}
       </div>
     </div>
   )
