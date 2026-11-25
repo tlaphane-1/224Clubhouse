@@ -29,6 +29,8 @@ export default function SalePanel({ onShift, onGoToShift }) {
   const record = useRecordSale()
   const closeRequest = useCloseTableRequest()
   const [requestId, setRequestId] = useState(null)
+  // Bumped after each sale so the customer search starts empty for the next one.
+  const [saleCount, setSaleCount] = useState(0)
 
   const total = cartTotal(cart.lines)
   const blockers = saleBlockers({ customer, lines: cart.lines, method, idChecked, onShift })
@@ -68,6 +70,7 @@ export default function SalePanel({ onShift, onGoToShift }) {
   }
 
   const reset = () => {
+    setSaleCount(n => n + 1)
     setRequestId(null)
     setCustomer(null)
     dispatch({ type: 'clear' })
@@ -107,7 +110,7 @@ export default function SalePanel({ onShift, onGoToShift }) {
     <div className="grid gap-6 md:grid-cols-2">
       <section className="bg-surface border border-border rounded-2xl p-6" aria-labelledby="sale-customer">
         <h2 id="sale-customer" className="text-gold text-xs uppercase tracking-widest mb-4">Customer</h2>
-        <CustomerPicker customer={customer} onChange={setCustomer} />
+        <CustomerPicker key={saleCount} customer={customer} onChange={setCustomer} />
       </section>
 
       <section className="bg-surface border border-border rounded-2xl p-6 space-y-5" aria-labelledby="sale-items">

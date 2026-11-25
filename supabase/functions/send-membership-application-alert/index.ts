@@ -7,6 +7,7 @@ import { notifyTelegram, tg } from '../_shared/telegram.ts'
 import { alertStore } from '../_shared/storeAlerts.ts'
 import { sendStoreMail } from '../_shared/mail.ts'
 import { DEFAULT_STORE } from '../_shared/stores.ts'
+import { membershipPayHint } from '../_shared/fulfilmentCopy.ts'
 
 // Tells the club a membership application is waiting for approval. Invoked by
 // the APPLICANT right after place_membership succeeds (fire-and-forget).
@@ -87,7 +88,7 @@ serve(async (req) => {
       ${row('Amount due', formatZAR(m.amount))}
     </table>
     <p style="color:#888;font-size:13px;margin:24px 0;">
-      The applicant pays by EFT or with their next delivery. Approve it once payment is received.
+      ${escapeHtml(membershipPayHint(brand.fulfilment))} Approve it once payment is received.
     </p>
     <a href="${store.siteUrl}/admin/memberships" style="display:inline-block;background:${brand.gold};color:#000;text-decoration:none;font-weight:bold;padding:12px 24px;border-radius:6px;">Review in admin</a>
   </div>
