@@ -246,12 +246,24 @@ export default function TableMode() {
                 {shown.map(p => {
                   const { kind, variants } = pickerOptions(p)
                   return (
-                    <article key={p.id} className="bg-surface border border-border rounded-2xl p-5 space-y-3">
-                      <div>
+                    <article key={p.id} className="bg-surface border border-border rounded-2xl overflow-hidden flex flex-col">
+                      {/* Same photo as the store's product card. */}
+                      <div className="aspect-[4/3] bg-background overflow-hidden">
+                        {p.images?.length > 0 ? (
+                          <img src={p.images[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <BrandLogo decorative className="w-1/3 opacity-30" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-5 space-y-3 flex-1 flex flex-col">
+                      <div className="flex-1">
                         <h3 className="text-white font-semibold">{p.name}</h3>
                         <p className="text-muted text-xs mt-0.5">
                           {[p.strain_type, p.thc_percentage ? `THC ${p.thc_percentage}%` : null].filter(Boolean).join(' · ')}
                         </p>
+                        {p.description && <p className="text-muted text-sm mt-2 line-clamp-2">{p.description}</p>}
                       </div>
                       {kind === 'unavailable' ? (
                         <p className="text-muted text-sm">Not available right now</p>
@@ -270,6 +282,7 @@ export default function TableMode() {
                           ))}
                         </div>
                       )}
+                      </div>
                     </article>
                   )
                 })}
