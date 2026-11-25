@@ -16,8 +16,26 @@ alter table public.orders add column if not exists served_by uuid references aut
 create index if not exists orders_tenant_phone_idx on public.orders (tenant, customer_phone);
 
 -- ---- customer search -------------------------------------------------------------
+-- POPIA: only staff ON SHIFT, at least 3 characters, at most 10 rows, and no
+-- email address in the result (email is only a search key).
+create or replace function public.counter_on_shift()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.is_staff() and exists (
+    select 1 from shifts
+     where user_id = auth.uid() and tenant = public.current_tenant() and ended_at is null
+  );
+$$;
+revoke execute on function public.counter_on_shift() from public, anon;
+grant execute on function public.counter_on_shift() to authenticated;
+
+drop function if exists public.counter_find_customers(text);
 create or replace function public.counter_find_customers(p_query text)
-returns table(user_id uuid, full_name text, phone text, email text,
+returns table(user_id uuid, full_name text, phone text,
               member_status text, tier_name text, expires_at timestamptz)
 language plpgsql
 stable
@@ -31,7 +49,10 @@ begin
   if not public.is_staff() then
     raise exception 'Not authorized';
   end if;
-  if length(trim(coalesce(p_query, ''))) < 2 then
+  if not public.counter_on_shift() then
+    raise exception 'Start your shift first';
+  end if;
+  if length(trim(coalesce(p_query, ''))) < 3 then
     return;
   end if;
   -- Literal match: escape LIKE wildcards in what the cashier typed.
@@ -55,7 +76,7 @@ begin
       from people p
      order by coalesce(p.user_id::text, p.phone), p.seen desc
   )
-  select l.user_id, l.name, l.phone, l.email,
+  select l.user_id, l.name, l.phone,
          case when mm.id is null then 'none'
               when mm.status = 'active' and mm.expires_at > now() then 'active'
               when mm.status = 'pending' then 'pending'
@@ -87,6 +108,9 @@ as $$
 begin
   if not public.is_staff() then
     raise exception 'Not authorized';
+  end if;
+  if not public.counter_on_shift() then
+    raise exception 'Start your shift first';
   end if;
   if p_user_id is null and coalesce(trim(p_phone), '') = '' then
     return;

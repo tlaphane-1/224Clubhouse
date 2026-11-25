@@ -109,3 +109,24 @@ export function productLine(product, variant = null) {
     : { key: product.id, productId: product.id, variantId: null, name: product.name,
         label: null, price: product.price, stock: product.stock_quantity }
 }
+
+/** How the product picker offers a product: as itself, by available option, or not at all. */
+export function pickerOptions(product) {
+  const all = product.product_variants ?? []
+  if (all.length === 0) return { kind: 'plain', variants: [] }
+  const variants = all.filter(v => v.is_available)
+  return variants.length ? { kind: 'options', variants } : { kind: 'unavailable', variants: [] }
+}
+
+/** The cart line for a scanned label ({ line }), or why it can't be added ({ error }). */
+export function lineFromScan(products, code) {
+  const product = code && (products ?? []).find(p => p.slug === code.slug)
+  if (!product) return { error: 'Not one of our labels' }
+  const variants = product.product_variants ?? []
+  if (variants.length === 0) return { line: productLine(product) }
+  if (!code.variantId) return { error: `Scan the option label for ${product.name}` }
+  const variant = variants.find(v => v.id === code.variantId)
+  if (!variant) return { error: 'Not one of our labels' }
+  if (!variant.is_available) return { error: `${product.name} ${variant.label} is not for sale right now` }
+  return { line: productLine(product, variant) }
+}

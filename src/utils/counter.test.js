@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   labelUrl, parseLabelCode, counterCartReducer, cartTotal, toSaleItems, memberBadge,
-  labelSheetItems, saleBlockers, productLine,
+  labelSheetItems, saleBlockers, productLine, pickerOptions, lineFromScan,
 } from './counter'
 
 const SITE = 'https://explosive420.co.za'
@@ -121,5 +121,42 @@ describe('productLine', () => {
     expect(productLine({ id: 'p', name: 'OG', price: 1, stock_quantity: 9 }, { id: 'v', label: '7g', price: 75000, stock_quantity: 2 })).toEqual({
       key: 'p:v', productId: 'p', variantId: 'v', name: 'OG', label: '7g', price: 75000, stock: 2,
     })
+  })
+})
+
+const og = { id: 'p', slug: 'og', name: 'OG', price: 1, stock_quantity: 9, product_variants: [
+  { id: 'v1', label: '3.5g', price: 40000, stock_quantity: 2, is_available: true },
+  { id: 'v2', label: '7g', price: 75000, stock_quantity: 2, is_available: false },
+] }
+
+describe('pickerOptions', () => {
+  it('a product without options is sold as itself', () => {
+    expect(pickerOptions({ product_variants: [] })).toEqual({ kind: 'plain', variants: [] })
+  })
+  it('only available options are offered', () => {
+    expect(pickerOptions(og)).toEqual({ kind: 'options', variants: [og.product_variants[0]] })
+  })
+  it('a product whose options are all unavailable cannot be sold', () => {
+    expect(pickerOptions({ product_variants: [{ ...og.product_variants[1] }] })).toEqual({ kind: 'unavailable', variants: [] })
+  })
+})
+
+describe('lineFromScan', () => {
+  const products = [og, { id: 'g', slug: 'gelato', name: 'Gelato', price: 15000, stock_quantity: 3, product_variants: [] }]
+  it('a plain product label adds the product', () => {
+    expect(lineFromScan(products, { slug: 'gelato', variantId: null })).toEqual({ line: productLine(products[1]) })
+  })
+  it('an available option label adds that option', () => {
+    expect(lineFromScan(products, { slug: 'og', variantId: 'v1' })).toEqual({ line: productLine(og, og.product_variants[0]) })
+  })
+  it('an unavailable option is refused', () => {
+    expect(lineFromScan(products, { slug: 'og', variantId: 'v2' })).toEqual({ error: 'OG 7g is not for sale right now' })
+  })
+  it('a product label for a product with options asks for the option label', () => {
+    expect(lineFromScan(products, { slug: 'og', variantId: null })).toEqual({ error: 'Scan the option label for OG' })
+  })
+  it('unknown codes are not ours', () => {
+    expect(lineFromScan(products, null)).toEqual({ error: 'Not one of our labels' })
+    expect(lineFromScan(products, { slug: 'nope', variantId: null })).toEqual({ error: 'Not one of our labels' })
   })
 })

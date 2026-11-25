@@ -6,7 +6,7 @@ import ProductPicker from './ProductPicker'
 import QrScanner from './QrScanner'
 import { useProducts } from '../../hooks/useProducts'
 import { useRecordSale } from '../../hooks/useCounter'
-import { counterCartReducer, cartTotal, toSaleItems, parseLabelCode, saleBlockers, productLine } from '../../utils/counter'
+import { counterCartReducer, cartTotal, toSaleItems, parseLabelCode, saleBlockers, lineFromScan } from '../../utils/counter'
 import { formatZAR } from '../../utils/formatCurrency'
 import { PAYMENT_LABELS } from '../../utils/orderStatus'
 import { tenant } from '../../tenant'
@@ -37,20 +37,18 @@ export default function SalePanel({ onShift, onGoToShift }) {
   }
 
   const onScan = (text) => {
-    const code = parseLabelCode(text, tenant.domain.liveHosts)
-    const product = code && (products ?? []).find(p => p.slug === code.slug)
-    if (!product) {
-      toast.error('Not one of our labels')
+    const { line, error: scanError } = lineFromScan(products, parseLabelCode(text, tenant.domain.liveHosts))
+    if (scanError) {
+      toast.error(scanError)
       return
     }
-    const variants = product.product_variants ?? []
-    const variant = code.variantId ? variants.find(v => v.id === code.variantId) : null
-    if (variants.length > 0 && !variant) {
-      toast.error(`Scan the option label for ${product.name}`)
+    const inCart = cart.lines.find(l => l.key === line.key)?.quantity ?? 0
+    if (inCart >= line.stock) {
+      toast.error(`No more ${line.name}${line.label ? ` ${line.label}` : ''} in stock`)
       return
     }
-    addLine(productLine(product, variant))
-    toast.success(`Added ${product.name}${variant ? ` ${variant.label}` : ''}`)
+    addLine(line)
+    toast.success(`Added ${line.name}${line.label ? ` ${line.label}` : ''}`)
   }
 
   const reset = () => {

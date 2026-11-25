@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 import { useProducts } from '../../hooks/useProducts'
 import { formatZAR } from '../../utils/formatCurrency'
-import { productLine } from '../../utils/counter'
+import { productLine, pickerOptions } from '../../utils/counter'
 
 // Tap-to-add product list for the counter (alternative to scanning labels).
 // Products with options show one button per option.
@@ -33,10 +33,15 @@ export default function ProductPicker({ onAdd }) {
       ) : (
         <ul className="max-h-72 overflow-y-auto divide-y divide-border border border-border rounded-xl">
           {shown.map(p => {
-            const variants = (p.product_variants ?? []).filter(v => v.is_available)
+            const { kind, variants } = pickerOptions(p)
             return (
               <li key={p.id} className="px-4 py-2">
-                {variants.length === 0 ? (
+                {kind === 'unavailable' ? (
+                  <div className="min-h-11 flex items-center justify-between gap-3 opacity-50">
+                    <span className="text-white text-sm">{p.name}</span>
+                    <span className="text-muted text-sm">Unavailable</span>
+                  </div>
+                ) : kind === 'plain' ? (
                   <button type="button" disabled={p.stock_quantity < 1} onClick={() => onAdd(productLine(p))}
                     className="focus-ring w-full min-h-11 flex items-center justify-between gap-3 text-left disabled:opacity-50">
                     <span className="text-white text-sm">{p.name}</span>

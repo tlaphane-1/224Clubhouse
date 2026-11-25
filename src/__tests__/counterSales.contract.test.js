@@ -203,8 +203,21 @@ describe.skipIf(SKIP)('Counter sales contract', () => {
     expect(hit).toMatchObject({ member_status: 'active', phone: MEMBER_PHONE })
     const byPhone = await c.cashier.rpc('counter_find_customers', { p_query: '1111222' })
     expect(byPhone.data.some(r => r.user_id === u.member.id)).toBe(true)
-    const short = await c.cashier.rpc('counter_find_customers', { p_query: 'V' })
+    const short = await c.cashier.rpc('counter_find_customers', { p_query: 'Vi' })
     expect(short.data).toEqual([])
+  })
+
+  it('search results carry no email address (data minimisation)', async () => {
+    const { data } = await c.cashier.rpc('counter_find_customers', { p_query: 'counter memb' })
+    expect(data.length).toBeGreaterThan(0)
+    for (const row of data) expect(row).not.toHaveProperty('email')
+  })
+
+  it('staff who are not on shift cannot search customers or read history', async () => {
+    const f = await c.idle.rpc('counter_find_customers', { p_query: 'counter memb' })
+    expect(f.error?.message).toMatch(/Start your shift first/)
+    const h = await c.idle.rpc('counter_customer_history', { p_user_id: u.member.id, p_phone: null })
+    expect(h.error?.message).toMatch(/Start your shift first/)
   })
 
   it('history: newest first, at most 10, no cancelled orders', async () => {

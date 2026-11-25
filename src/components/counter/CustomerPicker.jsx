@@ -86,7 +86,7 @@ export default function CustomerPicker({ customer, onChange }) {
         <input id="customer-search" className="input-base text-sm pl-9" placeholder="Name, phone or email"
           value={query} onChange={e => setQuery(e.target.value)} autoComplete="off" />
       </div>
-      {query.trim().length >= 2 && (
+      {query.trim().length >= 3 && (
         results.isLoading ? (
           <div className="h-12 skeleton rounded-lg" aria-busy="true" />
         ) : results.isError ? (

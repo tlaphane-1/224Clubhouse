@@ -14,7 +14,7 @@ function useDebounced(value, ms) {
   return debounced
 }
 
-/** Customers matching a name, phone or email (at least 2 characters). */
+/** Customers matching a name, phone or email (at least 3 characters). */
 export function useFindCustomers(query) {
   const q = useDebounced((query ?? '').trim(), 300)
   return useQuery({
@@ -24,7 +24,7 @@ export function useFindCustomers(query) {
       if (error) throw error
       return data ?? []
     },
-    enabled: q.length >= 2,
+    enabled: q.length >= 3,
   })
 }
 
