@@ -100,3 +100,12 @@ export function saleBlockers({ customer, lines, method, idChecked, onShift }) {
   if (!idChecked) out.push('Tick that you checked their ID')
   return out
 }
+
+/** A cart line for a product, or for one of its options. */
+export function productLine(product, variant = null) {
+  return variant
+    ? { key: `${product.id}:${variant.id}`, productId: product.id, variantId: variant.id, name: product.name,
+        label: variant.label, price: variant.price, stock: variant.stock_quantity }
+    : { key: product.id, productId: product.id, variantId: null, name: product.name,
+        label: null, price: product.price, stock: product.stock_quantity }
+}

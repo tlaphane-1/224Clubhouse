@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   labelUrl, parseLabelCode, counterCartReducer, cartTotal, toSaleItems, memberBadge,
-  labelSheetItems, saleBlockers,
+  labelSheetItems, saleBlockers, productLine,
 } from './counter'
 
 const SITE = 'https://explosive420.co.za'
@@ -108,5 +108,18 @@ describe('saleBlockers', () => {
       'Choose cash or card',
       'Tick that you checked their ID',
     ])
+  })
+})
+
+describe('productLine', () => {
+  it('a plain product line takes the product price and stock', () => {
+    expect(productLine({ id: 'p', name: 'Gelato', price: 15000, stock_quantity: 4 })).toEqual({
+      key: 'p', productId: 'p', variantId: null, name: 'Gelato', label: null, price: 15000, stock: 4,
+    })
+  })
+  it('an option line takes the option price and stock', () => {
+    expect(productLine({ id: 'p', name: 'OG', price: 1, stock_quantity: 9 }, { id: 'v', label: '7g', price: 75000, stock_quantity: 2 })).toEqual({
+      key: 'p:v', productId: 'p', variantId: 'v', name: 'OG', label: '7g', price: 75000, stock: 2,
+    })
   })
 })

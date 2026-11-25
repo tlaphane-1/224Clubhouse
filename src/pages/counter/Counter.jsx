@@ -1,14 +1,25 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { LogOut } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
+import { useMyOpenShift } from '../../hooks/useShifts'
 import BrandLogo from '../../components/ui/BrandLogo'
 import ShiftPanel from '../../components/counter/ShiftPanel'
+import SalePanel from '../../components/counter/SalePanel'
 import { pageTitle } from '../../tenant'
 
+const TABS = [
+  { id: 'sale', label: 'Sale' },
+  { id: 'shift', label: 'Shift' },
+]
+
 // /counter — the shared counter tablet (staff accounts only, see StaffRoute).
-// Part 1: shift clock-in. Sales, stock and the live dashboard come next.
+// Sale: ring up in-store sales. Shift: selfie clock-in/out.
 export default function Counter() {
   const { user, signOut } = useAuth()
+  const shift = useMyOpenShift()
+  const [tab, setTab] = useState(null)
+  // Default: Sale when on shift, otherwise Shift (until the cashier picks a tab).
+  const active = tab ?? (shift.data ? 'sale' : 'shift')
 
   useEffect(() => {
     document.title = pageTitle('Counter')
@@ -16,7 +27,7 @@ export default function Counter() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-6">
-      <div className="max-w-lg mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6">
         <header className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <BrandLogo className="h-10 w-auto" />
@@ -31,8 +42,20 @@ export default function Counter() {
             <LogOut size={16} aria-hidden="true" /> Sign out
           </button>
         </header>
-        <ShiftPanel />
-        <p className="text-muted text-xs text-center">Sales, stock-take and the live dashboard arrive in the next update.</p>
+
+        <div role="tablist" aria-label="Counter" className="flex gap-2">
+          {TABS.map(t => (
+            <button key={t.id} type="button" role="tab" aria-selected={active === t.id} onClick={() => setTab(t.id)}
+              className={`focus-ring min-h-11 px-5 rounded-xl text-xs uppercase tracking-widest border ${
+                active === t.id ? 'border-gold text-gold bg-surface' : 'border-border text-muted hover:text-white'}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {active === 'sale'
+          ? <SalePanel onShift={!!shift.data} onGoToShift={() => setTab('shift')} />
+          : <div className="max-w-lg"><ShiftPanel /></div>}
       </div>
     </div>
   )
