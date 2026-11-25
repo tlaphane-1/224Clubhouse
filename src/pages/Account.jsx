@@ -144,7 +144,9 @@ export default function Account() {
             </div>
 
             {/* Club card QR for the counter and the table tablet. */}
-            {IN_STORE && <MemberCard />}
+            {IN_STORE && (
+              <MemberCard membership={latest} status={latest ? effectiveStatus : null} tierName={tierLabel(latest?.tier)} />
+            )}
 
             {/* Quick links */}
             <div className="bg-surface border border-border rounded-2xl p-2">
