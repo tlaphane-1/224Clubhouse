@@ -4,7 +4,8 @@ import { LogOut, Package, Search, BadgeCheck, ChevronRight } from 'lucide-react'
 import { useAuth } from '../context/useAuth'
 import { useMyMembership } from '../hooks/useMyMembership'
 import CustomerAuth from '../components/auth/CustomerAuth'
-import { pageTitle, IS_COLLECT } from '../tenant'
+import { pageTitle, IS_COLLECT, IN_STORE } from '../tenant'
+import MemberCard from '../components/account/MemberCard'
 import { PROMOTE_MEMBER_FREE_DELIVERY } from '../utils/shipping'
 
 const STATUS_STYLES = {
@@ -141,6 +142,9 @@ export default function Account() {
                 </div>
               )}
             </div>
+
+            {/* Club card QR for the counter and the table tablet. */}
+            {IN_STORE && <MemberCard />}
 
             {/* Quick links */}
             <div className="bg-surface border border-border rounded-2xl p-2">

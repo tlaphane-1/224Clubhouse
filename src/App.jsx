@@ -27,6 +27,7 @@ const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'))
 const TrackOrder = lazy(() => import('./pages/TrackOrder'))
 const MyOrders = lazy(() => import('./pages/MyOrders'))
 const Account = lazy(() => import('./pages/Account'))
+const MemberCardInfo = lazy(() => import('./pages/MemberCardInfo'))
 const OrderDetail = lazy(() => import('./pages/OrderDetail'))
 const Invoice = lazy(() => import('./pages/Invoice'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
@@ -128,6 +129,7 @@ export default function App() {
                 {/* No ProtectedRoute: the page shows sign-in itself when logged out. */}
                 <Route path="/orders" element={<PublicLayout><MyOrders /></PublicLayout>} />
                 <Route path="/account" element={<PublicLayout><Account /></PublicLayout>} />
+                {IN_STORE && <Route path="/m/:token" element={<PublicLayout><MemberCardInfo /></PublicLayout>} />}
                 <Route path="/orders/:id" element={<PublicLayout><OrderDetail /></PublicLayout>} />
                 {/* Bare page (no navbar/footer) so it prints as a clean A4 invoice. */}
                 <Route path="/orders/:id/invoice" element={<Invoice />} />
