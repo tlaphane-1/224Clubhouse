@@ -43,6 +43,8 @@ export function counterCartReducer(state, action) {
         .filter(l => l.quantity > 0)
       return { lines }
     }
+    case 'load':
+      return { lines: action.lines }
     case 'clear':
       return { lines: [] }
     default:

@@ -49,6 +49,11 @@ describe('counterCartReducer', () => {
     expect(s.lines).toHaveLength(0)
   })
 
+  it('load replaces the cart with a table order', () => {
+    const s = counterCartReducer({ lines: [{ ...line(), quantity: 1 }] }, { type: 'load', lines: [{ ...line({ key: 'x', productId: 'x' }), quantity: 2 }] })
+    expect(s.lines.map(l => [l.key, l.quantity])).toEqual([['x', 2]])
+  })
+
   it('quantity 0 removes the line; clear empties the cart', () => {
     let s = counterCartReducer({ lines: [] }, { type: 'add', line: line() })
     s = counterCartReducer(s, { type: 'setQty', key: 'p1', quantity: 0 })
