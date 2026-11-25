@@ -35,7 +35,7 @@ describe.skipIf(SKIP)('Stock-take and today summary contract', () => {
   const orderIds = []
 
   const setStock = (client, args) => client.rpc('counter_set_stock', {
-    p_product_id: p.plain, p_variant_id: null, p_counted: 7, p_reason: 'count', p_note: null, ...args,
+    p_product_id: p.plain, p_variant_id: null, p_counted: 7, p_reason: 'count', p_note: null, p_expected_old: null, ...args,
   })
   const stockOf = async (id) => (await admin.from('products').select('stock_quantity').eq('id', id).single()).data.stock_quantity
 
@@ -101,12 +101,31 @@ describe.skipIf(SKIP)('Stock-take and today summary contract', () => {
       .select('old_qty, new_qty, reason, note, user_id, product_name, variant_label').eq('product_id', p.plain)
     expect(log).toEqual([{ old_qty: 10, new_qty: 7, reason: 'count', note: 'shelf recount', user_id: u.cashier.id,
       product_name: 'Vitest Stock plain', variant_label: null }])
+    const { data: named } = await c.boss.from('stock_adjustments').select('user_name').eq('product_id', p.plain)
+    expect(named[0].user_name).toBe('Vitest cashier')
+  })
+
+  it('a count refuses to overwrite stock that changed since the cashier looked', async () => {
+    const stale = await setStock(c.cashier, { p_counted: 5, p_expected_old: 99 })
+    expect(stale.error?.message).toMatch(/Stock changed since you looked — it is now 7/)
+    expect(await stockOf(p.plain)).toBe(7)
+    const fresh = await setStock(c.cashier, { p_counted: 7, p_expected_old: 7 })
+    expect(fresh.error).toBeNull()
+  })
+
+  it('"received" adds the delivery to the stock on hand', async () => {
+    const res = await setStock(c.cashier, { p_counted: 20, p_reason: 'received' })
+    expect(res.error).toBeNull()
+    expect(res.data).toEqual({ old_qty: 7, new_qty: 27 })
+    expect(await stockOf(p.plain)).toBe(27)
+    // Back to 7 for the checks below.
+    mustSucceed('reset', await setStock(c.cashier, { p_counted: 7, p_reason: 'count' }))
   })
 
   it('a product with options needs the option; the option count changes the option', async () => {
     const noOption = await setStock(c.cashier, { p_product_id: p.options })
     expect(noOption.error?.message).toMatch(/Choose an option for/)
-    const res = await setStock(c.cashier, { p_product_id: p.options, p_variant_id: variantId, p_counted: 9, p_reason: 'received' })
+    const res = await setStock(c.cashier, { p_product_id: p.options, p_variant_id: variantId, p_counted: 9, p_reason: 'count' })
     expect(res.error).toBeNull()
     const { data: v } = await admin.from('product_variants').select('stock_quantity').eq('id', variantId).single()
     expect(v.stock_quantity).toBe(9)

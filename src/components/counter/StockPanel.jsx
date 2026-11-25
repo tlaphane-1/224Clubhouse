@@ -67,7 +67,10 @@ export default function StockPanel({ onShift, onGoToShift }) {
     }
     setError('')
     try {
-      const res = await setStock.mutateAsync({ productId: item.productId, variantId: item.variantId, counted, reason, note })
+      const res = await setStock.mutateAsync({
+        productId: item.productId, variantId: item.variantId, counted, reason, note,
+        expectedOld: reason === 'received' ? null : item.stock,
+      })
       const name = `${item.name}${item.label ? ` ${item.label}` : ''}`
       setLast(`${name}: ${res.old_qty} → ${res.new_qty} (${stockDelta(res.old_qty, res.new_qty)})`)
       toast.success('Stock saved')
@@ -77,6 +80,12 @@ export default function StockPanel({ onShift, onGoToShift }) {
       setReason('count')
     } catch (err) {
       const msg = err?.message || 'Could not save the count'
+      // A sale changed the stock since it was shown: show the new number.
+      const now = msg.match(/it is now (\d+)/)
+      if (now) {
+        setItem(it => (it ? { ...it, stock: Number(now[1]) } : it))
+        refetch()
+      }
       setError(msg)
       toast.error(msg)
     }
@@ -146,21 +155,29 @@ export default function StockPanel({ onShift, onGoToShift }) {
             </p>
             <p className="text-muted text-sm">The system says {item.stock}.</p>
             <div>
-              <label htmlFor="stock-counted" className={label}>Counted on the shelf *</label>
-              <input id="stock-counted" inputMode="numeric" pattern="[0-9]*" className="input-base text-sm"
-                value={count} onChange={e => setCount(e.target.value)} autoComplete="off" />
-            </div>
-            <div>
               <label htmlFor="stock-reason" className={label}>Reason</label>
               <select id="stock-reason" className="input-base text-sm" value={reason} onChange={e => setReason(e.target.value)}>
                 {STOCK_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
             </div>
             <div>
+              <label htmlFor="stock-counted" className={label}>
+                {reason === 'received' ? 'Quantity received *' : 'Counted on the shelf *'}
+              </label>
+              <input id="stock-counted" inputMode="numeric" pattern="[0-9]*" className="input-base text-sm"
+                value={count} onChange={e => setCount(e.target.value)} autoComplete="off"
+                aria-invalid={error ? true : undefined} aria-describedby={error ? 'stock-error' : 'stock-help'} />
+              <p id="stock-help" className="text-muted text-xs mt-1">
+                {reason === 'received'
+                  ? `Added to the ${item.stock} already in stock.`
+                  : 'The total on the shelf right now — this replaces the number above.'}
+              </p>
+            </div>
+            <div>
               <label htmlFor="stock-note" className={label}>Note (optional)</label>
               <input id="stock-note" className="input-base text-sm" maxLength={200} value={note} onChange={e => setNote(e.target.value)} />
             </div>
-            {error && <p className="text-red-400 text-sm" role="alert">{error}</p>}
+            {error && <p id="stock-error" className="text-red-400 text-sm" role="alert">{error}</p>}
             <button type="button" onClick={save} disabled={setStock.isPending || count === ''} className="btn-gold w-full min-h-11">
               {setStock.isPending ? 'Saving…' : 'Save count'}
             </button>

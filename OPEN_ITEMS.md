@@ -304,6 +304,9 @@ Admins can end anyone's open shift in Admin → Shifts; disabling staff ends the
 number and a reason; every change is logged (Admin → Stock). Counter → Today and the admin
 Dashboard show today's sales (total, orders, in store vs online, top sellers, low stock), refreshed
 every 30 seconds. Not yet checked on a screen — include in the tablet test before go-live.
+- Stock rules: "Delivery received" adds to stock; other reasons set the shelf total and are refused
+  if a sale changed the stock since it was shown. Small leftovers: deleting a product deletes its
+  stock log; the Today view counts unpaid pending orders (same rule as the daily summary).
 
 **Part 2a, counter sales (same branch, NOT deployed):** migration `20261125120000_counter_sales.sql`.
 Staff on shift ring up sales at `/counter` → Sale: find the customer (name/phone/email) or walk-in,

@@ -7,13 +7,15 @@ import { supabase } from '../lib/supabase'
 export function useSetStock() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ productId, variantId, counted, reason, note }) => {
+    mutationFn: async ({ productId, variantId, counted, reason, note, expectedOld }) => {
       const { data, error } = await supabase.rpc('counter_set_stock', {
         p_product_id: productId,
         p_variant_id: variantId ?? null,
         p_counted: counted,
         p_reason: reason,
         p_note: note || null,
+        // A count is refused if a sale changed the stock since it was shown.
+        p_expected_old: expectedOld ?? null,
       })
       if (error) throw error
       return data
@@ -26,24 +28,19 @@ export function useSetStock() {
   })
 }
 
-/** Admin: the latest stock changes, with the staff member's name. */
+/** Admin: the latest stock changes, with who made them. */
 export function useStockLog(limit = 100) {
   return useQuery({
     queryKey: ['stock-log', limit],
     queryFn: async () => {
       const { data: rows, error } = await supabase
         .from('stock_adjustments')
-        .select('id, product_name, variant_label, old_qty, new_qty, reason, note, user_id, created_at')
+        .select('id, product_name, variant_label, old_qty, new_qty, reason, note, user_name, created_at')
         .order('created_at', { ascending: false })
         .limit(limit)
       if (error) throw error
-      const ids = [...new Set(rows.map(r => r.user_id).filter(Boolean))]
-      const { data: staff, error: staffError } = ids.length
-        ? await supabase.from('staff_members').select('user_id, full_name').in('user_id', ids)
-        : { data: [], error: null }
-      if (staffError) throw staffError
-      const names = Object.fromEntries(staff.map(s => [s.user_id, s.full_name]))
-      return rows.map(r => ({ ...r, who: names[r.user_id] ?? 'Admin' }))
+      // The name is saved on each row, so it stays right after someone leaves.
+      return rows.map(r => ({ ...r, who: r.user_name || 'Unknown' }))
     },
   })
 }

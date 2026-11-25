@@ -20,6 +20,8 @@ create table if not exists public.stock_adjustments (
   reason        text not null check (reason in ('count', 'received', 'damaged', 'other')),
   note          text check (length(note) <= 200),
   user_id       uuid references auth.users(id) on delete set null,
+  -- Kept on the row so the log still names the person after they leave.
+  user_name     text,
   created_at    timestamptz not null default now()
 );
 alter table public.stock_adjustments enable row level security;
@@ -34,8 +36,14 @@ create policy stock_adjustments_select on public.stock_adjustments for select
   );
 
 -- ---- counter_set_stock ------------------------------------------------------------
+-- 'received' ADDS p_counted (the delivery) to the stock on hand; every other
+-- reason SETS the stock to p_counted (what is on the shelf). For a set, the
+-- tablet passes the stock it showed (p_expected_old): if a sale changed it in
+-- the meantime, the count is refused so it can't silently undo that sale.
+drop function if exists public.counter_set_stock(uuid, uuid, integer, text, text);
 create or replace function public.counter_set_stock(
-  p_product_id uuid, p_variant_id uuid, p_counted integer, p_reason text, p_note text
+  p_product_id uuid, p_variant_id uuid, p_counted integer, p_reason text, p_note text,
+  p_expected_old integer default null
 )
 returns jsonb
 language plpgsql
@@ -47,6 +55,8 @@ declare
   v_prod   products%rowtype;
   v_var    product_variants%rowtype;
   v_old    integer;
+  v_new    integer;
+  v_name   text;
 begin
   if not public.is_staff() then
     raise exception 'Not authorized';
@@ -77,23 +87,44 @@ begin
       raise exception 'Product not found';
     end if;
     v_old := v_var.stock_quantity;
-    -- The product_variants sync trigger recomputes the product's total.
-    update product_variants set stock_quantity = p_counted where id = v_var.id and tenant = v_tenant;
   else
     if exists (select 1 from product_variants where product_id = v_prod.id and tenant = v_tenant) then
       raise exception 'Choose an option for "%"', v_prod.name;
     end if;
     v_old := v_prod.stock_quantity;
-    update products set stock_quantity = p_counted where id = v_prod.id and tenant = v_tenant;
+  end if;
+
+  if p_reason = 'received' then
+    v_new := v_old + p_counted;
+    if v_new > 100000 then
+      raise exception 'Enter a count from 0 to 100000';
+    end if;
+  else
+    if p_expected_old is not null and p_expected_old <> v_old then
+      raise exception 'Stock changed since you looked — it is now %. Check the shelf and count again.', v_old;
+    end if;
+    v_new := p_counted;
+  end if;
+
+  if p_variant_id is not null then
+    -- The product_variants sync trigger recomputes the product's total.
+    update product_variants set stock_quantity = v_new where id = v_var.id and tenant = v_tenant;
+  else
+    update products set stock_quantity = v_new where id = v_prod.id and tenant = v_tenant;
+  end if;
+
+  select full_name into v_name from staff_members where user_id = auth.uid() and tenant = v_tenant;
+  if v_name is null and public.is_admin() then
+    v_name := 'Admin';
   end if;
 
   insert into stock_adjustments (tenant, product_id, variant_id, product_name, variant_label,
-                                 old_qty, new_qty, reason, note, user_id)
+                                 old_qty, new_qty, reason, note, user_id, user_name)
   values (v_tenant, v_prod.id, p_variant_id, v_prod.name,
           case when p_variant_id is null then null else v_var.label end,
-          v_old, p_counted, p_reason, nullif(trim(coalesce(p_note, '')), ''), auth.uid());
+          v_old, v_new, p_reason, nullif(trim(coalesce(p_note, '')), ''), auth.uid(), v_name);
 
-  return jsonb_build_object('old_qty', v_old, 'new_qty', p_counted);
+  return jsonb_build_object('old_qty', v_old, 'new_qty', v_new);
 end;
 $$;
 
@@ -161,7 +192,7 @@ begin
 end;
 $$;
 
-revoke execute on function public.counter_set_stock(uuid, uuid, integer, text, text),
+revoke execute on function public.counter_set_stock(uuid, uuid, integer, text, text, integer),
   public.store_today_summary() from public, anon;
-grant execute on function public.counter_set_stock(uuid, uuid, integer, text, text),
+grant execute on function public.counter_set_stock(uuid, uuid, integer, text, text, integer),
   public.store_today_summary() to authenticated;
