@@ -38,6 +38,7 @@ export function functionStore(t) {
     facebook: t.social?.facebook ?? null,
     gold: t.theme.colors.gold,
     minimumAge: t.minimumAge,
+    fulfilment: t.delivery.mode,
     freeDeliveryFromCents: t.delivery.freeFromCents,
     memberFreeDelivery: t.delivery.promoteMemberFreeDelivery,
     // The newsletter promises WELCOME10 only where the site does.

@@ -397,6 +397,10 @@ verify_jwt = false
 [functions.send-daily-summary]
 verify_jwt = false
 
+# Called by pg_cron with x-cron-secret (staff selfie retention, 20261125100000).
+[functions.purge-shift-selfies]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 56327

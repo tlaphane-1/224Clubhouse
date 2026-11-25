@@ -1,12 +1,54 @@
 import { Link } from 'react-router-dom'
 import LegalPage, { LegalSection, ReviewNote } from './LegalPage'
-import { tenant } from '../../tenant'
+import { tenant, IS_COLLECT } from '../../tenant'
 import { MIN_AGE } from '../../utils/age'
 import { SHIPPING_FEE, SHIPPING_THRESHOLD } from '../../utils/shipping'
 import { EFT_AVAILABLE } from '../../utils/bankDetails'
 import { formatTierPrice } from '../../utils/tierPrice'
 
 const { contact } = tenant
+
+/**
+ * Collection & returns policy, for a collect store (order online, collect at
+ * the club; no delivery). Sections 1–3 replace the delivery sections; the
+ * return sections are shared and count from collection instead of delivery.
+ */
+function CollectionSections() {
+  return (
+    <>
+      <LegalSection title="1. Where and when to collect">
+        <p>
+          Orders are collected from the club at {contact.street}, {contact.suburb}, {contact.city}{' '}
+          ({tenant.hours.status.replace(/^Open /, 'open ')}). We do not deliver. We email you when your
+          order is ready for collection; please bring your order number.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="2. Paying for your order">
+        <ul className="list-disc pl-5 space-y-2">
+          <li>There is no delivery fee.</li>
+          <li>
+            Pay by <span className="text-white">cash or card when you collect</span>
+            {EFT_AVAILABLE ? <>, or by <span className="text-white">EFT</span> before you collect — the
+            order is ready once the payment reflects</> : null}.
+          </li>
+          <li>
+            If an order is not collected, we will contact you on the phone number on the order. Orders
+            that are still not collected may be cancelled, and nothing is owed.
+          </li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection title={`3. ID check at collection (${MIN_AGE}+)`}>
+        <p>
+          Cannabis products are for adults aged {MIN_AGE} and over. The person collecting the order
+          must be {MIN_AGE} or older and must be able to show valid identification (SA ID,
+          driver&rsquo;s licence, or passport) if asked. We will not hand over an order without it.
+        </p>
+      </LegalSection>
+    </>
+  )
+}
 
 /**
  * Delivery & returns policy. The fee/threshold numbers here mirror
@@ -17,9 +59,12 @@ export default function DeliveryReturns() {
   return (
     <LegalPage
       eyebrow="Legal"
-      title="Delivery & Returns"
-      intro="How delivery works, what to expect at your door, and your return and refund rights under South African law."
+      title={IS_COLLECT ? 'Collection & Returns' : 'Delivery & Returns'}
+      intro={IS_COLLECT
+        ? 'How collecting your order works, and your return and refund rights under South African law.'
+        : 'How delivery works, what to expect at your door, and your return and refund rights under South African law.'}
     >
+      {IS_COLLECT ? <CollectionSections /> : (<>
       <LegalSection title="1. Delivery area">
         <p>
           We deliver from our store at {contact.street}, {contact.suburb}, {contact.city}. If your address
@@ -66,12 +111,13 @@ export default function DeliveryReturns() {
           is management&rsquo;s call and should be stated here once decided.
         </ReviewNote>
       </LegalSection>
+      </>)}
 
-      <LegalSection title="5. Cooling-off right (ECT Act section 44)">
+      <LegalSection title={`${IS_COLLECT ? 4 : 5}. Cooling-off right (ECT Act section 44)`}>
         <p>
           For purchases made through this website, section 44 of the Electronic Communications and
           Transactions Act gives you the right to cancel the purchase within{' '}
-          <span className="text-white">7 days after delivery</span>, without reason and without
+          <span className="text-white">7 days after {IS_COLLECT ? 'collection' : 'delivery'}</span>, without reason and without
           penalty. If you cancel, you pay only the direct cost of returning the goods, and we
           refund the purchase price within 30 days of cancellation.
         </p>
@@ -86,16 +132,16 @@ export default function DeliveryReturns() {
         </p>
       </LegalSection>
 
-      <LegalSection title="6. Defective products (Consumer Protection Act)">
+      <LegalSection title={`${IS_COLLECT ? 5 : 6}. Defective products (Consumer Protection Act)`}>
         <p>
           Nothing above affects your rights under the Consumer Protection Act. If a product is
           defective, unsafe, or not what was described, you may return it within{' '}
-          <span className="text-white">6 months of delivery</span> and choose a repair, a
+          <span className="text-white">6 months of {IS_COLLECT ? 'collection' : 'delivery'}</span> and choose a repair, a
           replacement, or a full refund. Return costs for defective goods are ours, not yours.
         </p>
       </LegalSection>
 
-      <LegalSection title="7. How to start a return">
+      <LegalSection title={`${IS_COLLECT ? 6 : 7}. How to start a return`}>
         <p>To start a return or report a problem with an order:</p>
         <ul className="list-disc pl-5 space-y-2">
           <li>

@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { ShoppingBag, Menu, X, User, LogOut, Package, LayoutDashboard, ChevronDown, Truck } from 'lucide-react'
+import { ShoppingBag, Menu, X, User, LogOut, Package, LayoutDashboard, ChevronDown, Truck, Store } from 'lucide-react'
 import { useCart } from '../../context/useCart'
 import { useAuth } from '../../context/useAuth'
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
-import { tenant } from '../../tenant'
+import { tenant, IN_STORE } from '../../tenant'
 
 const baseLinks = [
   { to: '/', label: 'Home' },
@@ -20,7 +20,7 @@ const trackLink = { to: '/track', label: 'Track Order' }
 
 export default function Navbar() {
   const { cartCount } = useCart()
-  const { user, isAdmin, isDriver, signOut } = useAuth()
+  const { user, isAdmin, isDriver, isStaff, signOut } = useAuth()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -58,6 +58,8 @@ export default function Navbar() {
     { to: '/orders', label: 'My Orders', icon: Package },
     // Drivers who sign in on the shop would otherwise never find their portal.
     ...(isDriver ? [{ to: '/driver', label: 'My Deliveries', icon: Truck }] : []),
+    // Staff on the counter tablet find their screen here.
+    ...(IN_STORE && isStaff ? [{ to: '/counter', label: 'Counter', icon: Store }] : []),
     ...(isAdmin ? [{ to: '/admin/dashboard', label: 'Admin Dashboard', icon: LayoutDashboard }] : []),
   ]
 

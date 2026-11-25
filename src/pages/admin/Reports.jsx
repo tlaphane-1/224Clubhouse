@@ -9,10 +9,14 @@ import { useSalesOrders } from '../../hooks/useSalesReport'
 import { useAllProducts } from '../../hooks/useProducts'
 import { formatZAR } from '../../utils/formatCurrency'
 import {
-  RANGES, bestSellers, buildBuckets, getRange, lowStockItems, niceMax, ordersToCsv, paymentSplit, sastDayKey,
+  RANGES, bestSellers, buildBuckets, channelSplit, getRange, lowStockItems, niceMax, ordersToCsv, paymentSplit, sastDayKey,
   summarize,
 } from '../../utils/salesReport'
-import { adminTitle } from '../../tenant'
+import { adminTitle, IN_STORE } from '../../tenant'
+import { STATUS_LABELS } from '../../utils/orderStatus'
+
+// 'Delivered', or 'Collected' in a collect store (same stored status).
+const DONE = STATUS_LABELS.delivered
 
 function downloadCsv(orders, rangeKey) {
   const blob = new Blob([ordersToCsv(orders)], { type: 'text/csv;charset=utf-8' })
@@ -92,7 +96,7 @@ function RevenueChart({ buckets, rangeLabel }) {
   const shown = buckets[active ?? buckets.length - 1]
   const pct = (v) => (max ? (v / max) * 100 : 0)
 
-  const summary = `Revenue over ${rangeLabel}, ${buckets.length} periods. Delivered ${formatZAR(totalDelivered)}, `
+  const summary = `Revenue over ${rangeLabel}, ${buckets.length} periods. ${DONE} ${formatZAR(totalDelivered)}, `
     + `other booked ${formatZAR(totalOther)}.`
     + (peak ? ` Highest period ${top.label} at ${formatZAR(top.delivered + top.other)}.` : '')
 
@@ -117,7 +121,7 @@ function RevenueChart({ buckets, rangeLabel }) {
       }
     >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted mb-3">
-        <span className="inline-flex items-center gap-1.5"><Swatch className="bg-gold" />Delivered</span>
+        <span className="inline-flex items-center gap-1.5"><Swatch className="bg-gold" />{DONE}</span>
         <span className="inline-flex items-center gap-1.5"><Swatch className="bg-muted" />Other booked</span>
       </div>
 
@@ -125,7 +129,7 @@ function RevenueChart({ buckets, rangeLabel }) {
       <p className="text-sm text-white mb-4 min-h-10 sm:min-h-5">
         <span className="font-semibold">{shown.label}</span>
         <span className="text-muted">
-          {' · '}Delivered {formatZAR(shown.delivered)} · Other {formatZAR(shown.other)} · {shown.orders}{' '}
+          {' · '}{DONE} {formatZAR(shown.delivered)} · Other {formatZAR(shown.other)} · {shown.orders}{' '}
           {shown.orders === 1 ? 'order' : 'orders'}
         </span>
       </p>
@@ -200,7 +204,7 @@ function RevenueChart({ buckets, rangeLabel }) {
           <thead>
             <tr className="border-b border-border text-muted uppercase tracking-widest text-xs">
               <th scope="col" className="pb-3 text-left font-medium">Period</th>
-              <th scope="col" className="pb-3 text-right font-medium">Delivered</th>
+              <th scope="col" className="pb-3 text-right font-medium">{DONE}</th>
               <th scope="col" className="pb-3 text-right font-medium">Other</th>
               <th scope="col" className="pb-3 text-right font-medium">Orders</th>
             </tr>
@@ -341,6 +345,7 @@ export default function Reports() {
       buckets: buildBuckets(orders, rangeKey),
       sellers: bestSellers(orders, 10),
       payments: paymentSplit(orders),
+      channels: channelSplit(orders),
     }
   }, [orders, rangeKey])
 
@@ -351,7 +356,7 @@ export default function Reports() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="font-heading text-3xl font-bold text-white">Sales Reports</h1>
-          <p className="text-muted text-sm mt-1">Revenue counts delivered orders; booked is everything not cancelled.</p>
+          <p className="text-muted text-sm mt-1">Revenue counts {DONE.toLowerCase()} orders; booked is everything not cancelled.</p>
         </div>
         <button
           onClick={() => downloadCsv(orders, rangeKey)}
@@ -393,8 +398,14 @@ export default function Reports() {
           </div>
         ) : (
           <>
+            {IN_STORE && (
+              <p className="text-muted text-sm mb-4">
+                Booked online <span className="text-white font-semibold">{formatZAR(report.channels.online)}</span>
+                {' · '}in store <span className="text-white font-semibold">{formatZAR(report.channels.counter)}</span>
+              </p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              <StatsCard title="Revenue (delivered)" value={formatZAR(report.kpis.revenue)} icon={Banknote} />
+              <StatsCard title={`Revenue (${DONE.toLowerCase()})`} value={formatZAR(report.kpis.revenue)} icon={Banknote} />
               <StatsCard title="Booked" value={formatZAR(report.kpis.booked)} icon={Wallet} trend="All non-cancelled orders" />
               <StatsCard title="Orders" value={report.kpis.orderCount} icon={ShoppingCart} />
               <StatsCard title="Average order" value={formatZAR(report.kpis.averageOrder)} icon={Receipt} />

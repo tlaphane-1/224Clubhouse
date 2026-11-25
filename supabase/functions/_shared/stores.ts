@@ -19,6 +19,7 @@ export interface Store {
   facebook: string | null
   gold: string
   minimumAge: number
+  fulfilment: 'delivery' | 'collect'
   freeDeliveryFromCents: number
   memberFreeDelivery: boolean
   welcomeOffer: boolean

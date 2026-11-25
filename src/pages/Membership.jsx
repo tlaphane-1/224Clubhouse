@@ -14,13 +14,14 @@ import toast from 'react-hot-toast'
 import EftDetails from '../components/checkout/EftDetails'
 import PaperApplication from '../components/membership/PaperApplication'
 import { CONSENTS, EMPTY_PAPER_FORM, paperDob } from '../components/membership/paperForm'
-import { tenant, pageTitle } from '../tenant'
+import { tenant, pageTitle, IS_COLLECT } from '../tenant'
 import { MIN_AGE } from '../utils/age'
 import { EFT_AVAILABLE } from '../utils/bankDetails'
 import { PROMOTE_MEMBER_FREE_DELIVERY } from '../utils/shipping'
 
 // How a member pays offline: EFT only where the store has bank details.
-const PAY_OFFLINE = EFT_AVAILABLE ? 'by EFT or with your next delivery' : 'with your next delivery'
+const NEXT_ORDER = IS_COLLECT ? 'when you next collect' : 'with your next delivery'
+const PAY_OFFLINE = EFT_AVAILABLE ? `by EFT or ${NEXT_ORDER}` : NEXT_ORDER
 
 // Tiers are data now (membership_tiers table) — only the presentation layer
 // stays client-side. Unknown future slugs fall back to the Star icon.
@@ -257,7 +258,7 @@ export default function Membership() {
           <p className="text-muted text-sm leading-relaxed mb-8">
             {PAY_ONLINE
               ? 'Your membership starts the moment we confirm it — you can check its status right here any time.'
-              : `Pay ${tier ? formatTierPrice(tier.price_cents) : ''} ${EFT_AVAILABLE ? 'by EFT, or pay the driver' : 'to the driver'} with your next delivery. We'll activate your membership as soon as payment is received — check its status here any time.`}
+              : `Pay ${tier ? formatTierPrice(tier.price_cents) : ''} ${IS_COLLECT ? (EFT_AVAILABLE ? 'by EFT, or at the counter when you next collect' : 'at the counter when you next collect') : `${EFT_AVAILABLE ? 'by EFT, or pay the driver' : 'to the driver'} with your next delivery`}. We'll activate your membership as soon as payment is received — check its status here any time.`}
           </p>
           {!PAY_ONLINE && EFT_AVAILABLE && (
             <div className="mb-8">
@@ -489,7 +490,7 @@ export default function Membership() {
                 {effectiveStatus === 'pending' &&
                   'We’ll confirm your application shortly — your membership clock only starts once it’s approved.'}
                 {effectiveStatus === 'active' &&
-                  (PROMOTE_MEMBER_FREE_DELIVERY
+                  (PROMOTE_MEMBER_FREE_DELIVERY && !IS_COLLECT
                     ? 'You get free delivery on every order while your membership is active. Contact us if anything looks wrong.'
                     : 'Your membership is active. Contact us if anything looks wrong.')}
                 {effectiveStatus === 'expired' &&

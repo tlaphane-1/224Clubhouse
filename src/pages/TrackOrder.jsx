@@ -14,7 +14,9 @@ import {
 } from '../utils/orderStatus'
 import EftDetails from '../components/checkout/EftDetails'
 import DeliveryTracker from '../components/delivery/DeliveryTracker'
-import { tenant, pageTitle } from '../tenant'
+import CollectFromCard from '../components/checkout/CollectFromCard'
+import { showCollectFrom, showFeeLine } from '../utils/fulfilmentView'
+import { tenant, pageTitle, IS_COLLECT } from '../tenant'
 
 export default function TrackOrder() {
   const [searchParams] = useSearchParams()
@@ -262,8 +264,10 @@ function OrderTracking({ order, email }) {
         </div>
       </div>
 
-      {/* Live driver map while out for delivery (same order number + email). */}
-      <DeliveryTracker orderNumber={order_number} email={email} status={status} />
+      {/* Collect stores: where to collect. Delivery stores: live driver map
+          while out for delivery (same order number + email). */}
+      {showCollectFrom(order, IS_COLLECT) && <CollectFromCard className="bg-surface" />}
+      {!IS_COLLECT && <DeliveryTracker orderNumber={order_number} email={email} status={status} />}
 
       {/* EFT still to pay: the bank details must be reachable from here, not
           only from the one-off confirmation page. */}
@@ -367,12 +371,14 @@ function OrderTracking({ order, email }) {
               <span className="text-gold font-medium">−{formatZAR(discount_cents)}</span>
             </div>
           )}
+          {showFeeLine(order, IS_COLLECT) && (
           <div className="flex justify-between">
             <span className="text-muted">Shipping</span>
             <span className={shipping_fee === 0 ? 'text-green-400' : 'text-white'}>
               {shipping_fee === 0 ? 'FREE' : formatZAR(shipping_fee)}
             </span>
           </div>
+          )}
           <div className="flex justify-between pt-3 border-t border-border">
             <span className="text-white font-semibold">Total</span>
             <span className="text-gold font-bold text-lg">{formatZAR(total)}</span>
@@ -382,7 +388,7 @@ function OrderTracking({ order, email }) {
 
       {/* Amount due callout */}
       <div className="bg-gold/5 border border-gold/20 rounded-2xl p-6">
-        <p className="text-gold text-xs uppercase tracking-widest mb-1">Amount due on delivery</p>
+        <p className="text-gold text-xs uppercase tracking-widest mb-1">{IS_COLLECT ? 'Amount due on collection' : 'Amount due on delivery'}</p>
         <p className="text-white text-lg font-semibold">
           {formatZAR(total)} <span className="text-muted text-sm font-normal">— {paymentLabel(payment_method)}</span>
         </p>

@@ -39,6 +39,9 @@
     "facebook": "https://www.facebook.com/224clubhouse",
     "instagram": "https://www.instagram.com/224clubhouse"
   },
+  "features": {
+    "inStore": false
+  },
   "telegram": true,
   "mail": {
     "fromDomain": "224clubhouse.store",
@@ -48,6 +51,7 @@
     "footerHours": "Mon–Sun 09:00–19:00"
   },
   "delivery": {
+    "mode": "delivery",
     "feeCents": 3000,
     "freeFromCents": 50000,
     "promoteMemberFreeDelivery": true

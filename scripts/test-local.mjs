@@ -35,7 +35,7 @@ const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost'])
 const DB_CONTAINER = 'supabase_db_224clubhouse'
 // The two jobs that POST to production Edge Functions (see the
 // abandoned_cart_reminders and admin_daily_summary migrations).
-const HTTP_CRON_JOBS = ['send-cart-reminders', 'send-daily-summary']
+const HTTP_CRON_JOBS = ['send-cart-reminders', 'send-daily-summary', 'purge-shift-selfies']
 // Override when `supabase` on PATH is not directly executable by node (e.g. a
 // Windows shim); set SUPABASE_BIN to the full path of a working CLI binary.
 const SUPABASE_BIN = process.env.SUPABASE_BIN || 'supabase'

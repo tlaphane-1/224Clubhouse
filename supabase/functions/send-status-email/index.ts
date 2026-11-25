@@ -7,6 +7,8 @@ import { darkFooter, emailLogo } from '../_shared/brand.ts'
 import { notifyTelegram, tg } from '../_shared/telegram.ts'
 import { alertStore } from '../_shared/storeAlerts.ts'
 import { sendStoreMail } from '../_shared/mail.ts'
+import { storeFor } from '../_shared/stores.ts'
+import { statusCopyFor } from '../_shared/fulfilmentCopy.ts'
 
 // Branded and sent as the store the order belongs to (orders.tenant).
 
@@ -20,7 +22,7 @@ interface StatusEmailPayload {
   kind?: 'status' | 'nearby'
 }
 
-// Not a status, so it lives outside STATUS_COPY. Only sent while the order is
+// Not a status, so it lives outside the per-status copy. Only sent while the order is
 // actually out for delivery.
 // {store} in a subject or message is the store's name.
 const NEARBY_COPY = {
@@ -29,35 +31,8 @@ const NEARBY_COPY = {
   message: '{name}, your driver is less than a kilometre away — please be ready to receive your order.',
 }
 
-// Per-status subject + copy. 'pending' is deliberately absent: the order-placed
-// receipt (send-order-email) already covers it, so a second email would be noise.
-const STATUS_COPY: Record<string, { subject: string; heading: string; message: string }> = {
-  confirmed: {
-    subject: 'Your {store} order is confirmed 🌿',
-    heading: 'Order Confirmed 🌿',
-    message: 'Good news, {name} — your order has been confirmed and will be prepared shortly.',
-  },
-  preparing: {
-    subject: 'Your {store} order is being prepared',
-    heading: 'Preparing Your Order',
-    message: '{name}, your order is being prepared with care. We’ll let you know the moment it’s on its way.',
-  },
-  out_for_delivery: {
-    subject: 'Your {store} order is out for delivery 🚚',
-    heading: 'Out for Delivery 🚚',
-    message: '{name}, your order is on its way to you — follow your driver live on the tracking page. If you’re paying on delivery, have your payment ready.',
-  },
-  delivered: {
-    subject: 'Your {store} order has been delivered',
-    heading: 'Order Delivered ✅',
-    message: 'Enjoy, {name}! Your order has been delivered. Thank you for choosing {store}.',
-  },
-  cancelled: {
-    subject: 'Your {store} order has been cancelled',
-    heading: 'Order Cancelled',
-    message: '{name}, your order has been cancelled. If this wasn’t expected, please get in touch with us.',
-  },
-}
+// Per-status subject + copy lives in _shared/fulfilmentCopy.ts (it differs for
+// a collect store, where the customer collects at the club).
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -105,7 +80,11 @@ serve(async (req) => {
     // No email for 'pending' (covered by the order receipt) or for any status
     // without copy (legacy values like 'paid'/'shipped'). Report success so the
     // caller's fire-and-forget path never treats a deliberate skip as a failure.
-    if (!nearby && (status === 'out_for_delivery' || status === 'delivered')) {
+    // A collect store has no drivers: no driver Telegram alerts, no "nearby" email.
+    const mode = storeFor(order.tenant)?.fulfilment ?? 'delivery'
+    const collect = mode === 'collect'
+
+    if (!collect && !nearby && (status === 'out_for_delivery' || status === 'delivered')) {
       const { data: drv } = order.driver_id
         ? await serviceClient().from('drivers').select('full_name').eq('user_id', order.driver_id).maybeSingle()
         : { data: null }
@@ -119,8 +98,8 @@ serve(async (req) => {
     }
 
     const copy = nearby
-      ? (status === 'out_for_delivery' ? NEARBY_COPY : undefined)
-      : STATUS_COPY[status]
+      ? (status === 'out_for_delivery' && !collect ? NEARBY_COPY : undefined)
+      : statusCopyFor(mode, status)
     if (!copy) {
       return jsonResponse({ success: true, skipped: true })
     }
@@ -158,6 +137,13 @@ serve(async (req) => {
       ${message}
     </p>
 
+    ${collect && status === 'out_for_delivery' ? `<!-- Collect from -->
+    <div style="background:#111111; border:1px solid #222222; border-radius:12px; padding:24px 28px; margin-bottom:24px; text-align:center;">
+      <div style="color:#888888; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:8px;">Collect from</div>
+      <div style="color:#ffffff; font-size:15px; line-height:1.5;">${escapeHtml(brand.address)}</div>
+      <div style="color:#888888; font-size:13px; margin-top:6px;">${escapeHtml(brand.hours)}</div>
+    </div>
+` : ''}
     <!-- Order Card -->
     <div style="background:#111111; border:1px solid #222222; border-radius:12px; padding:28px; margin-bottom:24px; text-align:center;">
       <div style="color:#888888; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">Your Order Number</div>

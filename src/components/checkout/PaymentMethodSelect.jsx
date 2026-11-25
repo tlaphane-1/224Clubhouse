@@ -1,14 +1,21 @@
 import { PAYMENT_METHODS, PAYMENT_LABELS } from '../../utils/orderStatus'
 import { EFT_AVAILABLE } from '../../utils/bankDetails'
+import { IS_COLLECT } from '../../tenant'
 
 // EFT is offered only when the store has bank details to pay into.
 const METHODS = EFT_AVAILABLE ? PAYMENT_METHODS : PAYMENT_METHODS.filter(m => m !== 'eft')
 
-const HELPER_TEXT = {
-  cash_on_delivery: 'Pay with cash when your order arrives.',
-  card_on_delivery: 'Pay by card machine at your door.',
-  eft: 'Pay by bank transfer. Use your name and surname as the reference — we dispatch once it reflects.',
-}
+const HELPER_TEXT = IS_COLLECT
+  ? {
+      cash_on_delivery: 'Pay with cash when you collect your order.',
+      card_on_delivery: 'Pay by card at the counter when you collect.',
+      eft: 'Pay by bank transfer. Use your name and surname as the reference — your order is ready once it reflects.',
+    }
+  : {
+      cash_on_delivery: 'Pay with cash when your order arrives.',
+      card_on_delivery: 'Pay by card machine at your door.',
+      eft: 'Pay by bank transfer. Use your name and surname as the reference — we dispatch once it reflects.',
+    }
 
 export default function PaymentMethodSelect({ value, onChange }) {
   return (

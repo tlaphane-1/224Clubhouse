@@ -8,11 +8,12 @@ import { useOrders } from '../../hooks/useOrders'
 import { useAllProducts } from '../../hooks/useProducts'
 import { formatZAR } from '../../utils/formatCurrency'
 import { lowStockItems } from '../../utils/salesReport'
-import { eftState } from '../../utils/orderStatus'
+import { eftState, STATUS_LABELS } from '../../utils/orderStatus'
 import { useDailySummary } from '../../hooks/useDailySummary'
 import { shareLink, dailySummaryMessage } from '../../utils/staffWhatsApp'
 import WhatsAppButton from '../../components/ui/WhatsAppButton'
-import { tenant, adminTitle } from '../../tenant'
+import { tenant, adminTitle, IN_STORE } from '../../tenant'
+import TodayPanel from '../../components/counter/TodayPanel'
 
 export default function Dashboard() {
   const { data: orders, isError, refetch } = useOrders()
@@ -47,15 +48,18 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* In-store stores: today's sales, refreshing every 30 seconds. */}
+      {IN_STORE && <div className="mb-8"><TodayPanel compact /></div>}
+
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
         <StatsCard title="Total Products" value={products?.length ?? '—'} icon={Package} />
         <StatsCard title="Total Orders" value={orders?.length ?? '—'} icon={ShoppingCart} />
         <StatsCard
-          title="Revenue (delivered)"
+          title={`Revenue (${STATUS_LABELS.delivered.toLowerCase()})`}
           value={orders ? formatZAR(deliveredRevenue) : '—'}
           icon={DollarSign}
-          trend={orders ? `Outstanding (undelivered): ${formatZAR(outstandingTotal)}` : undefined}
+          trend={orders ? `Outstanding (not yet ${STATUS_LABELS.delivered.toLowerCase()}): ${formatZAR(outstandingTotal)}` : undefined}
         />
         <StatsCard title="Pending Orders" value={pendingOrders} icon={Clock} />
       </div>

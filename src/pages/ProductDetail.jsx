@@ -15,7 +15,7 @@ import { SHIPPING_FEE, SHIPPING_THRESHOLD, PROMOTE_MEMBER_FREE_DELIVERY } from '
 import { toastAddedToCart } from '../utils/cartToast'
 import BrandLogo from '../components/ui/BrandLogo'
 import { purchasableVariants, hasVariants, toCartItem } from '../utils/variants'
-import { tenant, pageTitle } from '../tenant'
+import { tenant, pageTitle, IS_COLLECT } from '../tenant'
 
 export default function ProductDetail() {
   const { slug } = useParams()
@@ -215,7 +215,8 @@ export default function ProductDetail() {
 
             <div className="text-gold font-bold text-3xl md:text-4xl mb-3">{formatZAR(unitPrice)}</div>
 
-            {/* Delivery note — the membership nudge where it matters most */}
+            {/* Delivery note — the membership nudge where it matters most. Collect stores charge no delivery. */}
+            {!IS_COLLECT && (
             <p className="flex items-start gap-2 text-sm mb-6">
               <Truck size={16} className="text-leaf mt-0.5 shrink-0" />
               {isMember ? (
@@ -231,6 +232,7 @@ export default function ProductDetail() {
                 </span>
               )}
             </p>
+            )}
 
             {product.description && (
               <p className="text-muted leading-relaxed mb-6 md:mb-8 text-sm">{product.description}</p>

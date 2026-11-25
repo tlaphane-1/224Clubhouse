@@ -11,7 +11,7 @@ import toast from 'react-hot-toast'
 import { HIGHLIGHT_TOAST_STYLE } from '../utils/toastTheme'
 import { BRAND_IMAGES } from '../hooks/useStorageImages'
 import BrandLogo from '../components/ui/BrandLogo'
-import { tenant } from '../tenant'
+import { tenant, IS_COLLECT } from '../tenant'
 import { PROMOTE_MEMBER_FREE_DELIVERY } from '../utils/shipping'
 import { EFT_AVAILABLE } from '../utils/bankDetails'
 
@@ -207,7 +207,7 @@ export default function Home() {
                   <Sparkles size={16} className="text-leaf shrink-0" /> Members-only products
                 </li>
                 <li className="flex items-center gap-3">
-                  <Crown size={16} className="text-leaf shrink-0" /> Pay {EFT_AVAILABLE ? 'by EFT or ' : ''}with your next delivery
+                  <Crown size={16} className="text-leaf shrink-0" /> Pay {EFT_AVAILABLE ? 'by EFT or ' : ''}{IS_COLLECT ? 'when you next collect' : 'with your next delivery'}
                 </li>
               </ul>
             </div>

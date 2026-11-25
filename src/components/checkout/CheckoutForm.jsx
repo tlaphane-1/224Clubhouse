@@ -1,6 +1,7 @@
 import { checkoutFieldId } from './checkoutFields'
 import UseMyLocation from './UseMyLocation'
-import { tenant } from '../../tenant'
+import CollectFromCard from './CollectFromCard'
+import { tenant, IS_COLLECT } from '../../tenant'
 import { SA_PROVINCES } from '../../utils/geo'
 
 export default function CheckoutForm({ form, onChange, errors, lockEmail = false, pin = null, onPin }) {
@@ -49,6 +50,8 @@ export default function CheckoutForm({ form, onChange, errors, lockEmail = false
         </div>
       </div>
 
+      {/* Collect stores ask for no address and no location. */}
+      {IS_COLLECT ? <CollectFromCard /> : (
       <div className="border-t border-border pt-5">
         <h3 className="text-white font-semibold mb-4 text-sm uppercase tracking-widest">Delivery Address</h3>
         {onPin && <UseMyLocation pin={pin} onPin={onPin} onAddress={(addr) => onChange({ ...form, ...addr })} />}
@@ -88,6 +91,7 @@ export default function CheckoutForm({ form, onChange, errors, lockEmail = false
           </div>
         </div>
       </div>
+      )}
     </div>
   )
 }

@@ -6,7 +6,8 @@ import { useInvoiceOrder } from '../hooks/useInvoiceOrder'
 import { formatZAR } from '../utils/formatCurrency'
 import { statusLabel, paymentLabel } from '../utils/orderStatus'
 import { BANK_DETAILS } from '../utils/bankDetails'
-import { tenant, pageTitle } from '../tenant'
+import { tenant, pageTitle, IS_COLLECT } from '../tenant'
+import { showFeeLine } from '../utils/fulfilmentView'
 import { MIN_AGE } from '../utils/age'
 
 // Seller details printed on every invoice. Same facts as Contact.jsx / Footer.jsx
@@ -198,6 +199,8 @@ function InvoiceSheet({ order }) {
         <p className="font-semibold">{customer_name}</p>
         <p className="text-neutral-700 break-all">{customer_email}</p>
         {customer_phone && <p className="text-neutral-700">{customer_phone}</p>}
+        {/* Collect stores show no address, even on orders from before the switch. */}
+        {!IS_COLLECT && (
         <address className="not-italic text-neutral-700 mt-2 leading-relaxed">
           {addr?.street && <span className="block">{addr.street}</span>}
           {addr?.apartment && <span className="block">{addr.apartment}</span>}
@@ -206,6 +209,7 @@ function InvoiceSheet({ order }) {
           )}
           {addr?.postalCode && <span className="block">{addr.postalCode}</span>}
         </address>
+        )}
       </section>
 
       {/* Line items. On a phone the unit-price column folds under the name. */}
@@ -251,10 +255,12 @@ function InvoiceSheet({ order }) {
             <dd className="tabular-nums">−{formatZAR(discount_cents)}</dd>
           </div>
         )}
+        {showFeeLine(order, IS_COLLECT) && (
         <div className="flex justify-between gap-4">
           <dt className="text-neutral-600">Delivery</dt>
           <dd className="tabular-nums">{shipping_fee === 0 ? 'Free' : formatZAR(shipping_fee)}</dd>
         </div>
+        )}
         <div className="flex justify-between gap-4 pt-2 mt-1 border-t border-neutral-400 text-base font-bold">
           <dt>Total</dt>
           <dd className="tabular-nums">{formatZAR(total)}</dd>

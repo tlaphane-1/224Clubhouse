@@ -5,6 +5,7 @@ import { serviceClient } from '../_shared/supabaseClients.ts'
 import { ageLine, emailLogo } from '../_shared/brand.ts'
 import { sendStoreMail } from '../_shared/mail.ts'
 import { allStores, type Store } from '../_shared/stores.ts'
+import { cartReminderLine } from '../_shared/fulfilmentCopy.ts'
 
 // Called hourly by pg_cron (migration 20261005150000_abandoned_cart_reminders),
 // never by the browser. Deployed with --no-verify-jwt because the cron job has
@@ -45,11 +46,10 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
+// Collect stores (order online, collect at the club) promise no delivery.
 function deliveryLine(brand: Store): string {
   const from = formatZAR(brand.freeDeliveryFromCents).replace(/\.00$/, '')
-  return brand.memberFreeDelivery
-    ? `delivery is free for members and on orders of ${from} or more.`
-    : `delivery is free on orders of ${from} or more.`
+  return cartReminderLine(brand.fulfilment, from, brand.memberFreeDelivery)
 }
 
 function reminderHtml(brand: Store, lines: CartLine[], optOutUrl: string): string {

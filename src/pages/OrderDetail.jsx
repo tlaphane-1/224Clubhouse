@@ -11,6 +11,9 @@ import { formatZAR } from '../utils/formatCurrency'
 import { STATUS_STEPS, statusLabel, paymentLabel } from '../utils/orderStatus'
 import EftPaymentPanel from '../components/checkout/EftPaymentPanel'
 import DeliveryTracker from '../components/delivery/DeliveryTracker'
+import CollectFromCard from '../components/checkout/CollectFromCard'
+import { showCollectFrom, showFeeLine } from '../utils/fulfilmentView'
+import { IS_COLLECT } from '../tenant'
 import { pageTitle } from '../tenant'
 
 // Customer-facing detail view for one of their own orders (/orders/:id).
@@ -204,8 +207,9 @@ function OrderDetailBody({ order }) {
       {/* EFT: bank details + proof upload while unpaid, confirmation once paid. */}
       <EftPaymentPanel order={order} />
 
-      {/* Live driver map while out for delivery. */}
-      <DeliveryTracker orderNumber={order_number} email={order.customer_email} status={status} />
+      {/* Collect stores: where to collect. Delivery stores: live driver map while out for delivery. */}
+      {showCollectFrom(order, IS_COLLECT) && <CollectFromCard className="bg-surface" />}
+      {!IS_COLLECT && <DeliveryTracker orderNumber={order_number} email={order.customer_email} status={status} />}
 
       {/* Cancelled banner */}
       {cancelled && (
@@ -300,12 +304,14 @@ function OrderDetailBody({ order }) {
               <span className="text-gold font-medium">−{formatZAR(discount_cents)}</span>
             </div>
           )}
+          {showFeeLine(order, IS_COLLECT) && (
           <div className="flex justify-between">
             <span className="text-muted">Shipping</span>
             <span className={shipping_fee === 0 ? 'text-green-400' : 'text-white'}>
               {shipping_fee === 0 ? 'FREE' : formatZAR(shipping_fee)}
             </span>
           </div>
+          )}
           <div className="flex justify-between pt-3 border-t border-border">
             <span className="text-white font-semibold">Total</span>
             <span className="text-gold font-bold text-lg">{formatZAR(total)}</span>
@@ -313,7 +319,8 @@ function OrderDetailBody({ order }) {
         </div>
       </div>
 
-      {/* Delivery address */}
+      {/* Delivery address (collect stores never show one, even on old orders) */}
+      {!IS_COLLECT && (
       <div className="bg-surface border border-border rounded-2xl p-6">
         <h3 className="text-white font-semibold text-sm uppercase tracking-widest mb-4">Delivery Address</h3>
         <p className="text-white text-sm leading-relaxed">
@@ -325,11 +332,12 @@ function OrderDetailBody({ order }) {
           {addr?.postalCode && <><br />{addr.postalCode}</>}
         </p>
       </div>
+      )}
 
       {/* Amount due callout */}
       {!cancelled && (
         <div className="bg-gold/5 border border-gold/20 rounded-2xl p-6">
-          <p className="text-gold text-xs uppercase tracking-widest mb-1">Amount due on delivery</p>
+          <p className="text-gold text-xs uppercase tracking-widest mb-1">{IS_COLLECT ? 'Amount due on collection' : 'Amount due on delivery'}</p>
           <p className="text-white text-lg font-semibold">
             {formatZAR(total)} <span className="text-muted text-sm font-normal">— {paymentLabel(payment_method)}</span>
           </p>

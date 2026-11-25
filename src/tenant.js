@@ -14,6 +14,14 @@ function deepFreeze(value) {
 
 export const tenant = deepFreeze(data)
 
+// 'delivery' (address, fee, drivers) or 'collect' (order online, collect at
+// the club). Build-time per store, like everything else in tenant.json.
+export const FULFILMENT = tenant.delivery.mode
+export const IS_COLLECT = FULFILMENT === 'collect'
+
+// The in-store system (counter tablet, staff shifts) is switched on per store.
+export const IN_STORE = tenant.features.inStore === true
+
 // legacyStorageKeys pins keys that predate the prefix scheme, so visitors who
 // already have a cart / age confirmation / recent orders keep them.
 export function storageKey(name) {

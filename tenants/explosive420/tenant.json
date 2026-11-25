@@ -29,6 +29,9 @@
     "status": "Open Monday – Sunday, 09:00 – 22:00",
     "contactPage": ["Open Monday – Sunday", "09:00 – 22:00"]
   },
+  "features": {
+    "inStore": true
+  },
   "telegram": false,
   "mail": {
     "fromDomain": "explosive420.co.za",
@@ -36,6 +39,7 @@
     "footerHours": "Mon–Sun 09:00–22:00"
   },
   "delivery": {
+    "mode": "collect",
     "feeCents": 3000,
     "freeFromCents": 50000,
     "promoteMemberFreeDelivery": false
@@ -111,8 +115,8 @@
         "description": "Terms and conditions for using the Explosive 420 Cannabis Social Club website, membership and store."
       },
       "/delivery-returns": {
-        "title": "Delivery & Returns",
-        "description": "Delivery and returns policy for Explosive 420 Cannabis Social Club orders."
+        "title": "Collection & Returns",
+        "description": "How to collect your order and the returns policy for Explosive 420 Cannabis Social Club, Soshanguve."
       }
     },
     "productDescription": "{name} from Explosive 420 Cannabis Social Club, Soshanguve. Members 21+ only.",
@@ -120,7 +124,7 @@
   },
   "legal": {
     "reviewNotes": false,
-    "lastUpdated": "3 November 2026"
+    "lastUpdated": "24 November 2026"
   },
   "content": {
     "home": {

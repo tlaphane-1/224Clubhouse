@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useCart } from '../../context/useCart'
 import { buildWhatsAppLink, composeOrderMessage } from '../../utils/whatsappOrder'
 import { WhatsAppIcon } from '../ui/WhatsAppButton'
+import { IS_COLLECT } from '../../tenant'
 
 // Digits only, international format without + (e.g. 27821234567).
 // Read here at the component level, never inside the pure utils.
@@ -28,8 +29,9 @@ const SEND_CLASSES =
 export default function WhatsAppOrderPanel() {
   const { items } = useCart()
   const addressRef = useRef(null)
-  // Store closed until further notice — delivery only (2026-10-01).
-  const mode = 'delivery'
+  // Delivery stores: delivery only (store closed, 2026-10-01). Collect stores:
+  // collection at the club only (no address asked).
+  const mode = IS_COLLECT ? 'collection' : 'delivery'
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [note, setNote] = useState('')

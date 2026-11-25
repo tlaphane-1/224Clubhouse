@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { BRAND_IMAGES } from '../../hooks/useStorageImages'
-import { tenant } from '../../tenant'
+import { tenant, IS_COLLECT } from '../../tenant'
 import { MIN_AGE } from '../../utils/age'
 
 function FacebookIcon({ size = 20, className = '' }) {
@@ -92,7 +92,7 @@ export default function Footer() {
               {[
                 { to: '/privacy', label: 'Privacy Policy' },
                 { to: '/terms', label: 'Terms of Service' },
-                { to: '/delivery-returns', label: 'Delivery & Returns' },
+                { to: '/delivery-returns', label: IS_COLLECT ? 'Collection & Returns' : 'Delivery & Returns' },
               ].map(({ to, label }) => (
                 <li key={label}>
                   <Link to={to} className="text-muted hover:text-gold text-sm transition-colors">

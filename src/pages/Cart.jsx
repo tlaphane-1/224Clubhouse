@@ -8,7 +8,7 @@ import { useCheapestTier } from '../hooks/useMembershipTiers'
 import { memberPurchaseGate } from '../utils/memberGate'
 import { formatZAR } from '../utils/formatCurrency'
 import { formatTierPrice } from '../utils/tierPrice'
-import { SHIPPING_THRESHOLD, PROMOTE_MEMBER_FREE_DELIVERY, shippingFeeFor } from '../utils/shipping'
+import { SHIPPING_THRESHOLD, PROMOTE_MEMBER_FREE_DELIVERY, SHOW_DELIVERY_FEE, shippingFeeFor } from '../utils/shipping'
 import WhatsAppOrderPanel from '../components/store/WhatsAppOrderPanel'
 import StickyActionBar from '../components/ui/StickyActionBar'
 import BrandLogo from '../components/ui/BrandLogo'
@@ -196,6 +196,8 @@ export default function Cart() {
                   <span className="text-muted">Subtotal ({itemCount} {itemCount === 1 ? 'item' : 'items'})</span>
                   <span className="text-white">{formatZAR(cartSubtotal)}</span>
                 </div>
+                {/* Collect stores have no delivery line or free-delivery nudges. */}
+                {SHOW_DELIVERY_FEE && (<>
                 <div className="flex justify-between">
                   <span className="text-muted">Delivery</span>
                   <span className={shippingFee === 0 ? 'text-green-400 font-medium' : 'text-white'}>
@@ -227,6 +229,7 @@ export default function Cart() {
                     </div>
                   </div>
                 )}
+                </>)}
               </div>
 
               <div className="flex justify-between pt-4 border-t border-border lg:mb-6">
