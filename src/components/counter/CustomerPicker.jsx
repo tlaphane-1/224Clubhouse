@@ -1,6 +1,11 @@
 import { useState } from 'react'
-import { Search, UserPlus, X } from 'lucide-react'
+import { Search, UserPlus, X, QrCode } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useFindCustomers } from '../../hooks/useCounter'
+import { useCardCustomer } from '../../hooks/useTable'
+import { parseMemberCode } from '../../utils/table'
+import { tenant } from '../../tenant'
+import QrScanner from './QrScanner'
 import { memberBadge } from '../../utils/counter'
 import CustomerHistory from './CustomerHistory'
 
@@ -24,6 +29,26 @@ export default function CustomerPicker({ customer, onChange }) {
   const [walkIn, setWalkIn] = useState(false)
   const [walkInForm, setWalkInForm] = useState({ name: '', phone: '' })
   const results = useFindCustomers(query)
+  const card = useCardCustomer()
+  const [scanning, setScanning] = useState(false)
+
+  const onCard = async (text) => {
+    const token = parseMemberCode(text, tenant.domain.liveHosts)
+    if (!token) {
+      toast.error('That is not a club card')
+      return
+    }
+    try {
+      const r = await card.mutateAsync(token)
+      setScanning(false)
+      onChange({
+        userId: r.user_id, name: r.full_name || 'Customer', phone: r.phone || '',
+        memberStatus: r.member_status, tierName: r.tier_name, expiresAt: r.expires_at,
+      })
+    } catch (err) {
+      toast.error(err.message || 'Could not read the card')
+    }
+  }
   const label = 'block text-muted text-xs uppercase tracking-widest mb-1.5'
 
   if (customer) {
@@ -77,9 +102,17 @@ export default function CustomerPicker({ customer, onChange }) {
     )
   }
 
+  if (scanning) {
+    return <QrScanner onCode={onCard} onClose={() => setScanning(false)} />
+  }
+
   const list = results.data ?? []
   return (
     <div className="space-y-3">
+      <button type="button" onClick={() => setScanning(true)}
+        className="btn-outline w-full min-h-11 inline-flex items-center justify-center gap-2 text-xs uppercase tracking-widest">
+        <QrCode size={16} aria-hidden="true" /> Scan club card
+      </button>
       <label htmlFor="customer-search" className={label}>Find customer</label>
       <div className="relative">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true" />

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { LogOut } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { LogOut, LayoutGrid } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import { useMyOpenShift } from '../../hooks/useShifts'
 import BrandLogo from '../../components/ui/BrandLogo'
@@ -38,6 +39,11 @@ export default function Counter() {
             <BrandLogo className="h-10 w-auto" />
             <h1 className="font-heading text-xl text-white uppercase tracking-widest">Counter</h1>
           </div>
+          <div className="flex items-center gap-1">
+          <Link to="/table"
+            className="focus-ring rounded-lg min-h-11 px-3 inline-flex items-center gap-2 text-muted hover:text-white text-xs uppercase tracking-widest">
+            <LayoutGrid size={16} aria-hidden="true" /> Table mode
+          </Link>
           <button
             type="button"
             onClick={signOut}
@@ -46,6 +52,7 @@ export default function Counter() {
           >
             <LogOut size={16} aria-hidden="true" /> Sign out
           </button>
+          </div>
         </header>
 
         <div role="tablist" aria-label="Counter" className="flex flex-wrap gap-2">

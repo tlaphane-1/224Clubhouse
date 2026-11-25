@@ -4,6 +4,9 @@ import toast from 'react-hot-toast'
 import CustomerPicker from './CustomerPicker'
 import ProductPicker from './ProductPicker'
 import QrScanner from './QrScanner'
+import TableOrders from './TableOrders'
+import { useCloseTableRequest } from '../../hooks/useTable'
+import { requestToLines } from '../../utils/table'
 import { useProducts } from '../../hooks/useProducts'
 import { useRecordSale } from '../../hooks/useCounter'
 import { counterCartReducer, cartTotal, toSaleItems, parseLabelCode, saleBlockers, lineFromScan } from '../../utils/counter'
@@ -24,6 +27,8 @@ export default function SalePanel({ onShift, onGoToShift }) {
   const [error, setError] = useState('')
   const { data: products } = useProducts()
   const record = useRecordSale()
+  const closeRequest = useCloseTableRequest()
+  const [requestId, setRequestId] = useState(null)
 
   const total = cartTotal(cart.lines)
   const blockers = saleBlockers({ customer, lines: cart.lines, method, idChecked, onShift })
@@ -51,7 +56,19 @@ export default function SalePanel({ onShift, onGoToShift }) {
     toast.success(`Added ${line.name}${line.label ? ` ${line.label}` : ''}`)
   }
 
+  const loadRequest = (r) => {
+    const { lines, skipped } = requestToLines(r.items)
+    setCustomer({
+      userId: r.user_id, name: r.full_name || 'Customer', phone: r.phone || '',
+      memberStatus: r.member_status, tierName: r.tier_name, expiresAt: r.expires_at,
+    })
+    dispatch({ type: 'load', lines })
+    setRequestId(r.id)
+    if (skipped.length) toast.error(`Not available now: ${skipped.join(', ')}`)
+  }
+
   const reset = () => {
+    setRequestId(null)
     setCustomer(null)
     dispatch({ type: 'clear' })
     setMethod(null)
@@ -64,6 +81,8 @@ export default function SalePanel({ onShift, onGoToShift }) {
     try {
       const res = await record.mutateAsync({ customer, items: toSaleItems(cart.lines), method, idChecked })
       toast.success(`Sale ${res.order_number} saved — ${formatZAR(res.total)}`)
+      // A sale loaded from a table order closes that order.
+      if (requestId) closeRequest.mutate({ id: requestId, status: 'done' })
       reset()
     } catch (err) {
       const msg = err?.message || 'Could not save the sale'
@@ -83,6 +102,8 @@ export default function SalePanel({ onShift, onGoToShift }) {
   }
 
   return (
+    <div className="space-y-6">
+    <TableOrders onLoad={loadRequest} />
     <div className="grid gap-6 md:grid-cols-2">
       <section className="bg-surface border border-border rounded-2xl p-6" aria-labelledby="sale-customer">
         <h2 id="sale-customer" className="text-gold text-xs uppercase tracking-widest mb-4">Customer</h2>
@@ -149,6 +170,7 @@ export default function SalePanel({ onShift, onGoToShift }) {
           {record.isPending ? 'Saving…' : `Complete sale — ${formatZAR(total)}`}
         </button>
       </section>
+    </div>
     </div>
   )
 }

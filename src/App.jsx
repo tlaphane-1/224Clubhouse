@@ -60,6 +60,7 @@ const AdminStock = lazy(() => import('./pages/admin/Stock'))
 const AdminAlerts = lazy(() => import('./pages/admin/Alerts'))
 const DriverPortal = lazy(() => import('./pages/driver/DriverPortal'))
 const Counter = lazy(() => import('./pages/counter/Counter'))
+const TableMode = lazy(() => import('./pages/counter/TableMode'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -170,6 +171,8 @@ export default function App() {
                 {!IS_COLLECT && <Route path="/driver" element={<DriverPortal />} />}
                 {/* Counter tablet: staff accounts only (shift clock-in; sales next). */}
                 {IN_STORE && <Route path="/counter" element={<StaffRoute><Counter /></StaffRoute>} />}
+                {/* Table mode: the same tablet as a customer menu; leaving needs the staff password. */}
+                {IN_STORE && <Route path="/table" element={<StaffRoute allowLocked><TableMode /></StaffRoute>} />}
                 <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
 
                 {/* Fallback */}

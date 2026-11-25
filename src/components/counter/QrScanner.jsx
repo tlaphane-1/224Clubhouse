@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserQRCodeReader } from '@zxing/browser'
 
-// Live camera QR scanner for the counter tablet. Prefers the rear camera,
+// Live camera QR scanner for the counter tablet. Rear camera by default
+// (facing='user' for the table, where the customer holds up their phone),
 // reports each new code once, and always releases the camera on close.
-export default function QrScanner({ onCode, onClose }) {
+export default function QrScanner({ onCode, onClose, facing = 'environment' }) {
   const videoRef = useRef(null)
   const lastRef = useRef({ text: '', at: 0 })
   const onCodeRef = useRef(onCode)
@@ -16,7 +17,7 @@ export default function QrScanner({ onCode, onClose }) {
     let cancelled = false
     const reader = new BrowserQRCodeReader()
     reader.decodeFromConstraints(
-      { video: { facingMode: { ideal: 'environment' } } },
+      { video: { facingMode: { ideal: facing } } },
       videoRef.current,
       (result) => {
         if (!result) return
@@ -40,7 +41,7 @@ export default function QrScanner({ onCode, onClose }) {
       cancelled = true
       controls?.stop()
     }
-  }, [])
+  }, [facing])
 
   return (
     <div className="space-y-3">
