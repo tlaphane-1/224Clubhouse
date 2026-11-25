@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react'
+import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, AlertTriangle, QrCode } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/admin/AdminLayout'
 import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
@@ -10,7 +11,7 @@ import { formatZAR } from '../../utils/formatCurrency'
 import { useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import BrandLogo from '../../components/ui/BrandLogo'
-import { adminTitle } from '../../tenant'
+import { adminTitle, IN_STORE } from '../../tenant'
 
 export default function Products() {
   const { data: products, isLoading, isError, refetch } = useAllProducts()
@@ -57,9 +58,16 @@ export default function Products() {
           <h1 className="font-heading text-3xl font-bold text-white">Products</h1>
           <p className="text-muted text-sm mt-1">{products?.length || 0} total products</p>
         </div>
-        <button onClick={openAdd} className="btn-gold flex items-center gap-2 text-sm">
-          <Plus size={16} /> Add Product
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {IN_STORE && (
+            <Link to="/admin/labels" className="btn-outline flex items-center gap-2 text-sm min-h-11 px-4">
+              <QrCode size={16} aria-hidden="true" /> Print QR labels
+            </Link>
+          )}
+          <button onClick={openAdd} className="btn-gold flex items-center gap-2 text-sm">
+            <Plus size={16} /> Add Product
+          </button>
+        </div>
       </div>
 
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
