@@ -40,7 +40,7 @@ export default function Orders() {
       // 20260814101000_restock_on_cancel.sql).
       const stockLine =
         order.status === 'delivered'
-          ? 'It is already marked Delivered, so stock will NOT be returned — adjust it by hand if the goods came back.'
+          ? `It is already marked ${statusLabel('delivered')}, so stock will NOT be returned — adjust it by hand if the goods came back.`
           : 'The items will be returned to stock.'
       if (!window.confirm(`Cancel order ${label}? ${stockLine}`)) {
         if (selectEl) selectEl.value = order.status
@@ -150,7 +150,7 @@ export default function Orders() {
                       <p className="text-white font-semibold text-sm">{formatZAR(order.total)}</p>
                       <div className="mt-1"><Badge variant={order.status}>{statusLabel(order.status)}</Badge></div>
                       <div className="mt-1"><EftPill order={order} /></div>
-                      {order.driver_id && <p className="text-muted text-xs mt-1">🚚 {driverName(order.driver_id) ?? 'Driver'}</p>}
+                      {!IS_COLLECT && order.driver_id && <p className="text-muted text-xs mt-1">🚚 {driverName(order.driver_id) ?? 'Driver'}</p>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-3">
@@ -187,7 +187,7 @@ export default function Orders() {
                   <div className="text-center space-y-1">
                     <Badge variant={order.status}>{statusLabel(order.status)}</Badge>
                     <div><EftPill order={order} /></div>
-                    {order.driver_id && <p className="text-muted text-xs">🚚 {driverName(order.driver_id) ?? 'Driver'}</p>}
+                    {!IS_COLLECT && order.driver_id && <p className="text-muted text-xs">🚚 {driverName(order.driver_id) ?? 'Driver'}</p>}
                   </div>
                   <div className="text-center">
                     <select
@@ -216,7 +216,7 @@ export default function Orders() {
                   <div className="px-6 pb-6 bg-background/50 border-t border-border">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-5">
                       <div>
-                        <h4 className="text-gold text-xs uppercase tracking-widest mb-3">Shipping Address</h4>
+                        <h4 className="text-gold text-xs uppercase tracking-widest mb-3">{IS_COLLECT ? 'Customer' : 'Shipping Address'}</h4>
                         {/* Collect stores: no address, no location pin. */}
                         {IS_COLLECT ? (
                           <p className="text-white text-sm">Collection at the club</p>

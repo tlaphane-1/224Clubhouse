@@ -6,6 +6,7 @@ import { notifyTelegram, tg } from '../_shared/telegram.ts'
 import { alertStore, type AlertStore } from '../_shared/storeAlerts.ts'
 import { sendStoreMail } from '../_shared/mail.ts'
 import { allStores } from '../_shared/stores.ts'
+import { doneLabel } from '../_shared/fulfilmentCopy.ts'
 
 // Daily 07:00 summary to the club (migration 20261008130000_owner_alerts).
 // Called by pg_cron only — deployed with --no-verify-jwt; the shared
@@ -86,7 +87,7 @@ function summaryHtml(s: Summary, store: AlertStore): string {
 
       <table style="width:100%; border-collapse:collapse;">
         <tr>${stat('Visitors', String(s.visitors))}${stat('Page views', String(s.page_views))}${stat('New accounts', String(s.new_accounts))}</tr>
-        <tr>${stat('Orders', String(s.orders))}${stat('Booked', formatZAR(s.booked_cents))}${stat('Delivered', `${s.delivered} · ${formatZAR(s.delivered_cents)}`)}</tr>
+        <tr>${stat('Orders', String(s.orders))}${stat('Booked', formatZAR(s.booked_cents))}${stat(doneLabel(store.brand?.fulfilment ?? 'delivery'), `${s.delivered} · ${formatZAR(s.delivered_cents)}`)}</tr>
       </table>
 
       <div style="margin-top:16px;">
@@ -144,7 +145,7 @@ async function summarise(slug: string, day: string) {
   const telegram = await notifyTelegram('daily',
     `☀️ <b>${tg(label)} daily — ${tg(s.day)}</b>\n`
     + `👀 ${s.visitors} visitors · ${s.page_views} page views · ${s.new_accounts} new accounts\n`
-    + `🛒 ${s.orders} orders · ${tg(formatZAR(s.booked_cents))} booked · ${s.delivered} delivered (${tg(formatZAR(s.delivered_cents))})\n`
+    + `🛒 ${s.orders} orders · ${tg(formatZAR(s.booked_cents))} booked · ${s.delivered} ${doneLabel(store.brand?.fulfilment ?? 'delivery').toLowerCase()} (${tg(formatZAR(s.delivered_cents))})\n`
     + `\n<b>Waiting for you</b>\n`
     + `🧾 EFT: ${s.eft_proof} proof${s.eft_proof === 1 ? '' : 's'} to check, ${s.eft_awaiting} awaiting payment\n`
     + `⭐ ${s.reviews_pending} review${s.reviews_pending === 1 ? '' : 's'} · 👑 ${s.memberships_pending} membership application${s.memberships_pending === 1 ? '' : 's'}`

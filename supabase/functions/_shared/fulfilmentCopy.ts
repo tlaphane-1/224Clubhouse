@@ -89,3 +89,15 @@ export function cartReminderLine(mode: Fulfilment, from: string, memberFreeDeliv
     ? `delivery is free for members and on orders of ${from} or more.`
     : `delivery is free on orders of ${from} or more.`
 }
+
+/** What staff call a finished order: the stored status is 'delivered' either way. */
+export function doneLabel(mode: Fulfilment): string {
+  return mode === 'collect' ? 'Collected' : 'Delivered'
+}
+
+/** How a new member pays, for the owner's membership-application alert. */
+export function membershipPayHint(mode: Fulfilment): string {
+  return mode === 'collect'
+    ? 'The applicant pays by EFT or at the counter.'
+    : 'The applicant pays by EFT or with their next delivery.'
+}

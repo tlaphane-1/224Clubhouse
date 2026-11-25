@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  statusCopyFor, paymentLabelFor, amountDueLabel, DELIVERY_STATUS_COPY, cartReminderLine,
+  statusCopyFor, paymentLabelFor, amountDueLabel, DELIVERY_STATUS_COPY, cartReminderLine, doneLabel, membershipPayHint,
 } from '../../supabase/functions/_shared/fulfilmentCopy.ts'
 
 describe('statusCopyFor', () => {
@@ -60,5 +60,16 @@ describe('cartReminderLine', () => {
     const line = cartReminderLine('collect', 'R500', true)
     expect(line).toMatch(/collect/i)
     expect(line).not.toMatch(/deliver/i)
+  })
+})
+
+describe('staff wording', () => {
+  it('done orders are "Delivered" or "Collected"', () => {
+    expect(doneLabel('delivery')).toBe('Delivered')
+    expect(doneLabel('collect')).toBe('Collected')
+  })
+  it('membership payment hint matches how the store works', () => {
+    expect(membershipPayHint('delivery')).toBe('The applicant pays by EFT or with their next delivery.')
+    expect(membershipPayHint('collect')).toBe('The applicant pays by EFT or at the counter.')
   })
 })
