@@ -9,10 +9,10 @@ import { useSalesOrders } from '../../hooks/useSalesReport'
 import { useAllProducts } from '../../hooks/useProducts'
 import { formatZAR } from '../../utils/formatCurrency'
 import {
-  RANGES, bestSellers, buildBuckets, getRange, lowStockItems, niceMax, ordersToCsv, paymentSplit, sastDayKey,
+  RANGES, bestSellers, buildBuckets, channelSplit, getRange, lowStockItems, niceMax, ordersToCsv, paymentSplit, sastDayKey,
   summarize,
 } from '../../utils/salesReport'
-import { adminTitle } from '../../tenant'
+import { adminTitle, IN_STORE } from '../../tenant'
 import { STATUS_LABELS } from '../../utils/orderStatus'
 
 // 'Delivered', or 'Collected' in a collect store (same stored status).
@@ -345,6 +345,7 @@ export default function Reports() {
       buckets: buildBuckets(orders, rangeKey),
       sellers: bestSellers(orders, 10),
       payments: paymentSplit(orders),
+      channels: channelSplit(orders),
     }
   }, [orders, rangeKey])
 
@@ -397,6 +398,12 @@ export default function Reports() {
           </div>
         ) : (
           <>
+            {IN_STORE && (
+              <p className="text-muted text-sm mb-4">
+                Booked online <span className="text-white font-semibold">{formatZAR(report.channels.online)}</span>
+                {' · '}in store <span className="text-white font-semibold">{formatZAR(report.channels.counter)}</span>
+              </p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               <StatsCard title={`Revenue (${DONE.toLowerCase()})`} value={formatZAR(report.kpis.revenue)} icon={Banknote} />
               <StatsCard title="Booked" value={formatZAR(report.kpis.booked)} icon={Wallet} trend="All non-cancelled orders" />

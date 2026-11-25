@@ -275,6 +275,69 @@ Owner feedback 2026-11-24: stop deliveries because of risk. Spec
    one real order end to end (placed → ready-for-collection email → collected).
 6. Then update the E420 handover pack (drivers no longer used).
 
+## 7f. E420 in-store system, part 1: staff + selfie shifts (branch `feat/e420-in-store`, NOT deployed)
+
+Owner feedback 2026-11-24. Spec `docs/superpowers/specs/2026-11-24-e420-in-store-design.md`, plan
+`docs/superpowers/plans/2026-11-25-staff-shifts.md`. Built on top of `feat/e420-collect-only`
+(merge #44 first).
+
+- Staff accounts (`staff_members`, `is_staff()`), managed in Admin → Staff (by email of an existing
+  account in the store). Admins count as staff.
+- `/counter` (staff only): start a shift with a selfie, end it; server clock. Admin → Shifts lists a
+  day's shifts with selfies. Selfies: private bucket `shift-selfies`, owner + admins only.
+- Per-store switch `features.inStore` in `tenant.json` (E420 on, 224 off).
+
+**Rollout:** migration `20261125100000_staff_shifts.sql` (also schedules the daily
+`purge-shift-selfies` job), deploy the `purge-shift-selfies` function with `--no-verify-jwt`, then
+the E420 build; the owner adds the cashier's account in Admin → Staff; test a clock-in on the tablet.
+Admins can end anyone's open shift in Admin → Shifts; disabling staff ends theirs.
+
+**Open:**
+- Selfie clean-up runs daily: selfies older than 90 days, and uploads no shift uses after a day.
+  Not yet seen running (the job calls production; first check after deploy).
+- Staff selfies are staff personal information: the owner should tell staff in writing why they are
+  taken and how long they are kept (not covered by the customer privacy policy).
+
+**Part 3, table menu (same branch, NOT deployed):** migration `20261125140000_table_menu.sql`.
+Customers get a club card QR on My Account (with "New code"). Counter → "Table mode" turns the
+tablet into a menu: browse; scan the club card to see their orders, "order again", send an order to
+the counter, and rate products they've had (ratings wait for approval in Admin → Reviews). Table
+orders show at the top of the counter's Sale tab ("Load" fills the sale; they disappear after 30
+minutes). Leaving table mode needs the staff password. Not yet checked on a screen.
+- **Must before go-live: lock the tablet to the browser** — Android "screen pinning" (Settings →
+  Security → App pinning) or iPad "Guided Access" (Settings → Accessibility). The table lock is only
+  on screen; the tablet still holds the cashier's staff login, so someone with the address bar or
+  developer tools could use counter functions (search customers, record sales). A dedicated
+  low-rights "table account" would remove this — not built yet.
+- The tablet must be signed in with a **staff** account, never the owner's admin account (table mode
+  refuses admin accounts; admin pages also ask for the password while the tablet is in table mode).
+- Club card codes don't expire; customers are told to keep them private and can make a new one.
+- Small leftovers: the "rate what you've had" list isn't capped at 20; a table order whose option was
+  deleted loads as the base product; repeated wrong unlock passwords can hit the sign-in rate limit.
+
+**Part 2b, stock-take + live dashboard (same branch, NOT deployed):** migration
+`20261125130000_stocktake_today.sql`. Counter → Stock: scan or pick a product, type the counted
+number and a reason; every change is logged (Admin → Stock). Counter → Today and the admin
+Dashboard show today's sales (total, orders, in store vs online, top sellers, low stock), refreshed
+every 30 seconds. Not yet checked on a screen — include in the tablet test before go-live.
+- Stock rules: "Delivery received" adds to stock; other reasons set the shelf total and are refused
+  if a sale changed the stock since it was shown. Small leftovers: deleting a product deletes its
+  stock log; the Today view counts unpaid pending orders (same rule as the daily summary).
+
+**Part 2a, counter sales (same branch, NOT deployed):** migration `20261125120000_counter_sales.sql`.
+Staff on shift ring up sales at `/counter` → Sale: find the customer (name/phone/email) or walk-in,
+see their last 10 orders, add items by scanning QR labels (Admin → Products → Print QR labels) or
+tapping, cash/card, tick the ID check. Saved as `orders.channel = 'counter'`, already collected and
+paid; stock drops. Admin → Orders marks them "In store"; Reports shows online vs in-store.
+- **Not checked on screen yet** (browser tool could not load the local site): check a full sale on
+  the E420 preview on the tablet before go-live, including camera scanning.
+- Small leftovers from review (not fixed): changing a walk-in counter sale's status tries to email a
+  blank address; cart stock limits don't refresh until the cart is cleared; two sales locking the
+  same products in opposite order can show a raw "deadlock" error (also true online); `served_by`
+  (a staff id) is visible to the customer on their own order row.
+- `npm audit` lists 8 older vulnerabilities in Firebase / React Router dependencies (not from the
+  new QR libraries) — worth a separate update pass.
+
 ## 8. Resolved
 
 - **2026-11-23 — `.claude/settings.local.json` tracked by git** (was §3.3): untracked and added to

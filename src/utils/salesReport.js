@@ -266,6 +266,16 @@ export function paymentSplit(orders = []) {
  * Hidden products (is_available === false) are skipped — they aren't on sale,
  * so their stock isn't urgent.
  */
+/** Booked money (non-cancelled) from online orders vs in-store counter sales. */
+export function channelSplit(orders = []) {
+  const out = { online: 0, counter: 0 }
+  for (const o of orders) {
+    if (!isBooked(o)) continue
+    out[o.channel === 'counter' ? 'counter' : 'online'] += o.total ?? 0
+  }
+  return out
+}
+
 export function lowStockItems(products = [], threshold = LOW_STOCK_THRESHOLD) {
   const out = []
   for (const p of products) {

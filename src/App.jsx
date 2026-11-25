@@ -12,7 +12,10 @@ import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotFound from './pages/NotFound'
-import { IS_COLLECT } from './tenant'
+import { IS_COLLECT, IN_STORE } from './tenant'
+import StaffRoute from './components/counter/StaffRoute'
+import StaffUnlock from './components/counter/StaffUnlock'
+import { isTableLocked } from './utils/tableLock'
 
 // Pages are lazy-loaded: each becomes its own chunk fetched on demand, so the
 // storefront's initial bundle no longer ships the admin panel, checkout,
@@ -26,6 +29,7 @@ const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'))
 const TrackOrder = lazy(() => import('./pages/TrackOrder'))
 const MyOrders = lazy(() => import('./pages/MyOrders'))
 const Account = lazy(() => import('./pages/Account'))
+const MemberCardInfo = lazy(() => import('./pages/MemberCardInfo'))
 const OrderDetail = lazy(() => import('./pages/OrderDetail'))
 const Invoice = lazy(() => import('./pages/Invoice'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
@@ -51,8 +55,14 @@ const AdminReports = lazy(() => import('./pages/admin/Reports'))
 const AdminReviews = lazy(() => import('./pages/admin/Reviews'))
 const AdminAnalytics = lazy(() => import('./pages/admin/Analytics'))
 const AdminDrivers = lazy(() => import('./pages/admin/Drivers'))
+const AdminStaff = lazy(() => import('./pages/admin/Staff'))
+const AdminShifts = lazy(() => import('./pages/admin/Shifts'))
+const AdminLabels = lazy(() => import('./pages/admin/Labels'))
+const AdminStock = lazy(() => import('./pages/admin/Stock'))
 const AdminAlerts = lazy(() => import('./pages/admin/Alerts'))
 const DriverPortal = lazy(() => import('./pages/driver/DriverPortal'))
+const Counter = lazy(() => import('./pages/counter/Counter'))
+const TableMode = lazy(() => import('./pages/counter/TableMode'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -84,6 +94,15 @@ function ProtectedRoute({ children }) {
 
   if (!user || !isAdmin) {
     return <Navigate to="/admin/login" replace />
+  }
+
+  // The tablet is in table mode (customers use it): admin pages need the password.
+  if (isTableLocked()) {
+    return (
+      <div className="min-h-screen bg-background px-4 py-10">
+        <StaffUnlock onUnlocked={() => window.location.reload()} />
+      </div>
+    )
   }
 
   return children
@@ -122,6 +141,7 @@ export default function App() {
                 {/* No ProtectedRoute: the page shows sign-in itself when logged out. */}
                 <Route path="/orders" element={<PublicLayout><MyOrders /></PublicLayout>} />
                 <Route path="/account" element={<PublicLayout><Account /></PublicLayout>} />
+                {IN_STORE && <Route path="/m/:token" element={<PublicLayout><MemberCardInfo /></PublicLayout>} />}
                 <Route path="/orders/:id" element={<PublicLayout><OrderDetail /></PublicLayout>} />
                 {/* Bare page (no navbar/footer) so it prints as a clean A4 invoice. */}
                 <Route path="/orders/:id/invoice" element={<Invoice />} />
@@ -153,9 +173,17 @@ export default function App() {
                 {/* Collect stores have no drivers: no driver admin, no driver portal. */}
                 {!IS_COLLECT && <Route path="/admin/drivers" element={<ProtectedRoute><AdminDrivers /></ProtectedRoute>} />}
                 <Route path="/admin/alerts" element={<ProtectedRoute><AdminAlerts /></ProtectedRoute>} />
+                {IN_STORE && <Route path="/admin/staff" element={<ProtectedRoute><AdminStaff /></ProtectedRoute>} />}
+                {IN_STORE && <Route path="/admin/shifts" element={<ProtectedRoute><AdminShifts /></ProtectedRoute>} />}
+                {IN_STORE && <Route path="/admin/labels" element={<ProtectedRoute><AdminLabels /></ProtectedRoute>} />}
+                {IN_STORE && <Route path="/admin/stock" element={<ProtectedRoute><AdminStock /></ProtectedRoute>} />}
 
                 {/* Driver portal: its own phone-first layout; the page handles sign-in and access. */}
                 {!IS_COLLECT && <Route path="/driver" element={<DriverPortal />} />}
+                {/* Counter tablet: staff accounts only (shift clock-in; sales next). */}
+                {IN_STORE && <Route path="/counter" element={<StaffRoute><Counter /></StaffRoute>} />}
+                {/* Table mode: the same tablet as a customer menu; leaving needs the staff password. */}
+                {IN_STORE && <Route path="/table" element={<StaffRoute allowLocked><TableMode /></StaffRoute>} />}
                 <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
 
                 {/* Fallback */}

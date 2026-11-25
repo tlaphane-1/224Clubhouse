@@ -39,6 +39,9 @@
     "facebook": "https://www.facebook.com/224clubhouse",
     "instagram": "https://www.instagram.com/224clubhouse"
   },
+  "features": {
+    "inStore": false
+  },
   "telegram": true,
   "mail": {
     "fromDomain": "224clubhouse.store",

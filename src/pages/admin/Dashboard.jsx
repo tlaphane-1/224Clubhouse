@@ -12,7 +12,8 @@ import { eftState, STATUS_LABELS } from '../../utils/orderStatus'
 import { useDailySummary } from '../../hooks/useDailySummary'
 import { shareLink, dailySummaryMessage } from '../../utils/staffWhatsApp'
 import WhatsAppButton from '../../components/ui/WhatsAppButton'
-import { tenant, adminTitle } from '../../tenant'
+import { tenant, adminTitle, IN_STORE } from '../../tenant'
+import TodayPanel from '../../components/counter/TodayPanel'
 
 export default function Dashboard() {
   const { data: orders, isError, refetch } = useOrders()
@@ -46,6 +47,9 @@ export default function Dashboard() {
           <WhatsAppButton href={shareLink(dailySummaryMessage(summary))}>Share today's summary</WhatsAppButton>
         )}
       </div>
+
+      {/* In-store stores: today's sales, refreshing every 30 seconds. */}
+      {IN_STORE && <div className="mb-8"><TodayPanel compact /></div>}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">

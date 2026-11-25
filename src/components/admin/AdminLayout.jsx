@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ChartColumn, Activity, Truck, Bell, Package, ShoppingCart, Calendar, Crown, Ticket, Star, Mail, Newspaper, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, ChartColumn, Activity, Truck, Bell, Package, ShoppingCart, Calendar, Crown, Ticket, Star, Mail, Newspaper, LogOut, Menu, X, UserCheck, Clock, ClipboardList } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import BrandLogo from '../ui/BrandLogo'
-import { tenant, IS_COLLECT } from '../../tenant'
+import { tenant, IS_COLLECT, IN_STORE } from '../../tenant'
 
 const navItems = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -13,6 +13,12 @@ const navItems = [
   { to: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
   // Collect stores have no drivers.
   ...(IS_COLLECT ? [] : [{ to: '/admin/drivers', icon: Truck, label: 'Drivers' }]),
+  // In-store system (counter tablet): staff accounts and their shifts.
+  ...(IN_STORE ? [
+    { to: '/admin/staff', icon: UserCheck, label: 'Staff' },
+    { to: '/admin/shifts', icon: Clock, label: 'Shifts' },
+    { to: '/admin/stock', icon: ClipboardList, label: 'Stock' },
+  ] : []),
   { to: '/admin/events', icon: Calendar, label: 'Events' },
   { to: '/admin/memberships', icon: Crown, label: 'Memberships' },
   { to: '/admin/discounts', icon: Ticket, label: 'Discounts' },
