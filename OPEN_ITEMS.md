@@ -15,9 +15,8 @@
 > **Updated 2026-11-23:** PRs #37–#40, all live since 2026-11-12: drivers get a sign-in email,
 > customers can share their location at checkout, and Admin → Drivers always shows the map (§7d).
 >
-> **Updated 2026-11-24:** Explosive 420 asked to stop delivering ("too risky"). Branch
-> `feat/e420-collect-only` makes it a **collect-only** store (order online, collect at the club):
-> no address, no fee, no drivers. **Not deployed** — see §7e for the rollout checklist.
+> **Updated 2026-11-24:** Explosive 420 asked to stop delivering ("too risky"). It is now a **collect-only** store (order online, collect at the club): no address, no fee, no
+> drivers. **Live 2026-11-25** together with the in-store system (§7f).
 
 ---
 
@@ -246,7 +245,16 @@ Owner phone order `224-849A99` stored with `tenant = 224clubhouse`. Pre-push sch
   summary (10 and 11 Nov). Still unverified: a 224 order since the 2026-11-09 email changes (last
   one 2026-11-03) and the membership application on live E420.
 
-## 7e. Explosive 420 collect-only (branch `feat/e420-collect-only`, NOT deployed)
+## 7e. Explosive 420 collect-only (LIVE 2026-11-25, PR #44)
+
+**Deployed 2026-11-25** (owner asked to go straight to live, no preview): migrations
+20261124120000–20261125140000, functions send-order-email / send-status-email /
+send-cart-reminders / purge-shift-selfies, both hosting sites. Checked live: E420
+/delivery-returns shows "Collection & Returns"; 224 unchanged. Tested beforehand on the local copy
+in Chrome (sale, Today, stock count, delivery received, table menu, table lock). **Not yet tested
+on a real tablet: camera scanning (labels, club cards), selfie clock-in.** Owner to-dos still open:
+membership perk text, read legal wording, staff selfie notice, lock the tablet (App pinning /
+Guided Access), add the cashier in Admin → Staff, print QR labels.
 
 Owner feedback 2026-11-24: stop deliveries because of risk. Spec
 `docs/superpowers/specs/2026-11-24-collect-only-fulfilment-design.md`, plan
@@ -275,7 +283,7 @@ Owner feedback 2026-11-24: stop deliveries because of risk. Spec
    one real order end to end (placed → ready-for-collection email → collected).
 6. Then update the E420 handover pack (drivers no longer used).
 
-## 7f. E420 in-store system, part 1: staff + selfie shifts (branch `feat/e420-in-store`, NOT deployed)
+## 7f. E420 in-store system (LIVE 2026-11-25, PR #45): staff shifts, counter sales, stock, table menu
 
 Owner feedback 2026-11-24. Spec `docs/superpowers/specs/2026-11-24-e420-in-store-design.md`, plan
 `docs/superpowers/plans/2026-11-25-staff-shifts.md`. Built on top of `feat/e420-collect-only`
@@ -298,7 +306,7 @@ Admins can end anyone's open shift in Admin → Shifts; disabling staff ends the
 - Staff selfies are staff personal information: the owner should tell staff in writing why they are
   taken and how long they are kept (not covered by the customer privacy policy).
 
-**Part 3, table menu (same branch, NOT deployed):** migration `20261125140000_table_menu.sql`.
+**Part 3, table menu (live 2026-11-25):** migration `20261125140000_table_menu.sql`.
 Customers get a club card QR on My Account (with "New code"). Counter → "Table mode" turns the
 tablet into a menu: browse; scan the club card to see their orders, "order again", send an order to
 the counter, and rate products they've had (ratings wait for approval in Admin → Reviews). Table
@@ -315,7 +323,7 @@ minutes). Leaving table mode needs the staff password. Not yet checked on a scre
 - Small leftovers: the "rate what you've had" list isn't capped at 20; a table order whose option was
   deleted loads as the base product; repeated wrong unlock passwords can hit the sign-in rate limit.
 
-**Part 2b, stock-take + live dashboard (same branch, NOT deployed):** migration
+**Part 2b, stock-take + live dashboard (live 2026-11-25):** migration
 `20261125130000_stocktake_today.sql`. Counter → Stock: scan or pick a product, type the counted
 number and a reason; every change is logged (Admin → Stock). Counter → Today and the admin
 Dashboard show today's sales (total, orders, in store vs online, top sellers, low stock), refreshed
@@ -324,7 +332,7 @@ every 30 seconds. Not yet checked on a screen — include in the tablet test bef
   if a sale changed the stock since it was shown. Small leftovers: deleting a product deletes its
   stock log; the Today view counts unpaid pending orders (same rule as the daily summary).
 
-**Part 2a, counter sales (same branch, NOT deployed):** migration `20261125120000_counter_sales.sql`.
+**Part 2a, counter sales (live 2026-11-25):** migration `20261125120000_counter_sales.sql`.
 Staff on shift ring up sales at `/counter` → Sale: find the customer (name/phone/email) or walk-in,
 see their last 10 orders, add items by scanning QR labels (Admin → Products → Print QR labels) or
 tapping, cash/card, tick the ID check. Saved as `orders.channel = 'counter'`, already collected and
