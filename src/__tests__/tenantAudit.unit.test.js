@@ -296,12 +296,12 @@ describe('audit: SECURITY DEFINER functions', () => {
 })
 
 describe('real repo', () => {
-  it('finds the 22 tenant tables and reports zero problems', () => {
+  it('finds the 24 tenant tables and reports zero problems', () => {
     const { tables, problems } = auditRepo()
     expect(problems).toEqual([])
-    expect(tables).toHaveLength(22)
+    expect(tables).toHaveLength(24)
     expect(tables).toContain('orders')
-    expect(tables).toEqual(expect.arrayContaining(['staff_members', 'shifts', 'stock_adjustments']))
+    expect(tables).toEqual(expect.arrayContaining(['staff_members', 'shifts', 'stock_adjustments', 'member_cards', 'table_requests']))
     expect(tables).not.toContain('tenants')
   })
 
@@ -311,6 +311,6 @@ describe('real repo', () => {
     })
     const parsed = JSON.parse(out)
     expect(parsed.problems).toEqual([])
-    expect(parsed.tables.length).toBe(22)
+    expect(parsed.tables.length).toBe(24)
   })
 })
