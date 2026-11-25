@@ -297,7 +297,17 @@ Admins can end anyone's open shift in Admin → Shifts; disabling staff ends the
   Not yet seen running (the job calls production; first check after deploy).
 - Staff selfies are staff personal information: the owner should tell staff in writing why they are
   taken and how long they are kept (not covered by the customer privacy policy).
-- Next: part 2 (cashier sales, QR labels, stock-take, live dashboard), part 3 (table menu).
+- Next: part 2b (stock-take, live dashboard), part 3 (table menu, ordering, ratings, membership QR).
+
+**Part 2a, counter sales (same branch, NOT deployed):** migration `20261125120000_counter_sales.sql`.
+Staff on shift ring up sales at `/counter` → Sale: find the customer (name/phone/email) or walk-in,
+see their last 10 orders, add items by scanning QR labels (Admin → Products → Print QR labels) or
+tapping, cash/card, tick the ID check. Saved as `orders.channel = 'counter'`, already collected and
+paid; stock drops. Admin → Orders marks them "In store"; Reports shows online vs in-store.
+- **Not checked on screen yet** (browser tool could not load the local site): check a full sale on
+  the E420 preview on the tablet before go-live, including camera scanning.
+- `npm audit` lists 8 older vulnerabilities in Firebase / React Router dependencies (not from the
+  new QR libraries) — worth a separate update pass.
 
 ## 8. Resolved
 

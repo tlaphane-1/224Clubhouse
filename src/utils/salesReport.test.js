@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  channelSplit,
   bestSellers,
   bucketLabel,
   buildBuckets,
@@ -269,5 +270,17 @@ describe('CSV', () => {
 
   it('header only for no orders', () => {
     expect(ordersToCsv([]).split('\r\n')).toHaveLength(1)
+  })
+})
+
+describe('channelSplit', () => {
+  it('splits booked money between online and counter sales; cancelled ignored', () => {
+    const orders = [
+      { status: 'delivered', total: 30000, channel: 'counter' },
+      { status: 'pending', total: 15000, channel: 'online' },
+      { status: 'delivered', total: 5000 },
+      { status: 'cancelled', total: 99999, channel: 'counter' },
+    ]
+    expect(channelSplit(orders)).toEqual({ online: 20000, counter: 30000 })
   })
 })

@@ -144,7 +144,7 @@ export default function Orders() {
                       <p className="font-mono text-gold text-[11px] mt-1">
                         {order.order_number || `${order.id.slice(0, 8)}…`} · {new Date(order.created_at).toLocaleDateString('en-ZA')}
                       </p>
-                      <p className="text-muted text-[11px] mt-0.5">{paymentLabel(order.payment_method)}</p>
+                      <p className="text-muted text-[11px] mt-0.5">{paymentLabel(order.payment_method)}{order.channel === 'counter' ? ' · In store' : ''}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-white font-semibold text-sm">{formatZAR(order.total)}</p>
@@ -232,6 +232,7 @@ export default function Orders() {
                         <div className="mt-3 space-y-1 text-sm">
                           <p className="text-muted">Order #: <span className="text-white">{order.order_number || order.id.slice(0, 8)}</span></p>
                           <p className="text-muted">Payment: <span className="text-white">{paymentLabel(order.payment_method)}</span></p>
+                          {order.channel === 'counter' && <p className="text-muted">Sold: <span className="text-white">in store, at the counter</span></p>}
                           <p className="text-muted">Phone: <span className="text-white">{order.customer_phone}</span></p>
                           <a
                             href={`/orders/${order.id}/invoice`}
