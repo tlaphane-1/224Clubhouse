@@ -3,6 +3,7 @@ import { Camera, LogOut as EndIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMyOpenShift, useStartShift, useEndShift, useSelfieUrl } from '../../hooks/useShifts'
 import { shiftStatusLabel } from '../../utils/shifts'
+import SelfieCamera from './SelfieCamera'
 
 // Start a shift with a selfie (front camera on phones/tablets), end it later.
 // The server stamps both times.
@@ -12,6 +13,7 @@ export default function ShiftPanel() {
   const end = useEndShift()
   const inputRef = useRef(null)
   const [file, setFile] = useState(null)
+  const [cameraOpen, setCameraOpen] = useState(false)
   const [error, setError] = useState('')
   const [now, setNow] = useState(() => Date.now())
   const selfie = useSelfieUrl(shift.data?.selfie_path)
@@ -121,17 +123,24 @@ export default function ShiftPanel() {
               </button>
               <button
                 type="button"
-                onClick={() => inputRef.current?.click()}
+                onClick={() => { setFile(null); setCameraOpen(true) }}
                 disabled={start.isPending}
                 className="btn-outline w-full min-h-11 text-xs uppercase tracking-widest"
               >
                 Retake
               </button>
             </>
+          ) : cameraOpen ? (
+            // In-page camera: the phone's camera app can make Android close the browser ("low memory").
+            <SelfieCamera
+              onCapture={(photo) => { setCameraOpen(false); setError(''); setFile(photo) }}
+              onCancel={() => setCameraOpen(false)}
+              onFallback={() => { setCameraOpen(false); inputRef.current?.click() }}
+            />
           ) : (
             <button
               type="button"
-              onClick={() => inputRef.current?.click()}
+              onClick={() => { setError(''); setCameraOpen(true) }}
               className="btn-gold w-full min-h-11 inline-flex items-center justify-center gap-2"
             >
               <Camera size={18} aria-hidden="true" /> Start shift — take a selfie
